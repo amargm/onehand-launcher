@@ -11,24 +11,60 @@ class AppsService {
 
   /// Returns all user-installed launchable apps, sorted alphabetically.
   static Future<List<AppInfo>> getInstalledApps() async {
-    final raw = await _channel.invokeListMethod<Map>('getInstalledApps') ?? [];
-    return raw.map((e) {
-      final iconRaw = e['icon'];
-      final Uint8List? icon = switch (iconRaw) {
-        Uint8List u => u,
-        List<Object?> l => Uint8List.fromList(l.cast<int>()),
-        _ => null,
-      };
-      return AppInfo(
-        packageName: e['packageName'] as String,
-        appName: e['appName'] as String,
-        icon: icon,
-      );
-    }).toList();
+    try {
+      final raw =
+          await _channel.invokeListMethod<Map>('getInstalledApps') ?? [];
+      return raw.map((e) {
+        final iconRaw = e['icon'];
+        final Uint8List? icon = switch (iconRaw) {
+          Uint8List u => u,
+          List<Object?> l => Uint8List.fromList(l.cast<int>()),
+          _ => null,
+        };
+        return AppInfo(
+          packageName: e['packageName'] as String,
+          appName: e['appName'] as String,
+          icon: icon,
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   /// Launches the app identified by [packageName].
+  /// Silently ignores failures (e.g. app uninstalled between list load and tap).
   static Future<void> openApp(String packageName) async {
-    await _channel.invokeMethod<void>('openApp', {'packageName': packageName});
+    try {
+      await _channel.invokeMethod<void>('openApp', {
+        'packageName': packageName,
+      });
+    } catch (_) {}
+  }
+
+  /// Returns apps that can play audio (music players, podcast apps, etc.).
+  /// Used to populate the quick-launch strip when headphones are connected.
+  static Future<List<AppInfo>> getMediaApps() async {
+    try {
+      final raw = await _channel.invokeListMethod<Map>('getMediaApps') ?? [];
+      return raw
+          .map((e) {
+            final iconRaw = e['icon'];
+            final Uint8List? icon = switch (iconRaw) {
+              Uint8List u => u,
+              List<Object?> l => Uint8List.fromList(l.cast<int>()),
+              _ => null,
+            };
+            return AppInfo(
+              packageName: e['packageName'] as String? ?? '',
+              appName: e['appName'] as String? ?? '',
+              icon: icon,
+            );
+          })
+          .where((a) => a.packageName.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return [];
+    }
   }
 }

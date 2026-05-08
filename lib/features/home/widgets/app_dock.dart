@@ -6,9 +6,11 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/folder_icons.dart';
 import '../../../core/models/app_folder.dart';
+import '../../../core/models/app_info.dart';
 import '../../../core/providers/context_settings_provider.dart';
 import '../../../core/providers/folders_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/services/apps_service.dart';
 import '../../../core/services/launcher_service.dart';
 import '../../folder/folder_screen.dart';
 import '../../search/search_overlay.dart';
@@ -19,11 +21,11 @@ class AppDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final folders          = ref.watch(foldersProvider);
+    final folders = ref.watch(foldersProvider);
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
-    final showSearchLabel  = ref.watch(showSearchLabelProvider);
-    final rightHanded      = ref.watch(rightHandedProvider);
-    final accent           = Theme.of(context).colorScheme.primary;
+    final showSearchLabel = ref.watch(showSearchLabelProvider);
+    final rightHanded = ref.watch(rightHandedProvider);
+    final accent = Theme.of(context).colorScheme.primary;
 
     final searchBtn = _DockButton(
       label: 'Search',
@@ -34,20 +36,22 @@ class AppDock extends ConsumerWidget {
       onTap: () => _openSearch(context),
     );
 
-    final folderBtns = folders
-        .map((f) => _DockButton(
-              label: f.name,
-              icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
-              color: accent.withValues(alpha: 0.85),
-              filled: false,
-              showLabel: showFolderLabels,
-              onTap: () => _openFolder(context, f),
-            ))
-        .toList();
+    final folderBtns =
+        folders
+            .map(
+              (f) => _DockButton(
+                label: f.name,
+                icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
+                color: accent.withValues(alpha: 0.85),
+                filled: false,
+                showLabel: showFolderLabels,
+                onTap: () => _openFolder(context, f),
+              ),
+            )
+            .toList();
 
-    final rowChildren = rightHanded
-        ? [...folderBtns, searchBtn]
-        : [searchBtn, ...folderBtns];
+    final rowChildren =
+        rightHanded ? [...folderBtns, searchBtn] : [searchBtn, ...folderBtns];
 
     return Padding(
       // 24px outer margin — concentric container spec
@@ -111,13 +115,16 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
   late Timer _timer;
   late DateTime _now;
   bool _headphones = false;
+  List<AppInfo> _mediaApps = [];
+  bool _mediaLoading = false;
 
   @override
   void initState() {
     super.initState();
     _now = DateTime.now();
     _poll();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+    // Poll every 5s for responsive headphone detection
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         setState(() => _now = DateTime.now());
         _poll();
@@ -132,8 +139,27 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
   }
 
   Future<void> _poll() async {
-    final v = await LauncherService.isHeadphoneConnected();
-    if (mounted && v != _headphones) setState(() => _headphones = v);
+    try {
+      final v = await LauncherService.isHeadphoneConnected();
+      if (!mounted) return;
+      if (v != _headphones) setState(() => _headphones = v);
+      // Load media apps lazily the first time headphones are detected
+      if (v && _mediaApps.isEmpty) _loadMediaApps();
+    } catch (_) {
+      // Ignore platform errors (emulator / audio service unavailable)
+    }
+  }
+
+  Future<void> _loadMediaApps() async {
+    if (_mediaLoading) return;
+    _mediaLoading = true;
+    try {
+      final apps = await AppsService.getMediaApps();
+      if (mounted) setState(() => _mediaApps = apps);
+    } catch (_) {
+      // fail silently — media row just won't appear
+    }
+    _mediaLoading = false;
   }
 
   @override
@@ -141,31 +167,53 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
     final enabled = ref.watch(contextItemsProvider);
     final accent  = Theme.of(context).colorScheme.primary;
 
-    final items = ContextItemType.values
+    final chips = ContextItemType.values
         .where((t) => enabled.contains(t))
         .map((t) => _iconFor(t, accent))
         .toList();
 
-    if (items.isEmpty) return const SizedBox.shrink();
+    final showMedia = _headphones && _mediaApps.isNotEmpty;
+    if (chips.isEmpty && !showMedia) return const SizedBox.shrink();
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: items,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (chips.isNotEmpty)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: chips,
+          ),
+        // When headphones connected: quick-launch strip for media/audio apps
+        if (showMedia) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _mediaApps.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              itemBuilder: (_, i) => _MediaAppIcon(app: _mediaApps[i]),
+            ),
+          ),
+        ],
+      ],
     );
   }
 
   Widget _iconFor(ContextItemType type, Color accent) {
     final h = _now.hour;
     final (IconData icon, bool active) = switch (type) {
-      ContextItemType.time => h >= 9 && h < 18
-          ? (Icons.bolt_rounded, true)
-          : h >= 18 && h < 23
-              ? (Icons.nightlight_rounded, true)
-              : (Icons.bedtime_outlined, false),
-      ContextItemType.headphone => _headphones
-          ? (Icons.headphones_rounded, true)
-          : (Icons.headphones_outlined, false),
-      ContextItemType.day  => (Icons.calendar_today_outlined, true),
+      ContextItemType.time =>
+        h >= 9 && h < 18
+            ? (Icons.bolt_rounded, true)
+            : h >= 18 && h < 23
+            ? (Icons.nightlight_rounded, true)
+            : (Icons.bedtime_outlined, false),
+      ContextItemType.headphone =>
+        _headphones
+            ? (Icons.headphones_rounded, true)
+            : (Icons.headphones_outlined, false),
+      ContextItemType.day => (Icons.calendar_today_outlined, true),
       ContextItemType.date => (Icons.event_outlined, true),
     };
 
@@ -179,6 +227,49 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(icon, color: color, size: 15),
+    );
+  }
+}
+
+// ── Media app quick-launch icon ───────────────────────────────────────────────
+/// Small circular icon shown in the headphone media strip.
+class _MediaAppIcon extends StatelessWidget {
+  const _MediaAppIcon({required this.app});
+
+  final AppInfo app;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => AppsService.openApp(app.packageName),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFF2A2A2A),
+        ),
+        child: ClipOval(
+          child:
+              app.icon != null
+                  ? Image.memory(
+                    app.icon!,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder:
+                        (_, __, ___) => const Icon(
+                          Icons.music_note_rounded,
+                          size: 18,
+                          color: Colors.white54,
+                        ),
+                  )
+                  : const Icon(
+                    Icons.music_note_rounded,
+                    size: 18,
+                    color: Colors.white54,
+                  ),
+        ),
+      ),
     );
   }
 }
@@ -214,27 +305,27 @@ class _DockButton extends StatelessWidget {
               shape: BoxShape.circle,
               color: filled ? Colors.white : color.withValues(alpha: 0.12),
               // Search button: orange glow (light-leak from primary action)
-              boxShadow: filled
-                  ? [
-                      BoxShadow(
-                        color: const Color(0xFFFF5722).withValues(alpha: 0.25),
-                        blurRadius: 24,
-                        spreadRadius: 2,
+              boxShadow:
+                  filled
+                      ? [
+                        BoxShadow(
+                          color: const Color(
+                            0xFFFF5722,
+                          ).withValues(alpha: 0.25),
+                          blurRadius: 24,
+                          spreadRadius: 2,
+                        ),
+                      ]
+                      : null,
+              border:
+                  filled
+                      ? null
+                      : Border.all(
+                        color: color.withValues(alpha: 0.25),
+                        width: 1,
                       ),
-                    ]
-                  : null,
-              border: filled
-                  ? null
-                  : Border.all(
-                      color: color.withValues(alpha: 0.25),
-                      width: 1,
-                    ),
             ),
-            child: Icon(
-              icon,
-              color: filled ? Colors.black : color,
-              size: 22,
-            ),
+            child: Icon(icon, color: filled ? Colors.black : color, size: 22),
           ),
           if (showLabel) ...[
             const SizedBox(height: 5),

@@ -26,7 +26,7 @@ class _ContextSectionState extends ConsumerState<ContextSection> {
     super.initState();
     _now = DateTime.now();
     _pollHeadphone();
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         setState(() => _now = DateTime.now());
         _pollHeadphone();
@@ -41,9 +41,13 @@ class _ContextSectionState extends ConsumerState<ContextSection> {
   }
 
   Future<void> _pollHeadphone() async {
-    final connected = await LauncherService.isHeadphoneConnected();
-    if (mounted && connected != _headphoneConnected) {
-      setState(() => _headphoneConnected = connected);
+    try {
+      final connected = await LauncherService.isHeadphoneConnected();
+      if (mounted && connected != _headphoneConnected) {
+        setState(() => _headphoneConnected = connected);
+      }
+    } catch (_) {
+      // ignore platform errors (emulator / audio service unavailable)
     }
   }
 

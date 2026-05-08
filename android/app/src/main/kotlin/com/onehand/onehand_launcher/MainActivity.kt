@@ -41,10 +41,21 @@ class MainActivity : FlutterActivity() {
                 "openApp" -> {
                     val pkg = call.argument<String>("packageName")
                     if (pkg != null) {
-                        openApp(pkg)
-                        result.success(null)
+                        try {
+                            openApp(pkg)
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("OPEN_FAILED", e.message, null)
+                        }
                     } else {
                         result.error("INVALID_ARG", "packageName is null", null)
+                    }
+                }
+                "getMediaApps" -> {
+                    try {
+                        result.success(getMediaApps())
+                    } catch (e: Exception) {
+                        result.error("ERROR", e.message, null)
                     }
                 }
                 else -> result.notImplemented()
@@ -161,6 +172,49 @@ class MainActivity : FlutterActivity() {
             @Suppress("DEPRECATION")
             am.isWiredHeadsetOn || am.isBluetoothA2dpOn
         }
+    }
+
+    // ── Media apps (music / audio players) ────────────────────────────────
+    private fun getMediaApps(): List<Map<String, Any?>> {
+        val pm = packageManager
+        val seen = mutableSetOf<String>()
+        val apps = mutableListOf<Map<String, Any?>>()
+
+        fun queryAndAdd(intent: android.content.Intent) {
+            try {
+                val list = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.queryIntentActivities(
+                        intent,
+                        PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_ALL.toLong()),
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    pm.queryIntentActivities(intent, PackageManager.MATCH_ALL)
+                }
+                for (info in list) {
+                    val pkg = info.activityInfo.packageName
+                    if (pkg != packageName && seen.add(pkg)) {
+                        val icon = try { info.loadIcon(pm) } catch (_: Exception) { null }
+                        apps.add(mapOf(
+                            "packageName" to pkg,
+                            "appName"     to info.loadLabel(pm).toString(),
+                            "icon"        to icon?.toBytes(),
+                        ))
+                    }
+                }
+            } catch (_: Exception) { /* ignore individual query failures */ }
+        }
+
+        // 1. Apps registered as music players
+        queryAndAdd(android.content.Intent(android.content.Intent.ACTION_MAIN).apply {
+            addCategory(android.content.Intent.CATEGORY_APP_MUSIC)
+        })
+        // 2. Apps that can open audio files
+        queryAndAdd(android.content.Intent(android.content.Intent.ACTION_VIEW).apply {
+            type = "audio/*"
+        })
+
+        return apps.take(8)
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────

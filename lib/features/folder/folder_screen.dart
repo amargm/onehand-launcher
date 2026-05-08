@@ -184,7 +184,9 @@ class FolderScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFF5722).withValues(alpha: 0.25),
+                              color: const Color(
+                                0xFFFF5722,
+                              ).withValues(alpha: 0.25),
                               blurRadius: 20,
                               spreadRadius: 0,
                             ),
@@ -193,8 +195,11 @@ class FolderScreen extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.add_rounded,
-                                color: Colors.white, size: 18),
+                            const Icon(
+                              Icons.add_rounded,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                             const SizedBox(width: 8),
                             Text(
                               'Add app',

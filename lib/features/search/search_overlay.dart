@@ -228,12 +228,14 @@ class _TwoRowResults extends StatelessWidget {
   }
 
   void _handleTap(BuildContext context, String pkg) {
-    onDismiss();
+    // Execute the action FIRST, then dismiss.
+    // In pick mode this ensures the app is added before the overlay animates out.
     if (pickMode && onAppPicked != null) {
       onAppPicked!(pkg);
     } else {
       CircularAppIcon.launch(pkg);
     }
+    onDismiss();
   }
 
   @override
@@ -372,15 +374,16 @@ class _SearchBarState extends State<_SearchBar> {
           color: _focused ? accent : const Color(0xFF2A2A2A),
           width: 1,
         ),
-        boxShadow: _focused
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.15),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                ),
-              ]
-            : null,
+        boxShadow:
+            _focused
+                ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.15),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ]
+                : null,
       ),
       child: Row(
         children: [
@@ -417,25 +420,26 @@ class _SearchBarState extends State<_SearchBar> {
           ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 150),
-            child: widget.controller.text.isNotEmpty
-                ? IconButton(
-                    key: const ValueKey('clear'),
-                    icon: const Icon(
-                      Icons.close_rounded,
-                      color: Colors.white38,
-                      size: 18,
+            child:
+                widget.controller.text.isNotEmpty
+                    ? IconButton(
+                      key: const ValueKey('clear'),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white38,
+                        size: 18,
+                      ),
+                      onPressed: widget.onClear,
+                    )
+                    : IconButton(
+                      key: const ValueKey('down'),
+                      icon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: Colors.white24,
+                        size: 22,
+                      ),
+                      onPressed: widget.onDismiss,
                     ),
-                    onPressed: widget.onClear,
-                  )
-                : IconButton(
-                    key: const ValueKey('down'),
-                    icon: const Icon(
-                      Icons.keyboard_arrow_down_rounded,
-                      color: Colors.white24,
-                      size: 22,
-                    ),
-                    onPressed: widget.onDismiss,
-                  ),
           ),
         ],
       ),
