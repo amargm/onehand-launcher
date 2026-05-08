@@ -137,11 +137,13 @@ class AppGrid extends ConsumerWidget {
                 if (replace != null) {
                   ref.read(pinnedAppsProvider.notifier).unpin(replace);
                 }
-                ref.read(pinnedAppsProvider.notifier).pin(pkg, index: slotIndex);
+                ref
+                    .read(pinnedAppsProvider.notifier)
+                    .pin(pkg, index: slotIndex);
               },
             ),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
       ),
     );
   }

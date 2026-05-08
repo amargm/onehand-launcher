@@ -71,8 +71,8 @@ class AppDock extends ConsumerWidget {
         opaque: false,
         barrierColor: Colors.transparent,
         pageBuilder: (_, __, ___) => const SearchOverlay(),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
       ),
     );
   }

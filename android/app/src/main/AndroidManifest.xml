@@ -1,9 +1,36 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Required to list all installed apps on Android 11+ -->
+    <!-- ── Permissions ──────────────────────────────────────────────────── -->
+
+    <!-- List & query every installed app (Android 11+ package visibility) -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-    <!-- Required to set wallpaper -->
+
+    <!-- Allow expanding/collapsing the status bar (quick-settings access) -->
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
+    <!-- Allow setting the wallpaper from settings -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
+
+    <!-- ── Explicit package queries (Android 11+ visibility) ─────────────
+         Without this block, PackageManager won't return launcher-intent apps
+         even with QUERY_ALL_PACKAGES declared on some OEM builds. -->
+    <queries>
+        <!-- All apps with a launcher icon (home screen grid) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <!-- Other home/launcher apps (for default-home chooser) -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.HOME" />
+        </intent>
+        <!-- Text-processing actions (Flutter engine requirement) -->
+        <intent>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
 
     <application
         android:label="One-Handed"
@@ -18,38 +45,29 @@
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:resumeWhilePausing="true"
+            android:stateNotNeeded="true">
             <meta-data
-              android:name="io.flutter.embedding.android.NormalTheme"
-              android:resource="@style/NormalTheme"
-              />
-            <!-- Standard launcher intent -->
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme" />
+            <!-- App drawer / standard launcher shortcut -->
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-            <!-- HOME category — makes this app appear as a launcher option -->
+            <!-- HOME category — registers this activity as a home screen -->
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.HOME"/>
-                <category android:name="android.intent.category.DEFAULT"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- Flutter embedding metadata — do not remove -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
     </application>
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
 
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
-    <queries>
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
-    </queries>
 </manifest>
+

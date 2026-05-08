@@ -14,9 +14,6 @@ dependencies:
   # State management
   flutter_riverpod: ^2.6.1
 
-  # Installed apps query & launch (Android only)
-  device_apps: ^2.2.0
-
   # Persist settings (accent color, folders)
   shared_preferences: ^2.3.5
 

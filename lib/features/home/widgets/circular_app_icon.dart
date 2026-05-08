@@ -1,12 +1,12 @@
 import 'dart:typed_data';
 
-import 'package:device_apps/device_apps.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/models/app_info.dart';
 import '../../../core/providers/folders_provider.dart';
+import '../../../core/services/apps_service.dart';
 
 /// A single circular app icon with label beneath.
 /// Long-press opens "Add to folder" context menu.
@@ -134,9 +134,9 @@ class CircularAppIcon extends ConsumerWidget {
     );
   }
 
-  /// Launch an app by package name via device_apps.
+  /// Launch an app by package name via the platform channel.
   static Future<void> launch(String packageName) async {
-    await DeviceApps.openApp(packageName);
+    await AppsService.openApp(packageName);
   }
 }
 
