@@ -165,12 +165,13 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
   @override
   Widget build(BuildContext context) {
     final enabled = ref.watch(contextItemsProvider);
-    final accent  = Theme.of(context).colorScheme.primary;
+    final accent = Theme.of(context).colorScheme.primary;
 
-    final chips = ContextItemType.values
-        .where((t) => enabled.contains(t))
-        .map((t) => _iconFor(t, accent))
-        .toList();
+    final chips =
+        ContextItemType.values
+            .where((t) => enabled.contains(t))
+            .map((t) => _iconFor(t, accent))
+            .toList();
 
     final showMedia = _headphones && _mediaApps.isNotEmpty;
     if (chips.isEmpty && !showMedia) return const SizedBox.shrink();
