@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/settings_provider.dart';
 import '../home/widgets/circular_app_icon.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -89,6 +90,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   @override
   Widget build(BuildContext context) {
     final appsAsync = ref.watch(appsProvider);
+    final rightHanded = ref.watch(rightHandedProvider);
     final mq = MediaQuery.of(context);
     final accent = Theme.of(context).colorScheme.primary;
 
@@ -158,6 +160,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                                       ? all.take(32).toList()
                                       : results,
                               accent: accent,
+                              rightHanded: rightHanded,
                               pickMode: widget.pickMode,
                               onAppPicked: widget.onAppPicked,
                               onDismiss: _dismiss,
@@ -223,6 +226,7 @@ class _TwoRowResults extends StatelessWidget {
   const _TwoRowResults({
     required this.results,
     required this.accent,
+    required this.rightHanded,
     required this.pickMode,
     required this.onAppPicked,
     required this.onDismiss,
@@ -230,6 +234,7 @@ class _TwoRowResults extends StatelessWidget {
 
   final List<AppInfo> results;
   final Color accent;
+  final bool rightHanded;
   final bool pickMode;
   final void Function(String)? onAppPicked;
   final VoidCallback onDismiss;
@@ -247,8 +252,10 @@ class _TwoRowResults extends StatelessWidget {
         bottom: results[i],
       ));
     }
-    // Most relevant pair (results[0]) is col[0] → leftmost, immediately visible
-    return cols;
+    // Right-handed: best match (results[0]) should be rightmost so the thumb
+    // reaches it first → reverse the column list so col[0] is at the right end.
+    // Left-handed: best match stays leftmost (natural scroll-from-left reading).
+    return rightHanded ? cols.reversed.toList() : cols;
   }
 
   void _handleTap(BuildContext context, String pkg) {
@@ -287,6 +294,10 @@ class _TwoRowResults extends StatelessWidget {
           height: _gridH,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
+            // Right-handed: reverse=true so the list starts at the right edge
+            // (where the thumb rests), showing the best match immediately.
+            // Left-handed: reverse=false — best match is at the left.
+            reverse: rightHanded,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: cols.length,
             itemBuilder: (ctx, i) {

@@ -94,99 +94,123 @@ class _AppDockState extends ConsumerState<AppDock> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Folder panel ───────────────────────────────────────────────
-          // Appears above the outer shell as a separate rounded rectangle.
-          // AnimatedSize grows/shrinks it; AnimatedSwitcher cross-fades content.
+          // AnimatedSize handles height 0→full (same pattern as context shell).
+          // AnimatedOpacity fades content independently — no AnimatedSwitcher
+          // which would fight AnimatedSize and cause a pop on close.
           AnimatedSize(
-            duration: const Duration(milliseconds: 320),
-            curve: Curves.easeInOutCubic,
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 220),
-              child:
-                  activeFolder != null
-                      ? _FolderPanel(
-                        key: ValueKey(activeFolder.id),
-                        folder: activeFolder,
-                        onClose: () => setState(() => _activeFolderId = null),
-                      )
-                      : const SizedBox.shrink(key: ValueKey('no-folder')),
-            ),
-          ),
-          if (activeFolder != null) const SizedBox(height: 8),
-
-          // ── Outer shell + inner dock ────────────────────────────────────
-          // AnimatedContainer animates padding / color / border simultaneously
-          // at 700 ms with easeInOutQuart — slow, luxurious, no pop.
-          AnimatedContainer(
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeInOutQuart,
-            // Outer shell invisible when disconnected:
-            //   padding=0 / color=transparent / border=transparent
-            padding: headphones ? const EdgeInsets.all(8) : EdgeInsets.zero,
-            decoration: BoxDecoration(
-              color: headphones ? const Color(0xFF0D0D0D) : Colors.transparent,
-              borderRadius: BorderRadius.circular(40),
-              border: Border.all(
-                color:
-                    headphones
-                        ? Colors.white.withValues(alpha: 0.06)
-                        : Colors.transparent,
-              ),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // ── Context shell ─────────────────────────────────────────
-                // AnimatedSize handles height 0→full.
-                // AnimatedOpacity independently fades content in/out.
-                // Avoid AnimatedSwitcher here — it remeasures both children
-                // simultaneously which fights AnimatedSize and feels abrupt.
-                AnimatedSize(
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeInOutQuart,
-                  child:
-                      headphones
-                          ? AnimatedOpacity(
-                            opacity: 1.0,
-                            duration: const Duration(milliseconds: 500),
-                            curve: Curves.easeIn,
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _ContextShellRow(),
-                                SizedBox(height: 6),
-                              ],
-                            ),
-                          )
-                          : AnimatedOpacity(
-                            opacity: 0.0,
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeOut,
-                            child: const Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _ContextShellRow(),
-                                SizedBox(height: 6),
-                              ],
-                            ),
+            child:
+                activeFolder != null
+                    ? AnimatedOpacity(
+                      opacity: 1.0,
+                      duration: const Duration(milliseconds: 500),
+                      curve: Curves.easeIn,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _FolderPanel(
+                            key: ValueKey(activeFolder.id),
+                            folder: activeFolder,
+                            onClose:
+                                () => setState(() => _activeFolderId = null),
                           ),
-                ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    )
+                    : AnimatedOpacity(
+                      opacity: 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                      child: const SizedBox.shrink(),
+                    ),
+          ),
 
-                // ── Inner dock — always visible ───────────────────────────
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 14,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: dockRow,
-                  ),
+          // ── Outer shell + inner dock ────────────────────────────────────
+          // Center + AnimatedContainer: outer shell is centred so it wraps
+          // the inner dock tightly (no full-width stretch).
+          Center(
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeInOutQuart,
+              padding: headphones ? const EdgeInsets.all(8) : EdgeInsets.zero,
+              decoration: BoxDecoration(
+                color:
+                    headphones ? const Color(0xFF0D0D0D) : Colors.transparent,
+                borderRadius: BorderRadius.circular(40),
+                border: Border.all(
+                  color:
+                      headphones
+                          ? Colors.white.withValues(alpha: 0.06)
+                          : Colors.transparent,
                 ),
-              ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Context shell ─────────────────────────────────────────
+                  // AnimatedSize handles height 0→full.
+                  // AnimatedOpacity independently fades content in/out.
+                  // Avoid AnimatedSwitcher here — it remeasures both children
+                  // simultaneously which fights AnimatedSize and feels abrupt.
+                  AnimatedSize(
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeInOutQuart,
+                    child:
+                        headphones
+                            ? AnimatedOpacity(
+                              opacity: 1.0,
+                              duration: const Duration(milliseconds: 500),
+                              curve: Curves.easeIn,
+                              child: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _ContextShellRow(),
+                                  SizedBox(height: 6),
+                                ],
+                              ),
+                            )
+                            : AnimatedOpacity(
+                              opacity: 0.0,
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeOut,
+                              child: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _ContextShellRow(),
+                                  SizedBox(height: 6),
+                                ],
+                              ),
+                            ),
+                  ),
+
+                  // ── Inner dock ────────────────────────────────────────────
+                  // IntrinsicWidth: shrinks to the natural width of its
+                  // children (circles + spacing) — no full-width stretch.
+                  IntrinsicWidth(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 14,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: dockRow
+                            .expand(
+                              (c) => [c, const SizedBox(width: 16)],
+                            )
+                            .toList()
+                          ..removeLast(), // remove trailing SizedBox
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
