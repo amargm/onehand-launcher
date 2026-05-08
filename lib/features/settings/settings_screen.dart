@@ -104,6 +104,10 @@ class SettingsScreen extends ConsumerWidget {
                 (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
           ),
 
+          const SizedBox(height: 8),
+
+          _HandednessTile(),
+
           const SizedBox(height: 24),
 
           // ── Context indicators ──────────────────────────────────────────
@@ -578,6 +582,104 @@ class _ToggleTile extends ConsumerWidget {
           ),
           Switch(value: value, onChanged: onChanged, activeColor: accent),
         ],
+      ),
+    );
+  }
+}
+
+// ── Handedness tile ────────────────────────────────────────────────────────
+
+class _HandednessTile extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rightHanded = ref.watch(rightHandedProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.back_hand_outlined, color: Colors.white54, size: 20),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              'Handedness',
+              style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Segmented control
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _HandBtn(
+                  label: '← Left',
+                  selected: !rightHanded,
+                  accent: accent,
+                  onTap: () =>
+                      ref.read(rightHandedProvider.notifier).set(false),
+                ),
+                _HandBtn(
+                  label: 'Right →',
+                  selected: rightHanded,
+                  accent: accent,
+                  onTap: () =>
+                      ref.read(rightHandedProvider.notifier).set(true),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HandBtn extends StatelessWidget {
+  const _HandBtn({
+    required this.label,
+    required this.selected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: selected ? accent.withValues(alpha: 0.5) : Colors.transparent,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.sora(
+            fontSize: 12,
+            color: selected ? accent : Colors.white38,
+            fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
+          ),
+        ),
       ),
     );
   }

@@ -4,9 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
 
-const _kAccentColorKey = 'accent_color';
+const _kAccentColorKey   = 'accent_color';
 const _kShowFolderLabels = 'show_folder_labels';
-const _kShowSearchLabel = 'show_search_label';
+const _kShowSearchLabel  = 'show_search_label';
+const _kRightHanded      = 'right_handed';
 
 /// Injected at app startup — see main.dart.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
@@ -74,3 +75,12 @@ class _BoolNotifier extends StateNotifier<bool> {
     _prefs.setBool(_key, value);
   }
 }
+
+// ── Handedness ─────────────────────────────────────────────────────────────
+
+/// `true` = right-handed (search rightmost, default).
+/// `false` = left-handed (search leftmost).
+final rightHandedProvider = StateNotifierProvider<_BoolNotifier, bool>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _BoolNotifier(prefs, _kRightHanded, defaultValue: true);
+});

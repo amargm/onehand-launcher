@@ -16,10 +16,38 @@ class AppDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final folders = ref.watch(foldersProvider);
+    final folders          = ref.watch(foldersProvider);
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
-    final showSearchLabel = ref.watch(showSearchLabelProvider);
-    final accent = Theme.of(context).colorScheme.primary;
+    final showSearchLabel  = ref.watch(showSearchLabelProvider);
+    final rightHanded      = ref.watch(rightHandedProvider);
+    final accent           = Theme.of(context).colorScheme.primary;
+
+    final searchBtn = _DockButton(
+      label: 'Search',
+      icon: Icons.search_rounded,
+      color: Colors.white54,
+      showLabel: showSearchLabel,
+      onTap: () => _openSearch(context),
+    );
+
+    final folderWidgets = <Widget>[];
+    for (int i = 0; i < folders.length; i++) {
+      folderWidgets.add(
+        _DockButton(
+          label: folders[i].name,
+          icon: kFolderIcons[folders[i].iconKey] ?? Icons.folder_rounded,
+          color: accent.withValues(alpha: 0.85),
+          showLabel: showFolderLabels,
+          onTap: () => _openFolder(context, folders[i]),
+        ),
+      );
+      if (i < folders.length - 1) folderWidgets.add(const SizedBox(width: 18));
+    }
+
+    // Right-handed: folders … search  |  Left-handed: search … folders
+    final rowChildren = rightHanded
+        ? [...folderWidgets, const SizedBox(width: 18), searchBtn]
+        : [searchBtn, const SizedBox(width: 18), ...folderWidgets];
 
     return Center(
       child: Padding(
@@ -33,28 +61,7 @@ class AppDock extends ConsumerWidget {
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                for (int i = 0; i < folders.length; i++) ...[
-                  _DockButton(
-                    label: folders[i].name,
-                    icon:
-                        kFolderIcons[folders[i].iconKey] ??
-                        Icons.folder_rounded,
-                    color: accent.withValues(alpha: 0.85),
-                    showLabel: showFolderLabels,
-                    onTap: () => _openFolder(context, folders[i]),
-                  ),
-                  if (i < folders.length - 1) const SizedBox(width: 18),
-                ],
-                const SizedBox(width: 18),
-                _DockButton(
-                  label: 'Search',
-                  icon: Icons.search_rounded,
-                  color: Colors.white54,
-                  showLabel: showSearchLabel,
-                  onTap: () => _openSearch(context),
-                ),
-              ],
+              children: rowChildren,
             ),
           ),
         ),
