@@ -2,18 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/constants/folder_icons.dart';
 import '../../../core/models/app_folder.dart';
 import '../../../core/providers/folders_provider.dart';
+import '../../../core/providers/settings_provider.dart';
 import '../../folder/folder_screen.dart';
 import '../../search/search_overlay.dart';
 
-/// The bottom concentric dock — three folder buttons and a search button.
+/// The bottom dock — folder buttons and a search button.
+/// Labels and icons are configurable via Settings.
 class AppDock extends ConsumerWidget {
   const AppDock({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final folders = ref.watch(foldersProvider);
+    final showFolderLabels = ref.watch(showFolderLabelsProvider);
+    final showSearchLabel = ref.watch(showSearchLabelProvider);
     final accent = Theme.of(context).colorScheme.primary;
 
     return Center(
@@ -32,8 +37,11 @@ class AppDock extends ConsumerWidget {
                 for (int i = 0; i < folders.length; i++) ...[
                   _DockButton(
                     label: folders[i].name,
-                    icon: Icons.folder_rounded,
+                    icon:
+                        kFolderIcons[folders[i].iconKey] ??
+                        Icons.folder_rounded,
                     color: accent.withValues(alpha: 0.85),
+                    showLabel: showFolderLabels,
                     onTap: () => _openFolder(context, folders[i]),
                   ),
                   if (i < folders.length - 1) const SizedBox(width: 18),
@@ -43,6 +51,7 @@ class AppDock extends ConsumerWidget {
                   label: 'Search',
                   icon: Icons.search_rounded,
                   color: Colors.white54,
+                  showLabel: showSearchLabel,
                   onTap: () => _openSearch(context),
                 ),
               ],
@@ -83,12 +92,14 @@ class _DockButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.color,
+    required this.showLabel,
     required this.onTap,
   });
 
   final String label;
   final IconData icon;
   final Color color;
+  final bool showLabel;
   final VoidCallback onTap;
 
   @override
@@ -111,15 +122,17 @@ class _DockButton extends StatelessWidget {
             ),
             child: Icon(icon, color: color, size: 22),
           ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            style: GoogleFonts.sora(
-              fontSize: 9,
-              color: Colors.white54,
-              letterSpacing: 0.3,
+          if (showLabel) ...[
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: GoogleFonts.sora(
+                fontSize: 9,
+                color: Colors.white54,
+                letterSpacing: 0.3,
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

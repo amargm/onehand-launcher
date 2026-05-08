@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/constants/folder_icons.dart';
 import '../../core/models/app_folder.dart';
 import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../home/widgets/circular_app_icon.dart';
+import '../search/search_overlay.dart';
 
-/// Displays apps inside a dock folder. Long-press an app to remove it.
+/// Displays apps inside a dock folder.
+/// Tap "Add app" to add via search. Long-press an app to remove it.
 class FolderScreen extends ConsumerWidget {
   const FolderScreen({super.key, required this.folder});
 
@@ -18,6 +21,7 @@ class FolderScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appsAsync = ref.watch(appsProvider);
     final accent = Theme.of(context).colorScheme.primary;
+    final folderIcon = kFolderIcons[folder.iconKey] ?? Icons.folder_rounded;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -34,7 +38,7 @@ class FolderScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.folder_rounded, color: accent, size: 18),
+                    Icon(folderIcon, color: accent, size: 18),
                     const SizedBox(width: 8),
                     Text(
                       folder.name,
@@ -55,7 +59,39 @@ class FolderScreen extends ConsumerWidget {
                   style: GoogleFonts.sora(fontSize: 10, color: Colors.white24),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+
+                // ── Add app button ────────────────────────────────────────
+                GestureDetector(
+                  onTap: () => _addApp(context, ref),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: accent.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.3),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, color: accent, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Add app',
+                          style: GoogleFonts.sora(fontSize: 12, color: accent),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 // ── App grid ─────────────────────────────────────────────
                 Expanded(
@@ -100,7 +136,7 @@ class FolderScreen extends ConsumerWidget {
                               ),
                               const SizedBox(height: 6),
                               Text(
-                                'Long-press any app on the home screen\nto add it here.',
+                                'Tap "Add app" above to fill this folder.',
                                 textAlign: TextAlign.center,
                                 style: GoogleFonts.sora(
                                   color: Colors.white12,
@@ -147,6 +183,25 @@ class FolderScreen extends ConsumerWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  void _addApp(BuildContext context, WidgetRef ref) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked: (pkg) {
+                ref.read(foldersProvider.notifier).addApp(folder.id, pkg);
+                Navigator.of(context).pop();
+              },
+            ),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
       ),
     );
   }

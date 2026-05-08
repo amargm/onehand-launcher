@@ -36,9 +36,24 @@ class FoldersNotifier extends StateNotifier<List<AppFolder>> {
   }
 
   static List<AppFolder> _defaults() => [
-    AppFolder(id: const Uuid().v4(), name: 'Work', packageNames: []),
-    AppFolder(id: const Uuid().v4(), name: 'Social', packageNames: []),
-    AppFolder(id: const Uuid().v4(), name: 'Media', packageNames: []),
+    AppFolder(
+      id: const Uuid().v4(),
+      name: 'Work',
+      iconKey: 'work',
+      packageNames: [],
+    ),
+    AppFolder(
+      id: const Uuid().v4(),
+      name: 'Social',
+      iconKey: 'social',
+      packageNames: [],
+    ),
+    AppFolder(
+      id: const Uuid().v4(),
+      name: 'Media',
+      iconKey: 'media',
+      packageNames: [],
+    ),
   ];
 
   void _persist() {
@@ -52,6 +67,14 @@ class FoldersNotifier extends StateNotifier<List<AppFolder>> {
     state = [
       for (final f in state)
         if (f.id == id) f.copyWith(name: newName) else f,
+    ];
+    _persist();
+  }
+
+  void setFolderIcon(String id, String iconKey) {
+    state = [
+      for (final f in state)
+        if (f.id == id) f.copyWith(iconKey: iconKey) else f,
     ];
     _persist();
   }

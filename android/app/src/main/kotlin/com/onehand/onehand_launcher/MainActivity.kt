@@ -1,12 +1,15 @@
 package com.onehand.onehand_launcher
 
 import android.app.role.RoleManager
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
@@ -59,6 +62,7 @@ class MainActivity : FlutterActivity() {
                     requestDefaultLauncher()
                     result.success(null)
                 }
+                "isHeadphoneConnected" -> result.success(isHeadphoneConnected())
                 else -> result.notImplemented()
             }
         }
@@ -140,6 +144,22 @@ class MainActivity : FlutterActivity() {
                     flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 },
             )
+        }
+    }
+
+    // ── Headphone detection ────────────────────────────────────────────────
+    private fun isHeadphoneConnected(): Boolean {
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
+                device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
+                device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
+                device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
+            }
+        } else {
+            @Suppress("DEPRECATION")
+            am.isWiredHeadsetOn || am.isBluetoothA2dpOn
         }
     }
 

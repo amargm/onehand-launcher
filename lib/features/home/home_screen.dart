@@ -6,7 +6,6 @@ import '../../core/providers/apps_provider.dart';
 import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
 import 'widgets/app_dock.dart';
-import 'widgets/app_grid.dart';
 import 'widgets/context_section.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -103,11 +102,6 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
 
             // ── Negative space / wallpaper zone ─────────────────────────
             const Spacer(),
-
-            // ── Fixed 4×2 app grid — bottom third ───────────────────────
-            const AppGrid(),
-
-            const SizedBox(height: 16),
 
             // ── Concentric dock ──────────────────────────────────────────
             const AppDock(),

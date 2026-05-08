@@ -3,7 +3,9 @@ import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/constants/folder_icons.dart';
 import '../../core/models/app_folder.dart';
+import '../../core/providers/context_settings_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/theme/app_theme.dart';
@@ -78,6 +80,36 @@ class SettingsScreen extends ConsumerWidget {
                   context,
                 ).push(MaterialPageRoute(builder: (_) => const LockScreen())),
           ),
+
+          const SizedBox(height: 24),
+
+          // ── Dock ────────────────────────────────────────────────────────
+          _SectionHeader('Dock'),
+
+          _ToggleTile(
+            icon: Icons.label_outline_rounded,
+            label: 'Show folder labels',
+            value: ref.watch(showFolderLabelsProvider),
+            onChanged:
+                (_) => ref.read(showFolderLabelsProvider.notifier).toggle(),
+          ),
+
+          const SizedBox(height: 8),
+
+          _ToggleTile(
+            icon: Icons.search_rounded,
+            label: 'Show "Search" label',
+            value: ref.watch(showSearchLabelProvider),
+            onChanged:
+                (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Context indicators ──────────────────────────────────────────
+          _SectionHeader('Context indicators'),
+
+          _ContextItemsSection(),
 
           const SizedBox(height: 24),
 
@@ -281,14 +313,132 @@ class _FolderTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _SettingsTile(
-      icon: Icons.folder_rounded,
-      label: folder.name,
-      subtitle: '${folder.packageNames.length} apps',
-      trailing: IconButton(
-        icon: const Icon(Icons.edit_outlined, color: Colors.white38, size: 18),
-        onPressed: () => _renameFolder(context, ref),
+    final accent = Theme.of(context).colorScheme.primary;
+    final folderIcon = kFolderIcons[folder.iconKey] ?? Icons.folder_rounded;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
       ),
+      child: Row(
+        children: [
+          // Tappable icon — opens icon picker
+          GestureDetector(
+            onTap: () => _pickIcon(context, ref),
+            child: Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accent.withValues(alpha: 0.10),
+                border: Border.all(
+                  color: accent.withValues(alpha: 0.25),
+                  width: 1,
+                ),
+              ),
+              child: Icon(folderIcon, color: accent, size: 18),
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  folder.name,
+                  style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+                ),
+                Text(
+                  '${folder.packageNames.length} apps  ·  tap icon to change',
+                  style: GoogleFonts.sora(fontSize: 10, color: Colors.white38),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(
+              Icons.edit_outlined,
+              color: Colors.white38,
+              size: 18,
+            ),
+            onPressed: () => _renameFolder(context, ref),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _pickIcon(BuildContext context, WidgetRef ref) {
+    final accent = Theme.of(context).colorScheme.primary;
+    showDialog(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+            ),
+            title: Text(
+              'Choose icon',
+              style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
+            ),
+            content: SizedBox(
+              width: 280,
+              child: GridView.builder(
+                shrinkWrap: true,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 5,
+                  mainAxisSpacing: 10,
+                  crossAxisSpacing: 10,
+                ),
+                itemCount: kFolderIcons.length,
+                itemBuilder: (_, i) {
+                  final entry = kFolderIcons.entries.elementAt(i);
+                  final isSelected = entry.key == folder.iconKey;
+                  return GestureDetector(
+                    onTap: () {
+                      ref
+                          .read(foldersProvider.notifier)
+                          .setFolderIcon(folder.id, entry.key);
+                      Navigator.of(ctx).pop();
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            isSelected
+                                ? accent.withValues(alpha: 0.15)
+                                : Colors.white.withValues(alpha: 0.04),
+                        border: Border.all(
+                          color:
+                              isSelected
+                                  ? accent.withValues(alpha: 0.5)
+                                  : Colors.transparent,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Icon(
+                        entry.value,
+                        color: isSelected ? accent : Colors.white38,
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.sora(color: Colors.white38),
+                ),
+              ),
+            ],
+          ),
     );
   }
 
@@ -353,6 +503,82 @@ class _FolderTile extends ConsumerWidget {
               ),
             ],
           ),
+    );
+  }
+}
+
+// ── Context items section ──────────────────────────────────────────────────
+
+class _ContextItemsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(contextItemsProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          for (final item in ContextItemType.values)
+            SwitchListTile(
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                item.displayLabel,
+                style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+              ),
+              activeColor: accent,
+              value: enabled.contains(item),
+              onChanged:
+                  (_) => ref.read(contextItemsProvider.notifier).toggle(item),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Toggle tile ────────────────────────────────────────────────────────────
+
+class _ToggleTile extends ConsumerWidget {
+  const _ToggleTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.onChanged,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white54, size: 20),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+            ),
+          ),
+          Switch(value: value, onChanged: onChanged, activeColor: accent),
+        ],
+      ),
     );
   }
 }

@@ -16,9 +16,12 @@ class LauncherService {
   }
 
   /// Opens the system UI that lets the user choose this app as home.
-  /// - Android 10+: in-app RoleManager dialog
-  /// - Android 8–9: Settings → Choose default home app
   static Future<void> requestDefaultLauncher() async {
     await _channel.invokeMethod<void>('requestDefaultLauncher');
+  }
+
+  /// Returns `true` when wired or Bluetooth headphones are connected.
+  static Future<bool> isHeadphoneConnected() async {
+    return await _channel.invokeMethod<bool>('isHeadphoneConnected') ?? false;
   }
 }
