@@ -41,6 +41,8 @@ class _AppDockState extends ConsumerState<AppDock> {
     final folders = ref.watch(foldersProvider);
     final rightHanded = ref.watch(rightHandedProvider);
     final headphones = ref.watch(headphoneProvider);
+    final showFolderLabels = ref.watch(showFolderLabelsProvider);
+    final showSearchLabel = ref.watch(showSearchLabelProvider);
     final accent = Theme.of(context).colorScheme.primary;
 
     // If the active folder was removed, clear selection.
@@ -53,6 +55,8 @@ class _AppDockState extends ConsumerState<AppDock> {
       icon: Icons.search_rounded,
       isSearch: true,
       accent: accent,
+      label: 'Search',
+      showLabel: showSearchLabel,
       onTap: () {
         setState(() => _activeFolderId = null);
         _openSearch(context);
@@ -66,6 +70,8 @@ class _AppDockState extends ConsumerState<AppDock> {
                 icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
                 isSearch: false,
                 accent: accent,
+                label: f.name,
+                showLabel: showFolderLabels,
                 // Toggle: tap same folder to close, different folder to open.
                 onTap:
                     () => setState(
@@ -137,25 +143,32 @@ class _AppDockState extends ConsumerState<AppDock> {
                 AnimatedSize(
                   duration: const Duration(milliseconds: 700),
                   curve: Curves.easeInOutQuart,
-                  child: headphones
-                      ? AnimatedOpacity(
-                          opacity: 1.0,
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeIn,
-                          child: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [_ContextShellRow(), SizedBox(height: 6)],
+                  child:
+                      headphones
+                          ? AnimatedOpacity(
+                            opacity: 1.0,
+                            duration: const Duration(milliseconds: 500),
+                            curve: Curves.easeIn,
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _ContextShellRow(),
+                                SizedBox(height: 6),
+                              ],
+                            ),
+                          )
+                          : AnimatedOpacity(
+                            opacity: 0.0,
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeOut,
+                            child: const Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _ContextShellRow(),
+                                SizedBox(height: 6),
+                              ],
+                            ),
                           ),
-                        )
-                      : AnimatedOpacity(
-                          opacity: 0.0,
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOut,
-                          child: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [_ContextShellRow(), SizedBox(height: 6)],
-                          ),
-                        ),
                 ),
 
                 // ── Inner dock — always visible ───────────────────────────
@@ -446,53 +459,83 @@ class _ContextAppIcon extends StatelessWidget {
 // ── Inner dock circle button (56 px) ─────────────────────────────────────────
 /// Search: accent-filled with glow shadow.
 /// Folders: dark #121212 surface circle.
+/// Shows a text label below the circle when [showLabel] is true.
 class _DockCircle extends StatelessWidget {
   const _DockCircle({
     required this.icon,
     required this.isSearch,
     required this.accent,
+    required this.label,
+    required this.showLabel,
     required this.onTap,
   });
 
   final IconData icon;
   final bool isSearch;
   final Color accent;
+  final String label;
+  final bool showLabel;
   final VoidCallback onTap;
 
   static const double _size = 56;
 
   @override
   Widget build(BuildContext context) {
+    final circle = Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isSearch ? accent : const Color(0xFF121212),
+        boxShadow:
+            isSearch
+                ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.30),
+                    blurRadius: 20,
+                    spreadRadius: 0,
+                  ),
+                ]
+                : null,
+        border:
+            isSearch
+                ? null
+                : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Icon(
+        icon,
+        color: isSearch ? Colors.white : Colors.white60,
+        size: 24,
+      ),
+    );
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        width: _size,
-        height: _size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: isSearch ? accent : const Color(0xFF121212),
-          boxShadow:
-              isSearch
-                  ? [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.30),
-                      blurRadius: 20,
-                      spreadRadius: 0,
+      child:
+          showLabel
+              ? Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  circle,
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: _size + 8,
+                    child: Text(
+                      label,
+                      style: GoogleFonts.sora(
+                        fontSize: 9,
+                        color: Colors.white38,
+                        letterSpacing: 0.3,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
                     ),
-                  ]
-                  : null,
-          border:
-              isSearch
-                  ? null
-                  : Border.all(color: Colors.white.withValues(alpha: 0.08)),
-        ),
-        child: Icon(
-          icon,
-          color: isSearch ? Colors.white : Colors.white60,
-          size: 24,
-        ),
-      ),
+                  ),
+                ],
+              )
+              : circle,
     );
   }
 }
