@@ -1,4 +1,5 @@
-﻿import 'dart:ui';
+﻿import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -32,6 +33,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   String _query = '';
+  Timer? _debounce;
   late final AnimationController _animCtrl;
   late final Animation<double> _fade;
 
@@ -52,6 +54,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _animCtrl.dispose();
@@ -160,9 +163,21 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                         focusNode: _focusNode,
                         accent: accent,
                         pickMode: widget.pickMode,
-                        onChanged:
-                            (v) =>
-                                setState(() => _query = v.trim().toLowerCase()),
+                        onChanged: (v) {
+                          // Debounce: wait 200 ms after the user stops typing
+                          // before filtering/sorting 200+ apps.
+                          _debounce?.cancel();
+                          _debounce = Timer(
+                            const Duration(milliseconds: 200),
+                            () {
+                              if (mounted) {
+                                setState(
+                                  () => _query = v.trim().toLowerCase(),
+                                );
+                              }
+                            },
+                          );
+                        },
                         onClear: () {
                           _controller.clear();
                           setState(() => _query = '');

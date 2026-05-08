@@ -143,7 +143,9 @@ class CircularAppIcon extends ConsumerWidget {
 class _AppCircle extends StatelessWidget {
   const _AppCircle({required this.icon, required this.size});
 
-  final List<int>? icon;
+  /// Stored as [Uint8List] to match [AppInfo.icon] — avoids a redundant
+  /// .asUint8List() copy on every build frame.
+  final Uint8List? icon;
   final double size;
 
   @override
@@ -159,7 +161,7 @@ class _AppCircle extends StatelessWidget {
         child:
             icon != null
                 ? Image.memory(
-                  icon!.asUint8List(),
+                  icon!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _fallback(context),
                 )
@@ -173,9 +175,4 @@ class _AppCircle extends StatelessWidget {
     color: Theme.of(context).colorScheme.primary,
     size: size * 0.55,
   );
-}
-
-extension on List<int> {
-  Uint8List asUint8List() =>
-      this is Uint8List ? this as Uint8List : Uint8List.fromList(this);
 }

@@ -9,9 +9,10 @@ import '../../../core/models/app_folder.dart';
 import '../../../core/models/app_info.dart';
 import '../../../core/providers/context_settings_provider.dart';
 import '../../../core/providers/folders_provider.dart';
+import '../../../core/providers/headphone_provider.dart';
+import '../../../core/providers/media_apps_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/apps_service.dart';
-import '../../../core/services/launcher_service.dart';
 import '../../folder/folder_screen.dart';
 import '../../search/search_overlay.dart';
 
@@ -113,22 +114,16 @@ class _ContextMiniRow extends ConsumerStatefulWidget {
 
 class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
   late Timer _timer;
-  late DateTime _now;
-  bool _headphones = false;
-  List<AppInfo> _mediaApps = [];
-  bool _mediaLoading = false;
+  DateTime _now = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _now = DateTime.now();
-    _poll();
-    // Poll every 5s for responsive headphone detection
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
-        setState(() => _now = DateTime.now());
-        _poll();
-      }
+    // Tick once per minute — context chips only change at hour / day boundaries.
+    // Headphone state and media apps are driven reactively by Riverpod providers
+    // (headphoneProvider polls once every 5 s from one shared timer).
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
     });
   }
 
@@ -138,42 +133,19 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
     super.dispose();
   }
 
-  Future<void> _poll() async {
-    try {
-      final v = await LauncherService.isHeadphoneConnected();
-      if (!mounted) return;
-      if (v != _headphones) setState(() => _headphones = v);
-      // Load media apps lazily the first time headphones are detected
-      if (v && _mediaApps.isEmpty) _loadMediaApps();
-    } catch (_) {
-      // Ignore platform errors (emulator / audio service unavailable)
-    }
-  }
-
-  Future<void> _loadMediaApps() async {
-    if (_mediaLoading) return;
-    _mediaLoading = true;
-    try {
-      final apps = await AppsService.getMediaApps();
-      if (mounted) setState(() => _mediaApps = apps);
-    } catch (_) {
-      // fail silently — media row just won't appear
-    }
-    _mediaLoading = false;
-  }
-
   @override
   Widget build(BuildContext context) {
     final enabled = ref.watch(contextItemsProvider);
+    final headphones = ref.watch(headphoneProvider);
+    final mediaApps = ref.watch(mediaAppsProvider).valueOrNull ?? const [];
     final accent = Theme.of(context).colorScheme.primary;
 
-    final chips =
-        ContextItemType.values
-            .where((t) => enabled.contains(t))
-            .map((t) => _iconFor(t, accent))
-            .toList();
+    final chips = ContextItemType.values
+        .where((t) => enabled.contains(t))
+        .map((t) => _iconFor(t, accent, headphones))
+        .toList();
 
-    final showMedia = _headphones && _mediaApps.isNotEmpty;
+    final showMedia = headphones && mediaApps.isNotEmpty;
     if (chips.isEmpty && !showMedia) return const SizedBox.shrink();
 
     return Column(
@@ -184,16 +156,15 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: chips,
           ),
-        // When headphones connected: quick-launch strip for media/audio apps
         if (showMedia) ...[
           const SizedBox(height: 8),
           SizedBox(
             height: 36,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
-              itemCount: _mediaApps.length,
+              itemCount: mediaApps.length,
               separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => _MediaAppIcon(app: _mediaApps[i]),
+              itemBuilder: (_, i) => _MediaAppIcon(app: mediaApps[i]),
             ),
           ),
         ],
@@ -201,7 +172,7 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
     );
   }
 
-  Widget _iconFor(ContextItemType type, Color accent) {
+  Widget _iconFor(ContextItemType type, Color accent, bool headphones) {
     final h = _now.hour;
     final (IconData icon, bool active) = switch (type) {
       ContextItemType.time =>
@@ -211,7 +182,7 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
             ? (Icons.nightlight_rounded, true)
             : (Icons.bedtime_outlined, false),
       ContextItemType.headphone =>
-        _headphones
+        headphones
             ? (Icons.headphones_rounded, true)
             : (Icons.headphones_outlined, false),
       ContextItemType.day => (Icons.calendar_today_outlined, true),
@@ -223,7 +194,6 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
       width: 40,
       height: 32,
       decoration: BoxDecoration(
-        // Small chips: 8px radius per design spec
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(8),
       ),

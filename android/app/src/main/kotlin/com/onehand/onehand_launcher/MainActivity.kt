@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -16,11 +15,17 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
+import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
 
-    private val appsChannel   = "com.onehand.onehand_launcher/apps"
+    private val appsChannel     = "com.onehand.onehand_launcher/apps"
     private val launcherChannel = "com.onehand.onehand_launcher/launcher"
+
+    // Off-main-thread executor for icon-loading operations.
+    // Using a cached pool so concurrent getInstalledApps + getMediaApps calls
+    // don't block each other during first-launch warm-up.
+    private val executor = Executors.newCachedThreadPool()
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -32,10 +37,15 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "getInstalledApps" -> {
-                    try {
-                        result.success(getInstalledApps())
-                    } catch (e: Exception) {
-                        result.error("ERROR", e.message, null)
+                    // Run on background thread: querying PackageManager and
+                    // PNG-compressing 100+ icons blocks the main thread.
+                    executor.execute {
+                        try {
+                            val apps = getInstalledApps()
+                            runOnUiThread { result.success(apps) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("ERROR", e.message, null) }
+                        }
                     }
                 }
                 "openApp" -> {
@@ -52,10 +62,13 @@ class MainActivity : FlutterActivity() {
                     }
                 }
                 "getMediaApps" -> {
-                    try {
-                        result.success(getMediaApps())
-                    } catch (e: Exception) {
-                        result.error("ERROR", e.message, null)
+                    executor.execute {
+                        try {
+                            val apps = getMediaApps()
+                            runOnUiThread { result.success(apps) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("ERROR", e.message, null) }
+                        }
                     }
                 }
                 else -> result.notImplemented()
@@ -218,22 +231,20 @@ class MainActivity : FlutterActivity() {
     }
 
     // ── Helpers ────────────────────────────────────────────────────────────
-    private fun Drawable.toBytes(): ByteArray {
-        val bitmap = if (this is BitmapDrawable) {
-            this.bitmap
-        } else {
-            val bmp = Bitmap.createBitmap(
-                intrinsicWidth.coerceAtLeast(1),
-                intrinsicHeight.coerceAtLeast(1),
-                Bitmap.Config.ARGB_8888,
-            )
-            val canvas = Canvas(bmp)
-            setBounds(0, 0, canvas.width, canvas.height)
-            draw(canvas)
-            bmp
-        }
-        return ByteArrayOutputStream().also {
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+    /**
+     * Renders this Drawable into a 64×64 px PNG byte array.
+     *
+     * 64 px matches the largest icon display size in the UI (56 dp) while
+     * keeping data volume small — avoids sending 192×192 adaptive-icon bitmaps
+     * (which would be ~150 KB each) across the platform channel.
+     */
+    private fun Drawable.toBytes(sizePx: Int = 64): ByteArray {
+        val bmp = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bmp)
+        setBounds(0, 0, sizePx, sizePx)
+        draw(canvas)
+        return ByteArrayOutputStream().also { out ->
+            bmp.compress(Bitmap.CompressFormat.PNG, 100, out)
         }.toByteArray()
     }
 
