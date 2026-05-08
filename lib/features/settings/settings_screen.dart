@@ -5,11 +5,15 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/constants/folder_icons.dart';
 import '../../core/models/app_folder.dart';
+import '../../core/models/app_info.dart';
+import '../../core/providers/apps_provider.dart';
+import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/context_settings_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../lock_screen/lock_screen.dart';
+import '../search/search_overlay.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -116,7 +120,12 @@ class SettingsScreen extends ConsumerWidget {
           _ContextItemsSection(),
 
           const SizedBox(height: 24),
+          // ── Context shell apps ────────────────────────────────────────────
+          _SectionHeader('Context shell'),
 
+          _ContextShellAppsSection(),
+
+          const SizedBox(height: 24),
           // ── Folders ─────────────────────────────────────────────────────
           _SectionHeader('Dock Folders'),
 
@@ -776,6 +785,189 @@ class _SettingsTile extends StatelessWidget {
             if (trailing != null) trailing!,
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Context shell apps section ─────────────────────────────────────────────
+/// Shows 4 configurable slots for the outer context shell.
+/// Tap a filled slot to remove it; tap an empty slot to pick an app.
+class _ContextShellAppsSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final configured = ref.watch(contextShellAppsProvider);
+    final appsAsync = ref.watch(appsProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    final pkgMap = {
+      for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
+    };
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Description row
+          Row(
+            children: [
+              Icon(Icons.headphones_rounded, color: accent, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Shown when headphones or Bluetooth connected · max 4',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 12,
+                    color: Colors.white38,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // 4 slots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: List.generate(kContextShellMaxApps, (i) {
+              final pkg = i < configured.length ? configured[i] : null;
+              final app = pkg != null ? pkgMap[pkg] : null;
+
+              if (app != null) {
+                // ── Filled slot: show icon + remove badge ─────────────────
+                return GestureDetector(
+                  onTap: () => ref
+                      .read(contextShellAppsProvider.notifier)
+                      .remove(pkg!),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: const Color(0xFF1E1E1E),
+                              border: Border.all(
+                                color: accent.withValues(alpha: 0.30),
+                                width: 1.5,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: app.icon != null
+                                  ? Image.memory(
+                                      app.icon!,
+                                      fit: BoxFit.cover,
+                                      gaplessPlayback: true,
+                                    )
+                                  : Icon(
+                                      Icons.apps_rounded,
+                                      color: Colors.white54,
+                                      size: 24,
+                                    ),
+                            ),
+                          ),
+                          // ×  remove badge
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF0D0D0D),
+                                border: Border.all(color: Colors.white12),
+                              ),
+                              child: const Icon(
+                                Icons.close_rounded,
+                                color: Colors.white54,
+                                size: 11,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 5),
+                      SizedBox(
+                        width: 52,
+                        child: Text(
+                          app.appName,
+                          style: GoogleFonts.sora(
+                            fontSize: 8.5,
+                            color: Colors.white38,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              } else {
+                // ── Empty slot: tap to pick ───────────────────────────────
+                final canAdd = configured.length < kContextShellMaxApps;
+                return GestureDetector(
+                  onTap: canAdd ? () => _pickApp(context, ref) : null,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color:
+                                canAdd ? Colors.white24 : Colors.white10,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.add_rounded,
+                          color: canAdd ? Colors.white38 : Colors.white12,
+                          size: 22,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        canAdd ? 'Add' : '',
+                        style: GoogleFonts.sora(
+                          fontSize: 8.5,
+                          color: Colors.white24,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _pickApp(BuildContext context, WidgetRef ref) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder: (_, __, ___) => SearchOverlay(
+          pickMode: true,
+          onAppPicked: (pkg) =>
+              ref.read(contextShellAppsProvider.notifier).add(pkg),
+        ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
       ),
     );
   }
