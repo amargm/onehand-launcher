@@ -48,6 +48,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
     );
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _animCtrl.forward();
+    // Ensure keyboard appears as soon as the overlay animates in
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _focusNode.requestFocus(),
+    );
   }
 
   @override
@@ -146,7 +150,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                           }
                           return _TwoRowResults(
                             results: _query.isEmpty
-                                ? all.take(16).toList()
+                                ? all.take(32).toList()
                                 : results,
                             accent: accent,
                             pickMode: widget.pickMode,
@@ -224,8 +228,8 @@ class _TwoRowResults extends StatelessWidget {
         bottom: results[i],
       ));
     }
-    // Reverse: col[0] (most relevant pair) becomes rightmost
-    return cols.reversed.toList();
+    // Most relevant pair (results[0]) is col[0] → leftmost, immediately visible
+    return cols;
   }
 
   void _handleTap(BuildContext context, String pkg) {

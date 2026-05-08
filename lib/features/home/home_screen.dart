@@ -6,7 +6,6 @@ import '../../core/providers/apps_provider.dart';
 import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
 import 'widgets/app_dock.dart';
-import 'widgets/context_section.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -98,14 +97,7 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
             // ── Negative space / wallpaper zone ─────────────────────────
             const Spacer(),
 
-            // ── Context pills — just above dock, in the thumb zone ───────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: const ContextSection(),
-            ),
-            const SizedBox(height: 10),
-
-            // ── Concentric dock ──────────────────────────────────────────
+            // ── Unified dock (context row + action buttons) ───────────────
             const AppDock(),
 
             // ── "Set as default" banner (shown when not default) ─────────
