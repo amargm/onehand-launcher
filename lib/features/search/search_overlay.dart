@@ -1,14 +1,28 @@
+﻿import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
 import '../home/widgets/circular_app_icon.dart';
 
-/// Full-screen search overlay — slides up from the dock search button.
-/// In [pickMode] tapping an app calls [onAppPicked] instead of launching it.
+// ─────────────────────────────────────────────────────────────────────────────
+// SearchOverlay
+//
+// Full-screen blurred overlay. Search bar sits just above the keyboard.
+// Results are shown as a 2-row horizontal list directly above the search bar:
+//   • Most relevant result → bottom-right (closest to thumb)
+//   • Less relevant results → scroll left (bottom row), then top row right→left
+// ─────────────────────────────────────────────────────────────────────────────
+
 class SearchOverlay extends ConsumerStatefulWidget {
-  const SearchOverlay({super.key, this.pickMode = false, this.onAppPicked});
+  const SearchOverlay({
+    super.key,
+    this.pickMode = false,
+    this.onAppPicked,
+  });
 
   final bool pickMode;
   final void Function(String packageName)? onAppPicked;
@@ -17,163 +31,365 @@ class SearchOverlay extends ConsumerStatefulWidget {
   ConsumerState<SearchOverlay> createState() => _SearchOverlayState();
 }
 
-class _SearchOverlayState extends ConsumerState<SearchOverlay> {
+class _SearchOverlayState extends ConsumerState<SearchOverlay>
+    with SingleTickerProviderStateMixin {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   String _query = '';
+  late final AnimationController _animCtrl;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _animCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 220),
+    );
+    _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    _animCtrl.forward();
+  }
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
+    _animCtrl.dispose();
     super.dispose();
+  }
+
+  void _dismiss() {
+    _focusNode.unfocus();
+    _animCtrl.reverse().then((_) {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  // ── Relevance ranking ──────────────────────────────────────────────────────
+  List<AppInfo> _sortedResults(List<AppInfo> all) {
+    if (_query.isEmpty) return all;
+    final q = _query;
+    final matched = all.where((a) => a.appName.toLowerCase().contains(q)).toList();
+    matched.sort((a, b) => _score(a, q).compareTo(_score(b, q)));
+    return matched;
+  }
+
+  int _score(AppInfo app, String q) {
+    final name = app.appName.toLowerCase();
+    if (name == q) return 0;
+    if (name.startsWith(q)) return 1;
+    if (name.split(' ').any((w) => w.startsWith(q))) return 2;
+    return 3;
   }
 
   @override
   Widget build(BuildContext context) {
     final appsAsync = ref.watch(appsProvider);
     final mq = MediaQuery.of(context);
+    final accent = Theme.of(context).colorScheme.primary;
 
-    return Container(
-      height: mq.size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Color(0xFF0A0A0A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
-      ),
-      child: Column(
-        children: [
-          // ── Handle ─────────────────────────────────────────────────────
-          const SizedBox(height: 10),
-          Container(
-            width: 36,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white12,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // ── Search field ────────────────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: TextField(
-                controller: _controller,
-                autofocus: true,
-                style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
-                cursorColor: Theme.of(context).colorScheme.primary,
-                decoration: InputDecoration(
-                  hintText: 'Search apps…',
-                  hintStyle: GoogleFonts.sora(
-                    color: Colors.white38,
-                    fontSize: 14,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search_rounded,
-                    color: Colors.white24,
-                  ),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                onChanged:
-                    (v) => setState(() => _query = v.trim().toLowerCase()),
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Pick mode label
-          if (widget.pickMode)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Text(
-                'TAP AN APP TO PIN',
-                style: GoogleFonts.sora(
-                  fontSize: 10,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.primary.withValues(alpha: 0.7),
-                  letterSpacing: 2,
+    return FadeTransition(
+      opacity: _fade,
+      child: GestureDetector(
+        // Tap outside content → dismiss
+        onTap: _dismiss,
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          children: [
+            // ── Blurred dark background ──────────────────────────────────
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.62),
                 ),
               ),
             ),
 
-          // ── Results ─────────────────────────────────────────────────────
-          Expanded(
-            child: appsAsync.when(
-              loading:
-                  () => const Center(
-                    child: CircularProgressIndicator(strokeWidth: 1.5),
+            // ── Bottom-anchored content (search bar + results) ───────────
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: GestureDetector(
+                // Prevent taps on content from dismissing the overlay
+                onTap: () {},
+                behavior: HitTestBehavior.opaque,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    bottom: mq.viewInsets.bottom,
                   ),
-              error:
-                  (_, __) => Center(
-                    child: Text(
-                      'Error loading apps',
-                      style: GoogleFonts.sora(color: Colors.white38),
-                    ),
-                  ),
-              data: (apps) {
-                final filtered =
-                    _query.isEmpty
-                        ? apps
-                        : apps
-                            .where(
-                              (a) => a.appName.toLowerCase().contains(_query),
-                            )
-                            .toList();
-
-                if (filtered.isEmpty) {
-                  return Container(
-                    height: mq.size.height * 0.85,
-                    alignment: Alignment.center,
-                    child: Text(
-                      'No apps found',
-                      style: GoogleFonts.sora(
-                        color: Colors.white24,
-                        fontSize: 13,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // ── 2-row horizontal results ───────────────────────
+                      appsAsync.when(
+                        loading: () => const SizedBox(height: 160),
+                        error: (_, __) => const SizedBox(height: 160),
+                        data: (all) {
+                          final results = _sortedResults(all);
+                          if (results.isEmpty && _query.isNotEmpty) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 36),
+                              child: Center(
+                                child: Text(
+                                  'No apps found',
+                                  style: GoogleFonts.sora(
+                                    color: Colors.white24,
+                                    fontSize: 13,
+                                    letterSpacing: 0.4,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }
+                          return _TwoRowResults(
+                            results: _query.isEmpty
+                                ? all.take(16).toList()
+                                : results,
+                            accent: accent,
+                            pickMode: widget.pickMode,
+                            onAppPicked: widget.onAppPicked,
+                            onDismiss: _dismiss,
+                          );
+                        },
                       ),
-                    ),
-                  );
-                }
 
-                return GridView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
+                      // ── Search bar ─────────────────────────────────────
+                      _SearchBar(
+                        controller: _controller,
+                        focusNode: _focusNode,
+                        accent: accent,
+                        pickMode: widget.pickMode,
+                        onChanged: (v) =>
+                            setState(() => _query = v.trim().toLowerCase()),
+                        onClear: () {
+                          _controller.clear();
+                          setState(() => _query = '');
+                        },
+                        onDismiss: _dismiss,
+                      ),
+
+                      SizedBox(height: mq.padding.bottom + 8),
+                    ],
                   ),
-                  physics: const BouncingScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 4,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 8,
-                    childAspectRatio: 0.75,
-                  ),
-                  itemCount: filtered.length,
-                  itemBuilder: (ctx, i) {
-                    final app = filtered[i];
-                    return CircularAppIcon(
-                      app: app,
-                      size: 52,
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        if (widget.pickMode && widget.onAppPicked != null) {
-                          widget.onAppPicked!(app.packageName);
-                        } else {
-                          CircularAppIcon.launch(app.packageName);
-                        }
-                      },
-                    );
-                  },
-                );
-              },
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── 2-Row horizontal result list ──────────────────────────────────────────────
+//
+// Layout goal:
+//   results[0] = most relevant → bottom-right (rightmost visible column, bottom row)
+//   results[1] = second → rightmost column, top row
+//   results[2] = third  → second-from-right column, bottom row
+//   … and so on, scrolling LEFT for less relevant results.
+//
+// Achieved by:
+//   1. Grouping consecutive pairs into columns: col[i] = (top: results[2i+1], bottom: results[2i])
+//   2. Reversing the column list so col[0] (most relevant) is rightmost.
+// ─────────────────────────────────────────────────────────────────────────────
+class _TwoRowResults extends StatelessWidget {
+  const _TwoRowResults({
+    required this.results,
+    required this.accent,
+    required this.pickMode,
+    required this.onAppPicked,
+    required this.onDismiss,
+  });
+
+  final List<AppInfo> results;
+  final Color accent;
+  final bool pickMode;
+  final void Function(String)? onAppPicked;
+  final VoidCallback onDismiss;
+
+  static const double _iconSize = 50.0;
+  static const double _rowH = _iconSize + 20.0; // icon + label
+  static const double _gap = 10.0;
+  static const double _gridH = _rowH * 2 + _gap;
+
+  List<({AppInfo? top, AppInfo? bottom})> get _columns {
+    final cols = <({AppInfo? top, AppInfo? bottom})>[];
+    for (int i = 0; i < results.length; i += 2) {
+      cols.add((
+        top: (i + 1) < results.length ? results[i + 1] : null,
+        bottom: results[i],
+      ));
+    }
+    // Reverse: col[0] (most relevant pair) becomes rightmost
+    return cols.reversed.toList();
+  }
+
+  void _handleTap(BuildContext context, String pkg) {
+    onDismiss();
+    if (pickMode && onAppPicked != null) {
+      onAppPicked!(pkg);
+    } else {
+      CircularAppIcon.launch(pkg);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cols = _columns;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Pick mode label
+        if (pickMode)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              'TAP AN APP TO PIN',
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color: accent.withValues(alpha: 0.65),
+                letterSpacing: 2,
+              ),
             ),
           ),
 
-          SizedBox(height: mq.padding.bottom + 8),
+        SizedBox(
+          height: _gridH,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: cols.length,
+            itemBuilder: (ctx, i) {
+              final col = cols[i];
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 5),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Top row (less relevant of the pair)
+                    SizedBox(
+                      height: _rowH,
+                      child: col.top != null
+                          ? CircularAppIcon(
+                              app: col.top!,
+                              size: _iconSize,
+                              onTap: () =>
+                                  _handleTap(ctx, col.top!.packageName),
+                            )
+                          : const SizedBox(),
+                    ),
+                    SizedBox(height: _gap),
+                    // Bottom row (more relevant of the pair)
+                    SizedBox(
+                      height: _rowH,
+                      child: col.bottom != null
+                          ? CircularAppIcon(
+                              app: col.bottom!,
+                              size: _iconSize,
+                              onTap: () =>
+                                  _handleTap(ctx, col.bottom!.packageName),
+                            )
+                          : const SizedBox(),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+}
+
+// ── Search bar ────────────────────────────────────────────────────────────────
+class _SearchBar extends StatelessWidget {
+  const _SearchBar({
+    required this.controller,
+    required this.focusNode,
+    required this.accent,
+    required this.pickMode,
+    required this.onChanged,
+    required this.onClear,
+    required this.onDismiss,
+  });
+
+  final TextEditingController controller;
+  final FocusNode focusNode;
+  final Color accent;
+  final bool pickMode;
+  final void Function(String) onChanged;
+  final VoidCallback onClear;
+  final VoidCallback onDismiss;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 0, 12, 0),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accent.withValues(alpha: 0.3), width: 1),
+      ),
+      child: Row(
+        children: [
+          const SizedBox(width: 14),
+          Icon(
+            Icons.search_rounded,
+            color: accent.withValues(alpha: 0.65),
+            size: 20,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: TextField(
+              controller: controller,
+              focusNode: focusNode,
+              autofocus: true,
+              style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
+              cursorColor: accent,
+              decoration: InputDecoration(
+                hintText: pickMode ? 'Search to pin…' : 'Search apps…',
+                hintStyle: GoogleFonts.sora(
+                  color: Colors.white38,
+                  fontSize: 14,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onChanged: onChanged,
+            ),
+          ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 150),
+            child: controller.text.isNotEmpty
+                ? IconButton(
+                    key: const ValueKey('clear'),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: Colors.white38,
+                      size: 18,
+                    ),
+                    onPressed: onClear,
+                  )
+                : IconButton(
+                    key: const ValueKey('down'),
+                    icon: const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      color: Colors.white24,
+                      size: 22,
+                    ),
+                    onPressed: onDismiss,
+                  ),
+          ),
         ],
       ),
     );

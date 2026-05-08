@@ -126,20 +126,23 @@ class AppGrid extends ConsumerWidget {
     int slotIndex, {
     String? replace,
   }) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder:
-          (_) => SearchOverlay(
-            pickMode: true,
-            onAppPicked: (pkg) {
-              if (replace != null) {
-                ref.read(pinnedAppsProvider.notifier).unpin(replace);
-              }
-              ref.read(pinnedAppsProvider.notifier).pin(pkg, index: slotIndex);
-            },
-          ),
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked: (pkg) {
+                if (replace != null) {
+                  ref.read(pinnedAppsProvider.notifier).unpin(replace);
+                }
+                ref.read(pinnedAppsProvider.notifier).pin(pkg, index: slotIndex);
+              },
+            ),
+        transitionsBuilder: (_, anim, __, child) =>
+            FadeTransition(opacity: anim, child: child),
+      ),
     );
   }
 }
