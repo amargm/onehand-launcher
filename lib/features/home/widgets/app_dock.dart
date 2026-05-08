@@ -2,8 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import '../../../core/constants/folder_icons.dart';
 import '../../../core/models/app_folder.dart';
 import '../../../core/models/app_info.dart';
@@ -23,58 +21,64 @@ class AppDock extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final folders = ref.watch(foldersProvider);
-    final showFolderLabels = ref.watch(showFolderLabelsProvider);
-    final showSearchLabel = ref.watch(showSearchLabelProvider);
     final rightHanded = ref.watch(rightHandedProvider);
     final accent = Theme.of(context).colorScheme.primary;
 
-    final searchBtn = _DockButton(
-      label: 'Search',
+    final searchCircle = _DockCircle(
       icon: Icons.search_rounded,
-      color: Colors.white,
-      filled: true,
-      showLabel: showSearchLabel,
+      isSearch: true,
+      accent: accent,
       onTap: () => _openSearch(context),
     );
 
-    final folderBtns =
+    final folderCircles =
         folders
             .map(
-              (f) => _DockButton(
-                label: f.name,
+              (f) => _DockCircle(
                 icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
-                color: accent.withValues(alpha: 0.85),
-                filled: false,
-                showLabel: showFolderLabels,
+                isSearch: false,
+                accent: accent,
                 onTap: () => _openFolder(context, f),
               ),
             )
             .toList();
 
     final rowChildren =
-        rightHanded ? [...folderBtns, searchBtn] : [searchBtn, ...folderBtns];
+        rightHanded
+            ? [...folderCircles, searchCircle]
+            : [searchCircle, ...folderCircles];
 
     return Padding(
-      // 24px outer margin — concentric container spec
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
+        // ── Outer context-aware shell ──────────────────────────────────────
+        // Matches the HTML outer rounded rectangle (#0D0D0D, subtle border)
+        // that wraps both the context ring and the inner dock.
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          // Surface 1 — #1E1E1E card layer; no border, use tonal depth
-          color: const Color(0xFF1E1E1E),
-          borderRadius: BorderRadius.circular(24),
+          color: const Color(0xFF0D0D0D),
+          borderRadius: BorderRadius.circular(40),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ── Context-aware outer ring ───────────────────────────────────
+            // Shows media app circles when headphones connected;
+            // otherwise shows context-indicator circles (time, day, date…).
             _ContextMiniRow(),
-            const SizedBox(height: 10),
-            // Surface 2 divider — subtle tonal separator
-            Container(height: 1, color: const Color(0xFF2A2A2A)),
-            const SizedBox(height: 14),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: rowChildren,
+            const SizedBox(height: 6),
+            // ── Inner dock panel ──────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(32),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: rowChildren,
+              ),
             ),
           ],
         ),
@@ -140,35 +144,33 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
     final mediaApps = ref.watch(mediaAppsProvider).valueOrNull ?? const [];
     final accent = Theme.of(context).colorScheme.primary;
 
-    final chips = ContextItemType.values
-        .where((t) => enabled.contains(t))
-        .map((t) => _iconFor(t, accent, headphones))
-        .toList();
+    // ── Headphones connected: media app circles fill the outer ring ────────
+    if (headphones && mediaApps.isNotEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children:
+              mediaApps.take(6).map((app) => _MediaAppIcon(app: app)).toList(),
+        ),
+      );
+    }
 
-    final showMedia = headphones && mediaApps.isNotEmpty;
-    if (chips.isEmpty && !showMedia) return const SizedBox.shrink();
+    // ── Default: context-indicator circles (icon-only, 32 px = w-8 h-8) ───
+    final chips =
+        ContextItemType.values
+            .where((t) => enabled.contains(t))
+            .map((t) => _iconFor(t, accent, headphones))
+            .toList();
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (chips.isNotEmpty)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: chips,
-          ),
-        if (showMedia) ...[
-          const SizedBox(height: 8),
-          SizedBox(
-            height: 36,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: mediaApps.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
-              itemBuilder: (_, i) => _MediaAppIcon(app: mediaApps[i]),
-            ),
-          ),
-        ],
-      ],
+    if (chips.isEmpty) return const SizedBox(height: 4);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: chips,
+      ),
     );
   }
 
@@ -189,13 +191,15 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
       ContextItemType.date => (Icons.event_outlined, true),
     };
 
-    final color = active ? accent.withValues(alpha: 0.85) : Colors.white24;
+    // 32 px circle matches the HTML outer-ring icon size (w-8 h-8)
+    final color = active ? accent.withValues(alpha: 0.85) : Colors.white38;
     return Container(
-      width: 40,
+      width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
+        shape: BoxShape.circle,
+        color: const Color(0xFF1E1E1E),
+        border: Border.all(color: color.withValues(alpha: 0.35), width: 1),
       ),
       child: Icon(icon, color: color, size: 15),
     );
@@ -214,11 +218,12 @@ class _MediaAppIcon extends StatelessWidget {
     return GestureDetector(
       onTap: () => AppsService.openApp(app.packageName),
       child: Container(
-        width: 36,
-        height: 36,
+        // 32 px = w-8 h-8 from the HTML outer context ring spec
+        width: 32,
+        height: 32,
         decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          color: Color(0xFF2A2A2A),
+          color: Color(0xFF1E1E1E),
         ),
         child: ClipOval(
           child:
@@ -245,71 +250,56 @@ class _MediaAppIcon extends StatelessWidget {
   }
 }
 
-class _DockButton extends StatelessWidget {
-  const _DockButton({
-    required this.label,
+/// Circular dock button — w-14 h-14 (56 px) matching the HTML inner dock.
+/// Search: accent-filled circle with accent glow shadow.
+/// Folders: dark #121212 surface circle with subtle border.
+class _DockCircle extends StatelessWidget {
+  const _DockCircle({
     required this.icon,
-    required this.color,
-    required this.filled,
-    required this.showLabel,
+    required this.isSearch,
+    required this.accent,
     required this.onTap,
   });
 
-  final String label;
   final IconData icon;
-  final Color color;
-  final bool filled;
-  final bool showLabel;
+  final bool isSearch;
+  final Color accent;
   final VoidCallback onTap;
+
+  static const double _size = 56;
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: filled ? Colors.white : color.withValues(alpha: 0.12),
-              // Search button: orange glow (light-leak from primary action)
-              boxShadow:
-                  filled
-                      ? [
-                        BoxShadow(
-                          color: const Color(
-                            0xFFFF5722,
-                          ).withValues(alpha: 0.25),
-                          blurRadius: 24,
-                          spreadRadius: 2,
-                        ),
-                      ]
-                      : null,
-              border:
-                  filled
-                      ? null
-                      : Border.all(
-                        color: color.withValues(alpha: 0.25),
-                        width: 1,
-                      ),
-            ),
-            child: Icon(icon, color: filled ? Colors.black : color, size: 22),
-          ),
-          if (showLabel) ...[
-            const SizedBox(height: 5),
-            Text(
-              label,
-              style: GoogleFonts.sora(
-                fontSize: 9,
-                color: Colors.white54,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
-        ],
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: _size,
+        height: _size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          // Search: accent fill; Folders: surface-container (#121212)
+          color: isSearch ? accent : const Color(0xFF121212),
+          boxShadow:
+              isSearch
+                  ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.30),
+                      blurRadius: 20,
+                      spreadRadius: 0,
+                    ),
+                  ]
+                  : null,
+          border:
+              isSearch
+                  ? null
+                  : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        ),
+        child: Icon(
+          icon,
+          color: isSearch ? Colors.white : Colors.white60,
+          size: 24,
+        ),
       ),
     );
   }

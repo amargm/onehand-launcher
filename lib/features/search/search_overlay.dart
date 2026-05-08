@@ -171,9 +171,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                             const Duration(milliseconds: 200),
                             () {
                               if (mounted) {
-                                setState(
-                                  () => _query = v.trim().toLowerCase(),
-                                );
+                                setState(() => _query = v.trim().toLowerCase());
                               }
                             },
                           );
