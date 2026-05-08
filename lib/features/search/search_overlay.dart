@@ -92,104 +92,115 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
     final mq = MediaQuery.of(context);
     final accent = Theme.of(context).colorScheme.primary;
 
-    return FadeTransition(
-      opacity: _fade,
-      child: GestureDetector(
-        // Tap outside content → dismiss
-        onTap: _dismiss,
-        behavior: HitTestBehavior.opaque,
-        child: Stack(
-          children: [
-            // ── Blurred dark background ──────────────────────────────────
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                child: Container(color: Colors.black.withValues(alpha: 0.62)),
+    // Material(transparency) is required so that IconButton / InkWell widgets
+    // inside this overlay can find a Material ancestor. PageRouteBuilder does
+    // NOT inject Material the way MaterialPageRoute does, so we must add it
+    // ourselves. type: transparency keeps the visual appearance unchanged.
+    return Material(
+      type: MaterialType.transparency,
+      child: FadeTransition(
+        opacity: _fade,
+        child: GestureDetector(
+          // Tap outside content → dismiss
+          onTap: _dismiss,
+          behavior: HitTestBehavior.opaque,
+          child: Stack(
+            children: [
+              // ── Blurred dark background ──────────────────────────────────
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                  child: Container(color: Colors.black.withValues(alpha: 0.62)),
+                ),
               ),
-            ),
 
-            // ── Bottom-anchored content (search bar + results) ───────────
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: GestureDetector(
-                // Prevent taps on content from dismissing the overlay
-                onTap: () {},
-                behavior: HitTestBehavior.opaque,
-                child: Padding(
-                  padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // ── 2-row horizontal results ───────────────────────
-                      appsAsync.when(
-                        loading: () => const SizedBox(height: 160),
-                        error: (_, __) => const SizedBox(height: 160),
-                        data: (all) {
-                          final results = _sortedResults(all);
-                          if (results.isEmpty && _query.isNotEmpty) {
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 36),
-                              child: Center(
-                                child: Text(
-                                  'No apps found',
-                                  style: GoogleFonts.sora(
-                                    color: Colors.white24,
-                                    fontSize: 13,
-                                    letterSpacing: 0.4,
+              // ── Bottom-anchored content (search bar + results) ───────────
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: GestureDetector(
+                  // Prevent taps on content from dismissing the overlay
+                  onTap: () {},
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // ── 2-row horizontal results ───────────────────────
+                        appsAsync.when(
+                          loading: () => const SizedBox(height: 160),
+                          error: (_, __) => const SizedBox(height: 160),
+                          data: (all) {
+                            final results = _sortedResults(all);
+                            if (results.isEmpty && _query.isNotEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 36,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'No apps found',
+                                    style: GoogleFonts.sora(
+                                      color: Colors.white24,
+                                      fontSize: 13,
+                                      letterSpacing: 0.4,
+                                    ),
                                   ),
                                 ),
-                              ),
+                              );
+                            }
+                            return _TwoRowResults(
+                              results:
+                                  _query.isEmpty
+                                      ? all.take(32).toList()
+                                      : results,
+                              accent: accent,
+                              pickMode: widget.pickMode,
+                              onAppPicked: widget.onAppPicked,
+                              onDismiss: _dismiss,
                             );
-                          }
-                          return _TwoRowResults(
-                            results:
-                                _query.isEmpty
-                                    ? all.take(32).toList()
-                                    : results,
-                            accent: accent,
-                            pickMode: widget.pickMode,
-                            onAppPicked: widget.onAppPicked,
-                            onDismiss: _dismiss,
-                          );
-                        },
-                      ),
+                          },
+                        ),
 
-                      // ── Search bar ─────────────────────────────────────
-                      _SearchBar(
-                        controller: _controller,
-                        focusNode: _focusNode,
-                        accent: accent,
-                        pickMode: widget.pickMode,
-                        onChanged: (v) {
-                          // Debounce: wait 200 ms after the user stops typing
-                          // before filtering/sorting 200+ apps.
-                          _debounce?.cancel();
-                          _debounce = Timer(
-                            const Duration(milliseconds: 200),
-                            () {
-                              if (mounted) {
-                                setState(() => _query = v.trim().toLowerCase());
-                              }
-                            },
-                          );
-                        },
-                        onClear: () {
-                          _controller.clear();
-                          setState(() => _query = '');
-                        },
-                        onDismiss: _dismiss,
-                      ),
+                        // ── Search bar ─────────────────────────────────────
+                        _SearchBar(
+                          controller: _controller,
+                          focusNode: _focusNode,
+                          accent: accent,
+                          pickMode: widget.pickMode,
+                          onChanged: (v) {
+                            // Debounce: wait 200 ms after the user stops typing
+                            // before filtering/sorting 200+ apps.
+                            _debounce?.cancel();
+                            _debounce = Timer(
+                              const Duration(milliseconds: 200),
+                              () {
+                                if (mounted) {
+                                  setState(
+                                    () => _query = v.trim().toLowerCase(),
+                                  );
+                                }
+                              },
+                            );
+                          },
+                          onClear: () {
+                            _controller.clear();
+                            setState(() => _query = '');
+                          },
+                          onDismiss: _dismiss,
+                        ),
 
-                      SizedBox(height: mq.padding.bottom + 8),
-                    ],
+                        SizedBox(height: mq.padding.bottom + 8),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
