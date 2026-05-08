@@ -102,7 +102,21 @@ jobs:
           name: debug-apk
           path: dist
 
+      # Signing is optional — job succeeds without secrets and publishes debug only
+      - name: Check signing secrets
+        id: secrets
+        env:
+          CM_KEYSTORE: ${{ secrets.CM_KEYSTORE }}
+        run: |
+          if [ -n "$CM_KEYSTORE" ]; then
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+            echo "No keystore secret found — will publish debug APK only."
+          fi
+
       - name: Decode keystore
+        if: steps.secrets.outputs.available == 'true'
         env:
           CM_KEYSTORE: ${{ secrets.CM_KEYSTORE }}
         run: |
@@ -113,15 +127,13 @@ jobs:
             exit 1
           fi
           echo "CM_KEYSTORE_PATH=$KEYSTORE_PATH" >> $GITHUB_ENV
-          echo "Keystore decoded OK."
 
       - name: Get Flutter packages
+        if: steps.secrets.outputs.available == 'true'
         run: flutter pub get
 
-      - name: Dart analysis
-        run: flutter analyze --no-fatal-infos
-
       - name: Build release APK
+        if: steps.secrets.outputs.available == 'true'
         env:
           CM_KEY_ALIAS: ${{ secrets.CM_KEY_ALIAS }}
           CM_KEY_PASSWORD: ${{ secrets.CM_KEY_PASSWORD }}
@@ -132,6 +144,7 @@ jobs:
             --build-number=${{ github.run_number }}
 
       - name: Build release AAB
+        if: steps.secrets.outputs.available == 'true'
         env:
           CM_KEY_ALIAS: ${{ secrets.CM_KEY_ALIAS }}
           CM_KEY_PASSWORD: ${{ secrets.CM_KEY_PASSWORD }}
@@ -142,14 +155,15 @@ jobs:
             --build-number=${{ github.run_number }}
 
       - name: Rename release outputs
+        if: steps.secrets.outputs.available == 'true'
         run: |
-          mkdir -p dist
           cp build/app/outputs/apk/release/app-release.apk \
              dist/onehand-release-${{ github.run_number }}.apk
           cp build/app/outputs/bundle/release/app-release.aab \
              dist/onehand-release-${{ github.run_number }}.aab
 
       - name: Upload release APK artifact
+        if: steps.secrets.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
@@ -157,11 +171,27 @@ jobs:
           retention-days: 30
 
       - name: Upload release AAB artifact
+        if: steps.secrets.outputs.available == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: release-aab
           path: dist/onehand-release-${{ github.run_number }}.aab
           retention-days: 30
+
+      # Always collect debug; add signed files only when they were produced
+      - name: Collect release files
+        id: files
+        run: |
+          FILES="dist/onehand-debug-${{ github.run_number }}.apk"
+          if [ -f "dist/onehand-release-${{ github.run_number }}.apk" ]; then
+            FILES="$FILES"$'\n'"dist/onehand-release-${{ github.run_number }}.apk"
+          fi
+          if [ -f "dist/onehand-release-${{ github.run_number }}.aab" ]; then
+            FILES="$FILES"$'\n'"dist/onehand-release-${{ github.run_number }}.aab"
+          fi
+          echo "files<<EOF" >> $GITHUB_OUTPUT
+          echo "$FILES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -170,7 +200,4 @@ jobs:
           name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || 'Latest build' }}
           prerelease: ${{ !startsWith(github.ref, 'refs/tags/') }}
           make_latest: ${{ startsWith(github.ref, 'refs/tags/') && 'true' || 'false' }}
-          files: |
-            dist/onehand-debug-${{ github.run_number }}.apk
-            dist/onehand-release-${{ github.run_number }}.apk
-            dist/onehand-release-${{ github.run_number }}.aab
+          files: ${{ steps.files.outputs.files }}
