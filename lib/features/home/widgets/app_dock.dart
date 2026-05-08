@@ -50,19 +50,22 @@ class AppDock extends ConsumerWidget {
         : [searchBtn, ...folderBtns];
 
     return Padding(
+      // 24px outer margin — concentric container spec
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
       child: Container(
         padding: const EdgeInsets.fromLTRB(20, 14, 20, 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(28),
+          // Surface 1 — #1E1E1E card layer; no border, use tonal depth
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(24),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             _ContextMiniRow(),
             const SizedBox(height: 10),
-            Container(height: 1, color: Colors.white.withValues(alpha: 0.07)),
+            // Surface 2 divider — subtle tonal separator
+            Container(height: 1, color: const Color(0xFF2A2A2A)),
             const SizedBox(height: 14),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -171,8 +174,9 @@ class _ContextMiniRowState extends ConsumerState<_ContextMiniRow> {
       width: 40,
       height: 32,
       decoration: BoxDecoration(
+        // Small chips: 8px radius per design spec
         color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Icon(icon, color: color, size: 15),
     );
@@ -209,11 +213,21 @@ class _DockButton extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: filled ? Colors.white : color.withValues(alpha: 0.12),
+              // Search button: orange glow (light-leak from primary action)
+              boxShadow: filled
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFFFF5722).withValues(alpha: 0.25),
+                        blurRadius: 24,
+                        spreadRadius: 2,
+                      ),
+                    ]
+                  : null,
               border: filled
                   ? null
                   : Border.all(
-                      color: color.withValues(alpha: 0.35),
-                      width: 1.5,
+                      color: color.withValues(alpha: 0.25),
+                      width: 1,
                     ),
             ),
             child: Icon(

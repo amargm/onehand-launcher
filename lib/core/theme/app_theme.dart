@@ -2,47 +2,92 @@
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Obsidian Pulse dark theme — pure black surface, configurable accent.
+/// Obsidian Pulse — Electric Minimalism design system.
+/// Surfaces follow the tonal-layer spec: 0→base, 1→cards, 2→floating.
 class AppTheme {
   AppTheme._();
 
-  static const Color surface = Color(0xFF000000);
-  static const Color surfaceContainer = Color(0xFF1A1A1A);
-  static const Color dockSurface = Color(0xFF1A1A1A);
-  static const Color iconSurface = Color(0xFF262626);
-  static const Color pillSurface = Color(0xFF1C1C1C);
-  static const Color textPrimary = Color(0xFFFFFFFF);
+  // ── Tonal surface layers ────────────────────────────────────────────────
+  /// Surface 0 — infinite canvas / scaffold background
+  static const Color surface          = Color(0xFF121212);
+  /// Surface 1 — cards & containers (#1E1E1E)
+  static const Color surfaceContainer = Color(0xFF1E1E1E);
+  /// Surface 2 — floating / interactive elements (#2A2A2A)
+  static const Color surface2         = Color(0xFF2A2A2A);
+
+  // Legacy aliases kept so other files don't break
+  static const Color dockSurface = surfaceContainer;
+  static const Color iconSurface = surface2;
+  static const Color pillSurface = surface2;
+
+  static const Color textPrimary   = Color(0xFFFFFFFF);
   static const Color textSecondary = Color(0xFF808080);
 
-  // Named theme presets (Visual Variations — Section 5 of brief)
-  /// Amber / Orange Pulse — vibrant energy
-  static const Color presetAmber = Color(0xFFFF5722);
-
-  /// Monochromatic Stealth — high-contrast minimal
-  static const Color presetStealth = Color(0xFFFFFFFF);
-
-  /// Midnight / Slate — nocturnal cool
+  // ── Accent presets ──────────────────────────────────────────────────────
+  /// Amber / Orange Pulse — primary action catalyst
+  static const Color presetAmber    = Color(0xFFFF5722);
+  /// Monochromatic Stealth
+  static const Color presetStealth  = Color(0xFFFFFFFF);
+  /// Midnight / Slate
   static const Color presetMidnight = Color(0xFF5C7AEA);
 
   static const Color defaultAccent = presetAmber;
 
   static ThemeData dark(Color accent) {
     final colorScheme = ColorScheme.dark(
-      surface: surface,
+      surface:          surface,
       surfaceContainer: surfaceContainer,
-      primary: accent,
-      secondary: accent,
-      onSurface: textPrimary,
-      onPrimary: Colors.black,
+      primary:          accent,
+      secondary:        accent,
+      onSurface:        textPrimary,
+      onPrimary:        Colors.white,
     );
+
+    // Body + label text: Hanken Grotesk for legibility at small sizes
+    final baseTextTheme = ThemeData.dark().textTheme;
+    final textTheme = GoogleFonts.soraTextTheme(baseTextTheme)
+        .copyWith(
+          // bodyLarge / bodyMedium / bodySmall → Hanken Grotesk
+          bodyLarge: GoogleFonts.hankenGrotesk(
+            color: textPrimary,
+            fontSize: 18,
+            height: 1.55,
+          ),
+          bodyMedium: GoogleFonts.hankenGrotesk(
+            color: textPrimary,
+            fontSize: 16,
+            height: 1.5,
+          ),
+          bodySmall: GoogleFonts.hankenGrotesk(
+            color: textSecondary,
+            fontSize: 12,
+            height: 1.33,
+          ),
+          labelLarge: GoogleFonts.hankenGrotesk(
+            color: textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.05 * 14,
+          ),
+          labelMedium: GoogleFonts.hankenGrotesk(
+            color: textPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          labelSmall: GoogleFonts.hankenGrotesk(
+            color: textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.4,
+          ),
+        )
+        .apply(bodyColor: textPrimary, displayColor: textPrimary);
 
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: surface,
-      textTheme: GoogleFonts.soraTextTheme(
-        ThemeData.dark().textTheme,
-      ).apply(bodyColor: textPrimary, displayColor: textPrimary),
+      textTheme: textTheme,
       appBarTheme: const AppBarTheme(
         backgroundColor: surface,
         systemOverlayStyle: SystemUiOverlayStyle(

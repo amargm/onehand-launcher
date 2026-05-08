@@ -20,7 +20,7 @@ class SettingsScreen extends ConsumerWidget {
     final folders = ref.watch(foldersProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.surfaceContainer,
+      backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -203,7 +203,7 @@ class _ThemePresetRow extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFF141414),
+        color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
@@ -215,7 +215,11 @@ class _ThemePresetRow extends ConsumerWidget {
               const SizedBox(width: 14),
               Text(
                 'Theme preset',
-                style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
               ),
             ],
           ),
@@ -567,7 +571,8 @@ class _ToggleTile extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFF141414),
+        // Surface 1 — card layer
+        color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -577,7 +582,11 @@ class _ToggleTile extends ConsumerWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+              style: GoogleFonts.hankenGrotesk(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
             ),
           ),
           Switch(value: value, onChanged: onChanged, activeColor: accent),
@@ -731,7 +740,7 @@ class _SettingsTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF141414),
+          color: const Color(0xFF1E1E1E),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -745,14 +754,18 @@ class _SettingsTile extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),
                     Text(
                       subtitle!,
-                      style: GoogleFonts.sora(
-                        fontSize: 11,
+                      style: GoogleFonts.hankenGrotesk(
+                        fontSize: 12,
                         color: Colors.white38,
                       ),
                     ),

@@ -18,11 +18,7 @@ import '../home/widgets/circular_app_icon.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class SearchOverlay extends ConsumerStatefulWidget {
-  const SearchOverlay({
-    super.key,
-    this.pickMode = false,
-    this.onAppPicked,
-  });
+  const SearchOverlay({super.key, this.pickMode = false, this.onAppPicked});
 
   final bool pickMode;
   final void Function(String packageName)? onAppPicked;
@@ -73,7 +69,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   List<AppInfo> _sortedResults(List<AppInfo> all) {
     if (_query.isEmpty) return all;
     final q = _query;
-    final matched = all.where((a) => a.appName.toLowerCase().contains(q)).toList();
+    final matched =
+        all.where((a) => a.appName.toLowerCase().contains(q)).toList();
     matched.sort((a, b) => _score(a, q).compareTo(_score(b, q)));
     return matched;
   }
@@ -103,10 +100,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
             // ── Blurred dark background ──────────────────────────────────
             Positioned.fill(
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.62),
-                ),
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(color: Colors.black.withValues(alpha: 0.62)),
               ),
             ),
 
@@ -120,9 +115,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                 onTap: () {},
                 behavior: HitTestBehavior.opaque,
                 child: Padding(
-                  padding: EdgeInsets.only(
-                    bottom: mq.viewInsets.bottom,
-                  ),
+                  padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -149,9 +142,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                             );
                           }
                           return _TwoRowResults(
-                            results: _query.isEmpty
-                                ? all.take(32).toList()
-                                : results,
+                            results:
+                                _query.isEmpty
+                                    ? all.take(32).toList()
+                                    : results,
                             accent: accent,
                             pickMode: widget.pickMode,
                             onAppPicked: widget.onAppPicked,
@@ -166,8 +160,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                         focusNode: _focusNode,
                         accent: accent,
                         pickMode: widget.pickMode,
-                        onChanged: (v) =>
-                            setState(() => _query = v.trim().toLowerCase()),
+                        onChanged:
+                            (v) =>
+                                setState(() => _query = v.trim().toLowerCase()),
                         onClear: () {
                           _controller.clear();
                           setState(() => _query = '');
@@ -278,27 +273,32 @@ class _TwoRowResults extends StatelessWidget {
                     // Top row (less relevant of the pair)
                     SizedBox(
                       height: _rowH,
-                      child: col.top != null
-                          ? CircularAppIcon(
-                              app: col.top!,
-                              size: _iconSize,
-                              onTap: () =>
-                                  _handleTap(ctx, col.top!.packageName),
-                            )
-                          : const SizedBox(),
+                      child:
+                          col.top != null
+                              ? CircularAppIcon(
+                                app: col.top!,
+                                size: _iconSize,
+                                onTap:
+                                    () => _handleTap(ctx, col.top!.packageName),
+                              )
+                              : const SizedBox(),
                     ),
                     SizedBox(height: _gap),
                     // Bottom row (more relevant of the pair)
                     SizedBox(
                       height: _rowH,
-                      child: col.bottom != null
-                          ? CircularAppIcon(
-                              app: col.bottom!,
-                              size: _iconSize,
-                              onTap: () =>
-                                  _handleTap(ctx, col.bottom!.packageName),
-                            )
-                          : const SizedBox(),
+                      child:
+                          col.bottom != null
+                              ? CircularAppIcon(
+                                app: col.bottom!,
+                                size: _iconSize,
+                                onTap:
+                                    () => _handleTap(
+                                      ctx,
+                                      col.bottom!.packageName,
+                                    ),
+                              )
+                              : const SizedBox(),
                     ),
                   ],
                 ),
@@ -314,7 +314,8 @@ class _TwoRowResults extends StatelessWidget {
 }
 
 // ── Search bar ────────────────────────────────────────────────────────────────
-class _SearchBar extends StatelessWidget {
+// StatefulWidget so we can react to focus and animate the border/glow.
+class _SearchBar extends StatefulWidget {
   const _SearchBar({
     required this.controller,
     required this.focusNode,
@@ -334,47 +335,89 @@ class _SearchBar extends StatelessWidget {
   final VoidCallback onDismiss;
 
   @override
+  State<_SearchBar> createState() => _SearchBarState();
+}
+
+class _SearchBarState extends State<_SearchBar> {
+  bool _focused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.focusNode.addListener(_onFocusChange);
+  }
+
+  @override
+  void dispose() {
+    widget.focusNode.removeListener(_onFocusChange);
+    super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (mounted) setState(() => _focused = widget.focusNode.hasFocus);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
+    final accent = widget.accent;
+    // Input field: #121212 bg, 1px #2A2A2A border; on focus → orange border + glow
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 0),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: accent.withValues(alpha: 0.3), width: 1),
+        // Input fields sit on Surface 0 (#121212) — darker than card
+        color: const Color(0xFF121212),
+        borderRadius: BorderRadius.circular(16), // Buttons/inputs: 16px
+        border: Border.all(
+          color: _focused ? accent : const Color(0xFF2A2A2A),
+          width: 1,
+        ),
+        boxShadow: _focused
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.15),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                ),
+              ]
+            : null,
       ),
       child: Row(
         children: [
           const SizedBox(width: 14),
           Icon(
             Icons.search_rounded,
-            color: accent.withValues(alpha: 0.65),
+            color: _focused ? accent : Colors.white38,
             size: 20,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
-              controller: controller,
-              focusNode: focusNode,
+              controller: widget.controller,
+              focusNode: widget.focusNode,
               autofocus: true,
-              style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
+              style: GoogleFonts.hankenGrotesk(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w400,
+              ),
               cursorColor: accent,
               decoration: InputDecoration(
-                hintText: pickMode ? 'Search to pin…' : 'Search apps…',
-                hintStyle: GoogleFonts.sora(
+                hintText: widget.pickMode ? 'Search to pin…' : 'Search apps…',
+                hintStyle: GoogleFonts.hankenGrotesk(
                   color: Colors.white38,
                   fontSize: 14,
                 ),
                 border: InputBorder.none,
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(vertical: 14),
               ),
-              onChanged: onChanged,
+              onChanged: widget.onChanged,
             ),
           ),
           AnimatedSwitcher(
             duration: const Duration(milliseconds: 150),
-            child: controller.text.isNotEmpty
+            child: widget.controller.text.isNotEmpty
                 ? IconButton(
                     key: const ValueKey('clear'),
                     icon: const Icon(
@@ -382,7 +425,7 @@ class _SearchBar extends StatelessWidget {
                       color: Colors.white38,
                       size: 18,
                     ),
-                    onPressed: onClear,
+                    onPressed: widget.onClear,
                   )
                 : IconButton(
                     key: const ValueKey('down'),
@@ -391,7 +434,7 @@ class _SearchBar extends StatelessWidget {
                       color: Colors.white24,
                       size: 22,
                     ),
-                    onPressed: onDismiss,
+                    onPressed: widget.onDismiss,
                   ),
           ),
         ],

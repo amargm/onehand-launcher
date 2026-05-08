@@ -21,10 +21,9 @@ class FolderScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final appsAsync = ref.watch(appsProvider);
     // Watch live folder so UI refreshes when apps are added/removed
-    final liveFolder = ref.watch(foldersProvider).firstWhere(
-      (f) => f.id == folder.id,
-      orElse: () => folder,
-    );
+    final liveFolder = ref
+        .watch(foldersProvider)
+        .firstWhere((f) => f.id == folder.id, orElse: () => folder);
     final accent = Theme.of(context).colorScheme.primary;
     final folderIcon = kFolderIcons[liveFolder.iconKey] ?? Icons.folder_rounded;
 
@@ -81,20 +80,26 @@ class FolderScreen extends ConsumerWidget {
                   // ── App grid ─────────────────────────────────────────
                   Expanded(
                     child: appsAsync.when(
-                      loading: () => const Center(
-                        child: CircularProgressIndicator(strokeWidth: 1.5),
-                      ),
-                      error: (_, __) => Center(
-                        child: Text(
-                          'Error loading apps',
-                          style: GoogleFonts.sora(color: Colors.white38),
-                        ),
-                      ),
+                      loading:
+                          () => const Center(
+                            child: CircularProgressIndicator(strokeWidth: 1.5),
+                          ),
+                      error:
+                          (_, __) => Center(
+                            child: Text(
+                              'Error loading apps',
+                              style: GoogleFonts.sora(color: Colors.white38),
+                            ),
+                          ),
                       data: (allApps) {
-                        final folderApps = allApps
-                            .where((a) =>
-                                liveFolder.packageNames.contains(a.packageName))
-                            .toList();
+                        final folderApps =
+                            allApps
+                                .where(
+                                  (a) => liveFolder.packageNames.contains(
+                                    a.packageName,
+                                  ),
+                                )
+                                .toList();
 
                         if (folderApps.isEmpty) {
                           return Center(
@@ -136,11 +141,11 @@ class FolderScreen extends ConsumerWidget {
                           physics: const BouncingScrollPhysics(),
                           gridDelegate:
                               const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 4,
-                            mainAxisSpacing: 16,
-                            crossAxisSpacing: 8,
-                            childAspectRatio: 0.75,
-                          ),
+                                crossAxisCount: 4,
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 8,
+                                childAspectRatio: 0.75,
+                              ),
                           itemCount: folderApps.length,
                           itemBuilder: (ctx, i) {
                             final app = folderApps[i];
@@ -151,8 +156,13 @@ class FolderScreen extends ConsumerWidget {
                                 Navigator.of(context).pop();
                                 CircularAppIcon.launch(app.packageName);
                               },
-                              onLongPress: () =>
-                                  _confirmRemove(context, ref, liveFolder, app),
+                              onLongPress:
+                                  () => _confirmRemove(
+                                    context,
+                                    ref,
+                                    liveFolder,
+                                    app,
+                                  ),
                             );
                           },
                         );
@@ -160,34 +170,39 @@ class FolderScreen extends ConsumerWidget {
                     ),
                   ),
 
-                  // ── Add app — thumb-zone bottom button ────────────────
+                  // ── Add app — full-width primary button (Design spec) ──
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
                     child: GestureDetector(
                       onTap: () => _addApp(context, ref, liveFolder.id),
                       child: Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        padding: const EdgeInsets.symmetric(vertical: 15),
                         decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.10),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.3),
-                            width: 1,
-                          ),
+                          // Primary button: #FF5722 bg, white text, full-width
+                          color: const Color(0xFFFF5722),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFFFF5722).withValues(alpha: 0.25),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_rounded, color: accent, size: 18),
+                            const Icon(Icons.add_rounded,
+                                color: Colors.white, size: 18),
                             const SizedBox(width: 8),
                             Text(
                               'Add app',
-                              style: GoogleFonts.sora(
-                                fontSize: 13,
-                                color: accent,
-                                fontWeight: FontWeight.w500,
+                              style: GoogleFonts.hankenGrotesk(
+                                fontSize: 14,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.05 * 14,
                               ),
                             ),
                           ],
@@ -209,57 +224,65 @@ class FolderScreen extends ConsumerWidget {
       PageRouteBuilder(
         opaque: false,
         barrierColor: Colors.transparent,
-        pageBuilder: (_, __, ___) => SearchOverlay(
-          pickMode: true,
-          onAppPicked: (pkg) {
-            // Add app — SearchOverlay handles its own dismissal via onDismiss
-            ref.read(foldersProvider.notifier).addApp(folderId, pkg);
-          },
-        ),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked: (pkg) {
+                // Add app — SearchOverlay handles its own dismissal via onDismiss
+                ref.read(foldersProvider.notifier).addApp(folderId, pkg);
+              },
+            ),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
       ),
     );
   }
 
   void _confirmRemove(
-      BuildContext context, WidgetRef ref, AppFolder liveFolder, AppInfo app) {
+    BuildContext context,
+    WidgetRef ref,
+    AppFolder liveFolder,
+    AppInfo app,
+  ) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A1A),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text(
-          'Remove from folder?',
-          style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
-        ),
-        content: Text(
-          '${app.appName} will be removed from "${liveFolder.name}".',
-          style: GoogleFonts.sora(color: Colors.white54, fontSize: 13),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(
-              'Cancel',
-              style: GoogleFonts.sora(color: Colors.white38),
+      builder:
+          (ctx) => AlertDialog(
+            backgroundColor: const Color(0xFF1A1A1A),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-          ),
-          TextButton(
-            onPressed: () {
-              ref
-                  .read(foldersProvider.notifier)
-                  .removeApp(liveFolder.id, app.packageName);
-              Navigator.of(ctx).pop();
-            },
-            child: Text(
-              'Remove',
-              style: GoogleFonts.sora(
-                color: Theme.of(context).colorScheme.primary,
+            title: Text(
+              'Remove from folder?',
+              style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
+            ),
+            content: Text(
+              '${app.appName} will be removed from "${liveFolder.name}".',
+              style: GoogleFonts.sora(color: Colors.white54, fontSize: 13),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.sora(color: Colors.white38),
+                ),
               ),
-            ),
-          ),
-        ],
+              TextButton(
+                onPressed: () {
+                  ref
+                      .read(foldersProvider.notifier)
+                      .removeApp(liveFolder.id, app.packageName);
+                  Navigator.of(ctx).pop();
+                },
+                child: Text(
+                  'Remove',
+                  style: GoogleFonts.sora(
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ],
           ),
     );
   }
