@@ -171,13 +171,25 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    // ── Headphone detection ────────────────────────────────────────────────
+    // ── Headphone / audio-out detection ────────────────────────────────────
+    //
+    // Covers:
+    //   TYPE_WIRED_HEADPHONES  — 3.5 mm headphones (no mic)
+    //   TYPE_WIRED_HEADSET     — 3.5 mm headset (with mic)
+    //   TYPE_USB_HEADSET       — USB-C headset (API 26)
+    //   TYPE_USB_DEVICE        — generic USB audio device (API 23)
+    //   TYPE_USB_ACCESSORY     — USB audio accessory (API 23)
+    //   TYPE_BLUETOOTH_A2DP    — BT stereo (music)
+    //   TYPE_BLUETOOTH_SCO     — BT mono (calls / headsets)
     private fun isHeadphoneConnected(): Boolean {
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).any { device ->
                 device.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES ||
                 device.type == AudioDeviceInfo.TYPE_WIRED_HEADSET ||
+                device.type == AudioDeviceInfo.TYPE_USB_HEADSET ||
+                device.type == AudioDeviceInfo.TYPE_USB_DEVICE ||
+                device.type == AudioDeviceInfo.TYPE_USB_ACCESSORY ||
                 device.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP ||
                 device.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO
             }

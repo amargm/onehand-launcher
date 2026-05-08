@@ -385,13 +385,17 @@ class _FolderTile extends ConsumerWidget {
                   children: [
                     Text(
                       folder.name,
-                      style:
-                          GoogleFonts.sora(fontSize: 13, color: Colors.white),
+                      style: GoogleFonts.sora(
+                        fontSize: 13,
+                        color: Colors.white,
+                      ),
                     ),
                     Text(
                       '${folder.packageNames.length} / $_kMaxFolderApps apps  ·  tap icon to change',
-                      style:
-                          GoogleFonts.sora(fontSize: 10, color: Colors.white38),
+                      style: GoogleFonts.sora(
+                        fontSize: 10,
+                        color: Colors.white38,
+                      ),
                     ),
                   ],
                 ),

@@ -18,7 +18,8 @@ final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>(
 class HeadphoneNotifier extends StateNotifier<bool> {
   HeadphoneNotifier() : super(false) {
     _poll();
-    _timer = Timer.periodic(const Duration(seconds: 5), (_) => _poll());
+    // Poll every 2 s instead of 5 s so wired/USB plug-in is detected promptly.
+    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
   }
 
   late final Timer _timer;

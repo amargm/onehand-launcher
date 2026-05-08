@@ -98,71 +98,84 @@ class _AppDockState extends ConsumerState<AppDock> {
               child:
                   activeFolder != null
                       ? _FolderPanel(
-                          key: ValueKey(activeFolder.id),
-                          folder: activeFolder,
-                          onClose:
-                              () => setState(() => _activeFolderId = null),
-                        )
+                        key: ValueKey(activeFolder.id),
+                        folder: activeFolder,
+                        onClose: () => setState(() => _activeFolderId = null),
+                      )
                       : const SizedBox.shrink(key: ValueKey('no-folder')),
             ),
           ),
           if (activeFolder != null) const SizedBox(height: 8),
 
           // ── Outer shell + inner dock ────────────────────────────────────
+          // AnimatedContainer animates padding / color / border simultaneously
+          // at 700 ms with easeInOutQuart — slow, luxurious, no pop.
           AnimatedContainer(
-        duration: const Duration(milliseconds: 380),
-        curve: Curves.easeInOutCubic,
-        // Outer shell is invisible when headphones disconnected:
-        //   padding → 0  /  color → transparent  /  border → transparent
-        // All three properties animate to their visible values when connected.
-        padding: headphones ? const EdgeInsets.all(8) : EdgeInsets.zero,
-        decoration: BoxDecoration(
-          color: headphones ? const Color(0xFF0D0D0D) : Colors.transparent,
-          borderRadius: BorderRadius.circular(40),
-          border: Border.all(
-            color:
-                headphones
-                    ? Colors.white.withValues(alpha: 0.06)
-                    : Colors.transparent,
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // ── Context shell ─────────────────────────────────────────────
-            // AnimatedSize:   0 height → full height (smooth grow)
-            // AnimatedSwitcher: cross-fades content in/out
-            AnimatedSize(
-              duration: const Duration(milliseconds: 380),
-              curve: Curves.easeInOutCubic,
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 260),
-                child:
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeInOutQuart,
+            // Outer shell invisible when disconnected:
+            //   padding=0 / color=transparent / border=transparent
+            padding: headphones ? const EdgeInsets.all(8) : EdgeInsets.zero,
+            decoration: BoxDecoration(
+              color: headphones ? const Color(0xFF0D0D0D) : Colors.transparent,
+              borderRadius: BorderRadius.circular(40),
+              border: Border.all(
+                color:
                     headphones
-                        ? const Column(
-                          key: ValueKey('shell'),
-                          mainAxisSize: MainAxisSize.min,
-                          children: [_ContextShellRow(), SizedBox(height: 6)],
+                        ? Colors.white.withValues(alpha: 0.06)
+                        : Colors.transparent,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Context shell ─────────────────────────────────────────
+                // AnimatedSize handles height 0→full.
+                // AnimatedOpacity independently fades content in/out.
+                // Avoid AnimatedSwitcher here — it remeasures both children
+                // simultaneously which fights AnimatedSize and feels abrupt.
+                AnimatedSize(
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeInOutQuart,
+                  child: headphones
+                      ? AnimatedOpacity(
+                          opacity: 1.0,
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeIn,
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [_ContextShellRow(), SizedBox(height: 6)],
+                          ),
                         )
-                        : const SizedBox.shrink(key: ValueKey('empty')),
-              ),
-            ),
+                      : AnimatedOpacity(
+                          opacity: 0.0,
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOut,
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [_ContextShellRow(), SizedBox(height: 6)],
+                          ),
+                        ),
+                ),
 
-            // ── Inner dock — always visible ───────────────────────────────
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E1E1E),
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: dockRow,
-              ),
+                // ── Inner dock — always visible ───────────────────────────
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: dockRow,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
         ],
       ),
     );
@@ -185,11 +198,7 @@ class _AppDockState extends ConsumerState<AppDock> {
 /// Pops up above the outer shell as a SEPARATE rounded container (not concentric).
 /// Same width as the dock. Shows folder apps: max 10, in rows of 5.
 class _FolderPanel extends ConsumerWidget {
-  const _FolderPanel({
-    super.key,
-    required this.folder,
-    required this.onClose,
-  });
+  const _FolderPanel({super.key, required this.folder, required this.onClose});
 
   final AppFolder folder;
   final VoidCallback onClose;
@@ -278,7 +287,7 @@ class _FolderPanel extends ConsumerWidget {
                 ),
               ),
             )
-          else ...[  
+          else ...[
             const SizedBox(height: 12),
             for (var r = 0; r < rows.length; r++) ...[
               if (r > 0) const SizedBox(height: 8),
