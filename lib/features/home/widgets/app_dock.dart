@@ -16,11 +16,11 @@ class AppDock extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final folders          = ref.watch(foldersProvider);
+    final folders = ref.watch(foldersProvider);
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
-    final showSearchLabel  = ref.watch(showSearchLabelProvider);
-    final rightHanded      = ref.watch(rightHandedProvider);
-    final accent           = Theme.of(context).colorScheme.primary;
+    final showSearchLabel = ref.watch(showSearchLabelProvider);
+    final rightHanded = ref.watch(rightHandedProvider);
+    final accent = Theme.of(context).colorScheme.primary;
 
     final searchBtn = _DockButton(
       label: 'Search',
@@ -45,9 +45,10 @@ class AppDock extends ConsumerWidget {
     }
 
     // Right-handed: folders … search  |  Left-handed: search … folders
-    final rowChildren = rightHanded
-        ? [...folderWidgets, const SizedBox(width: 18), searchBtn]
-        : [searchBtn, const SizedBox(width: 18), ...folderWidgets];
+    final rowChildren =
+        rightHanded
+            ? [...folderWidgets, const SizedBox(width: 18), searchBtn]
+            : [searchBtn, const SizedBox(width: 18), ...folderWidgets];
 
     return Center(
       child: Padding(
@@ -59,10 +60,7 @@ class AppDock extends ConsumerWidget {
               color: const Color(0xFF1A1A1A),
               borderRadius: BorderRadius.circular(40),
             ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: rowChildren,
-            ),
+            child: Row(mainAxisSize: MainAxisSize.min, children: rowChildren),
           ),
         ),
       ),

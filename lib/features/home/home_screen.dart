@@ -82,26 +82,28 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
         Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Status bar padding + top spacing
+            // Status bar padding + settings gear (top-right)
             SizedBox(height: mq.padding.top + 14),
-
-            // ── "Context Active" pill — top of screen ───────────────────
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  const Expanded(child: ContextSection()),
-                  const SizedBox(width: 10),
-                  _GhostIconButton(
-                    icon: Icons.tune_rounded,
-                    onTap: () => _openSettings(context),
-                  ),
-                ],
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: _GhostIconButton(
+                  icon: Icons.tune_rounded,
+                  onTap: () => _openSettings(context),
+                ),
               ),
             ),
 
             // ── Negative space / wallpaper zone ─────────────────────────
             const Spacer(),
+
+            // ── Context pills — just above dock, in the thumb zone ───────
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: const ContextSection(),
+            ),
+            const SizedBox(height: 10),
 
             // ── Concentric dock ──────────────────────────────────────────
             const AppDock(),

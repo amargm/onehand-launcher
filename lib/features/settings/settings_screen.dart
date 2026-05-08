@@ -626,15 +626,14 @@ class _HandednessTile extends ConsumerWidget {
                   label: '← Left',
                   selected: !rightHanded,
                   accent: accent,
-                  onTap: () =>
-                      ref.read(rightHandedProvider.notifier).set(false),
+                  onTap:
+                      () => ref.read(rightHandedProvider.notifier).set(false),
                 ),
                 _HandBtn(
                   label: 'Right →',
                   selected: rightHanded,
                   accent: accent,
-                  onTap: () =>
-                      ref.read(rightHandedProvider.notifier).set(true),
+                  onTap: () => ref.read(rightHandedProvider.notifier).set(true),
                 ),
               ],
             ),
@@ -669,7 +668,8 @@ class _HandBtn extends StatelessWidget {
           color: selected ? accent.withValues(alpha: 0.18) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: selected ? accent.withValues(alpha: 0.5) : Colors.transparent,
+            color:
+                selected ? accent.withValues(alpha: 0.5) : Colors.transparent,
           ),
         ),
         child: Text(

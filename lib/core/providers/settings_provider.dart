@@ -4,10 +4,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../theme/app_theme.dart';
 
-const _kAccentColorKey   = 'accent_color';
+const _kAccentColorKey = 'accent_color';
 const _kShowFolderLabels = 'show_folder_labels';
-const _kShowSearchLabel  = 'show_search_label';
-const _kRightHanded      = 'right_handed';
+const _kShowSearchLabel = 'show_search_label';
+const _kRightHanded = 'right_handed';
 
 /// Injected at app startup — see main.dart.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
