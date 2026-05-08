@@ -328,61 +328,142 @@ class _FolderTile extends ConsumerWidget {
 
   final AppFolder folder;
 
+  static const int _kMaxFolderApps = 10;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final accent = Theme.of(context).colorScheme.primary;
     final folderIcon = kFolderIcons[folder.iconKey] ?? Icons.folder_rounded;
+    final appsAsync = ref.watch(appsProvider);
+    final pkgMap = {
+      for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
+    };
+
+    final folderApps =
+        folder.packageNames
+            .take(_kMaxFolderApps)
+            .map((pkg) => pkgMap[pkg])
+            .whereType<AppInfo>()
+            .toList();
+
+    final canAdd = folder.packageNames.length < _kMaxFolderApps;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
       decoration: BoxDecoration(
         color: const Color(0xFF141414),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tappable icon — opens icon picker
-          GestureDetector(
-            onTap: () => _pickIcon(context, ref),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: accent.withValues(alpha: 0.10),
-                border: Border.all(
-                  color: accent.withValues(alpha: 0.25),
-                  width: 1,
+          // ── Header row ──────────────────────────────────────────────────
+          Row(
+            children: [
+              // Tappable icon — opens icon picker
+              GestureDetector(
+                onTap: () => _pickIcon(context, ref),
+                child: Container(
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: accent.withValues(alpha: 0.10),
+                    border: Border.all(
+                      color: accent.withValues(alpha: 0.25),
+                      width: 1,
+                    ),
+                  ),
+                  child: Icon(folderIcon, color: accent, size: 18),
                 ),
               ),
-              child: Icon(folderIcon, color: accent, size: 18),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  folder.name,
-                  style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      folder.name,
+                      style:
+                          GoogleFonts.sora(fontSize: 13, color: Colors.white),
+                    ),
+                    Text(
+                      '${folder.packageNames.length} / $_kMaxFolderApps apps  ·  tap icon to change',
+                      style:
+                          GoogleFonts.sora(fontSize: 10, color: Colors.white38),
+                    ),
+                  ],
                 ),
-                Text(
-                  '${folder.packageNames.length} apps  ·  tap icon to change',
-                  style: GoogleFonts.sora(fontSize: 10, color: Colors.white38),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: Colors.white38,
+                  size: 18,
                 ),
-              ],
-            ),
+                onPressed: () => _renameFolder(context, ref),
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(
-              Icons.edit_outlined,
-              color: Colors.white38,
-              size: 18,
-            ),
-            onPressed: () => _renameFolder(context, ref),
+
+          // ── Apps chips + Add button ──────────────────────────────────────
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final app in folderApps)
+                _FolderAppChip(
+                  app: app,
+                  onRemove:
+                      () => ref
+                          .read(foldersProvider.notifier)
+                          .removeApp(folder.id, app.packageName),
+                ),
+              if (canAdd)
+                GestureDetector(
+                  onTap: () => _addApp(context, ref),
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white24, width: 1.5),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: Colors.white38,
+                      size: 18,
+                    ),
+                  ),
+                ),
+              if (folderApps.isEmpty && !canAdd)
+                Text(
+                  'No apps',
+                  style: GoogleFonts.sora(fontSize: 11, color: Colors.white24),
+                ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  void _addApp(BuildContext context, WidgetRef ref) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked:
+                  (pkg) =>
+                      ref.read(foldersProvider.notifier).addApp(folder.id, pkg),
+            ),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
       ),
     );
   }
@@ -520,6 +601,68 @@ class _FolderTile extends ConsumerWidget {
               ),
             ],
           ),
+    );
+  }
+}
+
+// ── Folder app chip (36 px, removable) ────────────────────────────────────────
+/// Small app icon with an × badge. Tap to remove from the folder.
+class _FolderAppChip extends StatelessWidget {
+  const _FolderAppChip({required this.app, required this.onRemove});
+
+  final AppInfo app;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onRemove,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF1E1E1E),
+            ),
+            child: ClipOval(
+              child:
+                  app.icon != null
+                      ? Image.memory(
+                        app.icon!,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                      )
+                      : const Icon(
+                        Icons.apps_rounded,
+                        size: 16,
+                        color: Colors.white54,
+                      ),
+            ),
+          ),
+          // × remove badge
+          Positioned(
+            top: -2,
+            right: -2,
+            child: Container(
+              width: 14,
+              height: 14,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0D0D0D),
+                border: Border.all(color: Colors.white12),
+              ),
+              child: const Icon(
+                Icons.close_rounded,
+                size: 9,
+                color: Colors.white54,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -840,9 +983,10 @@ class _ContextShellAppsSection extends ConsumerWidget {
               if (app != null) {
                 // ── Filled slot: show icon + remove badge ─────────────────
                 return GestureDetector(
-                  onTap: () => ref
-                      .read(contextShellAppsProvider.notifier)
-                      .remove(pkg!),
+                  onTap:
+                      () => ref
+                          .read(contextShellAppsProvider.notifier)
+                          .remove(pkg!),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -861,17 +1005,18 @@ class _ContextShellAppsSection extends ConsumerWidget {
                               ),
                             ),
                             child: ClipOval(
-                              child: app.icon != null
-                                  ? Image.memory(
-                                      app.icon!,
-                                      fit: BoxFit.cover,
-                                      gaplessPlayback: true,
-                                    )
-                                  : Icon(
-                                      Icons.apps_rounded,
-                                      color: Colors.white54,
-                                      size: 24,
-                                    ),
+                              child:
+                                  app.icon != null
+                                      ? Image.memory(
+                                        app.icon!,
+                                        fit: BoxFit.cover,
+                                        gaplessPlayback: true,
+                                      )
+                                      : Icon(
+                                        Icons.apps_rounded,
+                                        color: Colors.white54,
+                                        size: 24,
+                                      ),
                             ),
                           ),
                           // ×  remove badge
@@ -926,8 +1071,7 @@ class _ContextShellAppsSection extends ConsumerWidget {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color:
-                                canAdd ? Colors.white24 : Colors.white10,
+                            color: canAdd ? Colors.white24 : Colors.white10,
                             width: 1.5,
                           ),
                         ),
@@ -961,13 +1105,14 @@ class _ContextShellAppsSection extends ConsumerWidget {
       PageRouteBuilder(
         opaque: false,
         barrierColor: Colors.transparent,
-        pageBuilder: (_, __, ___) => SearchOverlay(
-          pickMode: true,
-          onAppPicked: (pkg) =>
-              ref.read(contextShellAppsProvider.notifier).add(pkg),
-        ),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked:
+                  (pkg) => ref.read(contextShellAppsProvider.notifier).add(pkg),
+            ),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
       ),
     );
   }

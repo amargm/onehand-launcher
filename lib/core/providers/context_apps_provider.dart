@@ -34,8 +34,7 @@ class ContextShellAppsNotifier extends StateNotifier<List<String>> {
     }
   }
 
-  void _persist() =>
-      _prefs.setString(_kContextShellAppsKey, jsonEncode(state));
+  void _persist() => _prefs.setString(_kContextShellAppsKey, jsonEncode(state));
 
   void add(String packageName) {
     if (state.contains(packageName)) return;

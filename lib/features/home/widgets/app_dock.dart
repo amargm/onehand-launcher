@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/constants/folder_icons.dart';
 import '../../../core/models/app_folder.dart';
@@ -10,58 +11,105 @@ import '../../../core/providers/folders_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/apps_service.dart';
-import '../../folder/folder_screen.dart';
 import '../../search/search_overlay.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AppDock
 //
-// Two-layer concentric container:
+// Three-layer stack (bottom-aligned):
 //
-//   Outer shell (#0D0D0D): invisible when headphones disconnected,
-//                          expands smoothly when connected.
-//     └── [AnimatedSize] Context shell row  (user-configured apps, 32 px)
-//     └── Inner dock (#1E1E1E)  (folder + search circles, 56 px)
+//   [_FolderPanel]   ← separate rounded container; slides up above the shell
+//                      when a folder circle is tapped; NOT concentric.
+//   Outer shell      ← invisible when headphones disconnected.
+//     └── Context shell row  (user-configured apps, 32 px)
+//     └── Inner dock  (folder + search circles, 56 px)
 //
-// When headphones disconnected: outer shell has padding=0, color=transparent,
-// border=transparent — fully invisible; inner dock appears standalone.
 // ─────────────────────────────────────────────────────────────────────────────
 
-class AppDock extends ConsumerWidget {
+class AppDock extends ConsumerStatefulWidget {
   const AppDock({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppDock> createState() => _AppDockState();
+}
+
+class _AppDockState extends ConsumerState<AppDock> {
+  String? _activeFolderId;
+
+  @override
+  Widget build(BuildContext context) {
     final folders = ref.watch(foldersProvider);
     final rightHanded = ref.watch(rightHandedProvider);
     final headphones = ref.watch(headphoneProvider);
     final accent = Theme.of(context).colorScheme.primary;
 
+    // If the active folder was removed, clear selection.
+    final activeFolder =
+        _activeFolderId == null
+            ? null
+            : folders.where((f) => f.id == _activeFolderId).firstOrNull;
+
     final searchCircle = _DockCircle(
       icon: Icons.search_rounded,
       isSearch: true,
       accent: accent,
-      onTap: () => _openSearch(context),
+      onTap: () {
+        setState(() => _activeFolderId = null);
+        _openSearch(context);
+      },
     );
 
-    final folderCircles = folders
-        .map(
-          (f) => _DockCircle(
-            icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
-            isSearch: false,
-            accent: accent,
-            onTap: () => _openFolder(context, f),
-          ),
-        )
-        .toList();
+    final folderCircles =
+        folders
+            .map(
+              (f) => _DockCircle(
+                icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
+                isSearch: false,
+                accent: accent,
+                // Toggle: tap same folder to close, different folder to open.
+                onTap:
+                    () => setState(
+                      () =>
+                          _activeFolderId =
+                              _activeFolderId == f.id ? null : f.id,
+                    ),
+              ),
+            )
+            .toList();
 
-    final dockRow = rightHanded
-        ? [...folderCircles, searchCircle]
-        : [searchCircle, ...folderCircles];
+    final dockRow =
+        rightHanded
+            ? [...folderCircles, searchCircle]
+            : [searchCircle, ...folderCircles];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-      child: AnimatedContainer(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Folder panel ───────────────────────────────────────────────
+          // Appears above the outer shell as a separate rounded rectangle.
+          // AnimatedSize grows/shrinks it; AnimatedSwitcher cross-fades content.
+          AnimatedSize(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeInOutCubic,
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 220),
+              child:
+                  activeFolder != null
+                      ? _FolderPanel(
+                          key: ValueKey(activeFolder.id),
+                          folder: activeFolder,
+                          onClose:
+                              () => setState(() => _activeFolderId = null),
+                        )
+                      : const SizedBox.shrink(key: ValueKey('no-folder')),
+            ),
+          ),
+          if (activeFolder != null) const SizedBox(height: 8),
+
+          // ── Outer shell + inner dock ────────────────────────────────────
+          AnimatedContainer(
         duration: const Duration(milliseconds: 380),
         curve: Curves.easeInOutCubic,
         // Outer shell is invisible when headphones disconnected:
@@ -72,9 +120,10 @@ class AppDock extends ConsumerWidget {
           color: headphones ? const Color(0xFF0D0D0D) : Colors.transparent,
           borderRadius: BorderRadius.circular(40),
           border: Border.all(
-            color: headphones
-                ? Colors.white.withValues(alpha: 0.06)
-                : Colors.transparent,
+            color:
+                headphones
+                    ? Colors.white.withValues(alpha: 0.06)
+                    : Colors.transparent,
           ),
         ),
         child: Column(
@@ -88,16 +137,14 @@ class AppDock extends ConsumerWidget {
               curve: Curves.easeInOutCubic,
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 260),
-                child: headphones
-                    ? const Column(
-                        key: ValueKey('shell'),
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _ContextShellRow(),
-                          SizedBox(height: 6),
-                        ],
-                      )
-                    : const SizedBox.shrink(key: ValueKey('empty')),
+                child:
+                    headphones
+                        ? const Column(
+                          key: ValueKey('shell'),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [_ContextShellRow(), SizedBox(height: 6)],
+                        )
+                        : const SizedBox.shrink(key: ValueKey('empty')),
               ),
             ),
 
@@ -116,17 +163,7 @@ class AppDock extends ConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  void _openFolder(BuildContext context, AppFolder folder) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.black87,
-        pageBuilder: (_, __, ___) => FolderScreen(folder: folder),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        ],
       ),
     );
   }
@@ -137,8 +174,170 @@ class AppDock extends ConsumerWidget {
         opaque: false,
         barrierColor: Colors.transparent,
         pageBuilder: (_, __, ___) => const SearchOverlay(),
-        transitionsBuilder: (_, anim, __, child) =>
-            FadeTransition(opacity: anim, child: child),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+}
+
+// ── Folder panel ──────────────────────────────────────────────────────────────
+/// Pops up above the outer shell as a SEPARATE rounded container (not concentric).
+/// Same width as the dock. Shows folder apps: max 10, in rows of 5.
+class _FolderPanel extends ConsumerWidget {
+  const _FolderPanel({
+    super.key,
+    required this.folder,
+    required this.onClose,
+  });
+
+  final AppFolder folder;
+  final VoidCallback onClose;
+
+  static const int _kMaxApps = 10;
+  static const int _kCols = 5;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final appsAsync = ref.watch(appsProvider);
+
+    final pkgMap = {
+      for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
+    };
+
+    final apps =
+        folder.packageNames
+            .take(_kMaxApps)
+            .map((pkg) => pkgMap[pkg])
+            .whereType<AppInfo>()
+            .toList();
+
+    // Split into rows of _kCols.
+    final rows = <List<AppInfo?>>[];
+    for (var i = 0; i < apps.length; i += _kCols) {
+      rows.add(
+        List<AppInfo?>.from(
+          apps.sublist(i, (i + _kCols).clamp(0, apps.length)),
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            children: [
+              Icon(
+                kFolderIcons[folder.iconKey] ?? Icons.folder_rounded,
+                color: accent,
+                size: 14,
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  folder.name,
+                  style: GoogleFonts.sora(
+                    fontSize: 11,
+                    color: Colors.white38,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+              GestureDetector(
+                onTap: onClose,
+                child: const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white24,
+                  size: 20,
+                ),
+              ),
+            ],
+          ),
+
+          if (apps.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: Text(
+                  'No apps · add them in Settings',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 11,
+                    color: Colors.white24,
+                  ),
+                ),
+              ),
+            )
+          else ...[  
+            const SizedBox(height: 12),
+            for (var r = 0; r < rows.length; r++) ...[
+              if (r > 0) const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(_kCols, (c) {
+                  final app = c < rows[r].length ? rows[r][c] : null;
+                  return _FolderPanelIcon(app: app);
+                }),
+              ),
+            ],
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── Folder panel app icon (44 px) ─────────────────────────────────────────────
+class _FolderPanelIcon extends StatelessWidget {
+  const _FolderPanelIcon({this.app});
+
+  final AppInfo? app;
+
+  @override
+  Widget build(BuildContext context) {
+    if (app == null) {
+      // Empty slot — invisible spacer to keep grid alignment.
+      return const SizedBox(width: 44, height: 44);
+    }
+    return GestureDetector(
+      onTap: () => AppsService.openApp(app!.packageName),
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: const BoxDecoration(
+          shape: BoxShape.circle,
+          color: Color(0xFF1E1E1E),
+        ),
+        child: ClipOval(
+          child:
+              app!.icon != null
+                  ? Image.memory(
+                    app!.icon!,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder:
+                        (_, __, ___) => const Icon(
+                          Icons.apps_rounded,
+                          size: 20,
+                          color: Colors.white54,
+                        ),
+                  )
+                  : const Icon(
+                    Icons.apps_rounded,
+                    size: 20,
+                    color: Colors.white54,
+                  ),
+        ),
       ),
     );
   }
@@ -159,32 +358,35 @@ class _ContextShellRow extends ConsumerWidget {
       for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
     };
 
-    final shellApps = configuredPkgs
-        .take(kContextShellMaxApps)
-        .map((pkg) => pkgMap[pkg])
-        .whereType<AppInfo>()
-        .toList();
+    final shellApps =
+        configuredPkgs
+            .take(kContextShellMaxApps)
+            .map((pkg) => pkgMap[pkg])
+            .whereType<AppInfo>()
+            .toList();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
-        mainAxisAlignment: shellApps.isEmpty
-            ? MainAxisAlignment.center
-            : MainAxisAlignment.spaceAround,
-        children: shellApps.isEmpty
-            // Ghost placeholders hint that apps can be configured in Settings
-            ? List.generate(
-                2,
-                (_) => Container(
-                  width: 32,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white10),
+        mainAxisAlignment:
+            shellApps.isEmpty
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.spaceAround,
+        children:
+            shellApps.isEmpty
+                // Ghost placeholders hint that apps can be configured in Settings
+                ? List.generate(
+                  2,
+                  (_) => Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white10),
+                    ),
                   ),
-                ),
-              )
-            : shellApps.map((app) => _ContextAppIcon(app: app)).toList(),
+                )
+                : shellApps.map((app) => _ContextAppIcon(app: app)).toList(),
       ),
     );
   }
@@ -208,22 +410,24 @@ class _ContextAppIcon extends StatelessWidget {
           color: Color(0xFF1E1E1E),
         ),
         child: ClipOval(
-          child: app.icon != null
-              ? Image.memory(
-                  app.icon!,
-                  fit: BoxFit.cover,
-                  gaplessPlayback: true,
-                  errorBuilder: (_, __, ___) => const Icon(
+          child:
+              app.icon != null
+                  ? Image.memory(
+                    app.icon!,
+                    fit: BoxFit.cover,
+                    gaplessPlayback: true,
+                    errorBuilder:
+                        (_, __, ___) => const Icon(
+                          Icons.apps_rounded,
+                          size: 16,
+                          color: Colors.white54,
+                        ),
+                  )
+                  : const Icon(
                     Icons.apps_rounded,
                     size: 16,
                     color: Colors.white54,
                   ),
-                )
-              : const Icon(
-                  Icons.apps_rounded,
-                  size: 16,
-                  color: Colors.white54,
-                ),
         ),
       ),
     );
@@ -259,18 +463,20 @@ class _DockCircle extends StatelessWidget {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           color: isSearch ? accent : const Color(0xFF121212),
-          boxShadow: isSearch
-              ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.30),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                  ),
-                ]
-              : null,
-          border: isSearch
-              ? null
-              : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          boxShadow:
+              isSearch
+                  ? [
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.30),
+                      blurRadius: 20,
+                      spreadRadius: 0,
+                    ),
+                  ]
+                  : null,
+          border:
+              isSearch
+                  ? null
+                  : Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
         child: Icon(
           icon,
