@@ -569,7 +569,7 @@ class _DockScreen extends ConsumerWidget {
         _HandednessTile(),
         const SizedBox(height: 24),
         _SectionHeader('Dock folders'),
-        for (final folder in folders) ...[  
+        for (final folder in folders) ...[
           _FolderTile(folder: folder),
           const SizedBox(height: 8),
         ],

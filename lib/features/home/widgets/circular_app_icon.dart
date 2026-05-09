@@ -154,8 +154,26 @@ void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
                     },
                   ),
 
-              // Uninstall section
+              // App info + Uninstall section
               const Divider(color: Colors.white12),
+              ListTile(
+                leading: const Icon(
+                  Icons.info_outline_rounded,
+                  color: Colors.white54,
+                  size: 20,
+                ),
+                title: Text(
+                  'App info',
+                  style: GoogleFonts.sora(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  AppsService.openAppInfo(app.packageName);
+                },
+              ),
               ListTile(
                 leading: const Icon(
                   Icons.delete_outline_rounded,

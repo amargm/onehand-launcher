@@ -205,6 +205,23 @@ class MainActivity : FlutterActivity() {
                         result.error("HAPTIC_FAILED", e.message, null)
                     }
                 }
+                "openAppInfo" -> {
+                    val pkg = call.argument<String>("packageName")
+                    if (pkg != null) {
+                        try {
+                            startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                                    .setData(Uri.parse("package:$pkg"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("OPEN_FAILED", e.message, null)
+                        }
+                    } else {
+                        result.error("INVALID_ARG", "packageName is null", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }

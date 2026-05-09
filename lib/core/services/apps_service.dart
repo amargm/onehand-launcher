@@ -51,6 +51,16 @@ class AppsService {
     } catch (_) {}
   }
 
+  /// Opens the Android App Info screen (Settings → Apps → [app]) for
+  /// [packageName] — equivalent to the (i) button in stock launchers.
+  static Future<void> openAppInfo(String packageName) async {
+    try {
+      await _channel.invokeMethod<void>('openAppInfo', {
+        'packageName': packageName,
+      });
+    } catch (_) {}
+  }
+
   /// Opens the default browser with the address / search bar focused and
   /// the software keyboard raised — triggered by long-pressing the search
   /// circle on the dock.
