@@ -12,7 +12,6 @@ import '../../core/providers/context_settings_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/theme/app_theme.dart';
-import '../lock_screen/lock_screen.dart';
 import '../search/search_overlay.dart';
 import '../wallpaper/wallpaper_picker_screen.dart';
 
@@ -248,20 +247,6 @@ class _AppearanceScreen extends ConsumerWidget {
                   builder: (_) => const WallpaperPickerScreen(),
                 ),
               ),
-        ),
-        const SizedBox(height: 8),
-        _SettingsTile(
-          icon: Icons.lock_outline_rounded,
-          label: 'Preview lock screen',
-          trailing: const Icon(
-            Icons.chevron_right_rounded,
-            color: Colors.white24,
-            size: 20,
-          ),
-          onTap:
-              () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute(builder: (_) => const LockScreen())),
         ),
       ],
     );

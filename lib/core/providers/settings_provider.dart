@@ -100,28 +100,38 @@ final use24HourClockProvider = StateNotifierProvider<_BoolNotifier, bool>((
 // ── Wallpaper ──────────────────────────────────────────────────────────────
 
 const _kWallpaperPath = 'wallpaper_path';
+const _kWallpaperVersion = 'wallpaper_version';
 
-/// Absolute path to the locally-saved wallpaper image, or `null` if none set.
-final wallpaperPathProvider = StateNotifierProvider<_StringNotifier, String?>((
-  ref,
-) {
+/// Holds the local wallpaper path plus a monotonic version counter.
+/// The version is incremented on every [set] call so the widget tree always
+/// gets a new value — even when the file path doesn't change — which forces
+/// [Image.file] to evict its cache and redraw with the new bytes.
+typedef WallpaperState = ({String? path, int version});
+
+final wallpaperPathProvider =
+    StateNotifierProvider<_WallpaperNotifier, WallpaperState>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return _StringNotifier(prefs, _kWallpaperPath);
+  return _WallpaperNotifier(prefs);
 });
 
-class _StringNotifier extends StateNotifier<String?> {
-  _StringNotifier(this._prefs, this._key) : super(_prefs.getString(_key));
+class _WallpaperNotifier extends StateNotifier<WallpaperState> {
+  _WallpaperNotifier(this._prefs)
+    : super((
+        path: _prefs.getString(_kWallpaperPath),
+        version: _prefs.getInt(_kWallpaperVersion) ?? 0,
+      ));
 
   final SharedPreferences _prefs;
-  final String _key;
 
   void set(String path) {
-    state = path;
-    _prefs.setString(_key, path);
+    final v = state.version + 1;
+    state = (path: path, version: v);
+    _prefs.setString(_kWallpaperPath, path);
+    _prefs.setInt(_kWallpaperVersion, v);
   }
 
   void clear() {
-    state = null;
-    _prefs.remove(_key);
+    state = (path: null, version: state.version + 1);
+    _prefs.remove(_kWallpaperPath);
   }
 }

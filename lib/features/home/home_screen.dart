@@ -16,17 +16,20 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final wallpaperPath = ref.watch(wallpaperPathProvider);
+    final wallpaper = ref.watch(wallpaperPathProvider);
 
     // Scaffold background: wallpaper file if one is set, otherwise pure black.
+    // The version key ensures Image.file never serves a stale cached decode
+    // when the same file path is overwritten with new wallpaper bytes.
     final Widget background =
-        wallpaperPath != null
+        wallpaper.path != null
             ? Image.file(
-              File(wallpaperPath),
+              File(wallpaper.path!),
+              key: ValueKey(wallpaper.version),
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              gaplessPlayback: true, // no flicker on wallpaper change
+              gaplessPlayback: true,
             )
             : const SizedBox.shrink();
 
@@ -238,45 +241,45 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-      // 24h: single plain Text.
-      // 12h: RichText so AM/PM is noticeably smaller than the digits
-      //      but still larger than the date line below.
-      if (use24h)
-        Text(
-          _buildTimeString(use24h),
-          style: GoogleFonts.sora(
-            fontSize: 64,
-            height: 1.0,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -1.5,
-            color: Colors.white.withValues(alpha: 0.82),
-          ),
-        )
-      else
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: _timeDigits12h(),
-                style: GoogleFonts.sora(
-                  fontSize: 64,
-                  height: 1.0,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -1.5,
-                  color: Colors.white.withValues(alpha: 0.82),
+        // 24h: single plain Text.
+        // 12h: RichText so AM/PM is noticeably smaller than the digits
+        //      but still larger than the date line below.
+        if (use24h)
+          Text(
+            _buildTimeString(use24h),
+            style: GoogleFonts.sora(
+              fontSize: 64,
+              height: 1.0,
+              fontWeight: FontWeight.w700,
+              letterSpacing: -1.5,
+              color: Colors.white.withValues(alpha: 0.82),
+            ),
+          )
+        else
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: _timeDigits12h(),
+                  style: GoogleFonts.sora(
+                    fontSize: 64,
+                    height: 1.0,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -1.5,
+                    color: Colors.white.withValues(alpha: 0.82),
+                  ),
                 ),
-              ),
-              TextSpan(
-                text: ' $_period',
-                style: GoogleFonts.sora(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w300,
-                  color: Colors.white.withValues(alpha: 0.55),
+                TextSpan(
+                  text: ' $_period',
+                  style: GoogleFonts.sora(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w300,
+                    color: Colors.white.withValues(alpha: 0.55),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         const SizedBox(height: 4),
         Text(
           _dateString.toUpperCase(),

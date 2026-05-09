@@ -278,6 +278,10 @@ class _WallpaperPreviewScreenState
       final file = File('${dir.path}/wallpaper.jpg');
       await file.writeAsBytes(response.bodyBytes, flush: true);
 
+      // Evict the old decode from Flutter's image cache so Image.file
+      // always loads fresh bytes on every wallpaper change.
+      await FileImage(file).evict();
+
       // Update the provider — home screen will rebuild immediately.
       ref.read(wallpaperPathProvider.notifier).set(file.path);
 

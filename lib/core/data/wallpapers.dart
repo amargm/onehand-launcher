@@ -143,12 +143,14 @@ const List<WallpaperEntry> kWallpapers = [
   ),
 
   // ── Grid / Dark Geometric Patterns ─────────────────────────────────────
+  // High-definition dark geometry: hex grids, circuit lattices, neon-line
+  // wireframes — near-black base, portrait-friendly composition.
   WallpaperEntry(
     id: 'g1',
     url:
-        'https://images.unsplash.com/photo-1557683316-973673baf926?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Pawel Czerwinski / Unsplash',
     category: WallpaperCategory.grid,
   ),
@@ -158,33 +160,33 @@ const List<WallpaperEntry> kWallpapers = [
         'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
         'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
+    credit: 'Alexandre Debiève / Unsplash',
     category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
     id: 'g3',
     url:
-        'https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
     id: 'g4',
     url:
-        'https://images.unsplash.com/photo-1614854262340-ab04ca8223c7?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1614851099175-e5b30eb6f696?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1614854262340-ab04ca8223c7?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1614851099175-e5b30eb6f696?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
     id: 'g5',
     url:
-        'https://images.unsplash.com/photo-1636955816868-fcb881e57954?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1636955816868-fcb881e57954?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.grid,
   ),

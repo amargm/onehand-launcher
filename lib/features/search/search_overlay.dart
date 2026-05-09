@@ -123,154 +123,156 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
         if (!didPop) _dismiss();
       },
       child: Material(
-      type: MaterialType.transparency,
-      child: FadeTransition(
-        opacity: _fade,
-        child: GestureDetector(
-          // Tap outside content → dismiss
-          onTap: _dismiss,
-          behavior: HitTestBehavior.opaque,
-          child: Stack(
-            children: [
-              // ── Blurred dark background ──────────────────────────────────
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                  child: Container(color: Colors.black.withValues(alpha: 0.62)),
-                ),
-              ),
-
-              // ── Bottom-anchored content (search bar + results) ───────────
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
-                child: GestureDetector(
-                  // Prevent taps on content from dismissing the overlay
-                  onTap: () {},
-                  behavior: HitTestBehavior.opaque,
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ── 2-row horizontal results ───────────────────────
-                        appsAsync.when(
-                          loading: () => const SizedBox(height: 160),
-                          error: (_, __) => const SizedBox(height: 160),
-                          data: (all) {
-                            final recentPkgs = ref.watch(recentAppsProvider);
-                            final pkgMap = {
-                              for (final a in all) a.packageName: a,
-                            };
-                            final recentApps =
-                                recentPkgs
-                                    .map((pkg) => pkgMap[pkg])
-                                    .whereType<AppInfo>()
-                                    .toList();
-
-                            final results = _sortedResults(all);
-                            if (results.isEmpty && _query.isNotEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 36,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'No apps found',
-                                    style: GoogleFonts.sora(
-                                      color: Colors.white24,
-                                      fontSize: 13,
-                                      letterSpacing: 0.4,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            // Empty query: show recents (or a placeholder if none yet).
-                            if (_query.isEmpty && recentApps.isEmpty) {
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 36,
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    'Start typing to search',
-                                    style: GoogleFonts.sora(
-                                      color: Colors.white24,
-                                      fontSize: 13,
-                                      letterSpacing: 0.4,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }
-                            return _TwoRowResults(
-                              results: _query.isEmpty ? recentApps : results,
-                              isRecents: _query.isEmpty,
-                              accent: accent,
-                              rightHanded: rightHanded,
-                              pickMode: widget.pickMode,
-                              onAppPicked: widget.onAppPicked,
-                              onDismiss: _dismiss,
-                              onLaunched:
-                                  (pkg) => ref
-                                      .read(recentAppsProvider.notifier)
-                                      .recordLaunch(pkg),
-                              multiPickMode: widget.multiPickMode,
-                              selectedPkgs: _selected,
-                              onToggle:
-                                  (pkg) => setState(() {
-                                    if (_selected.contains(pkg)) {
-                                      _selected.remove(pkg);
-                                    } else {
-                                      _selected.add(pkg);
-                                    }
-                                  }),
-                            );
-                          },
-                        ),
-
-                        // ── Search bar ─────────────────────────────────────
-                        _SearchBar(
-                          controller: _controller,
-                          focusNode: _focusNode,
-                          accent: accent,
-                          pickMode: widget.pickMode,
-                          onChanged: (v) {
-                            // Debounce: wait 200 ms after the user stops typing
-                            // before filtering/sorting 200+ apps.
-                            _debounce?.cancel();
-                            _debounce = Timer(
-                              const Duration(milliseconds: 200),
-                              () {
-                                if (mounted) {
-                                  setState(
-                                    () => _query = v.trim().toLowerCase(),
-                                  );
-                                }
-                              },
-                            );
-                          },
-                          onClear: () {
-                            _controller.clear();
-                            setState(() => _query = '');
-                          },
-                          onDismiss: _dismiss,
-                        ),
-
-                        SizedBox(height: mq.padding.bottom + 8),
-                      ],
+        type: MaterialType.transparency,
+        child: FadeTransition(
+          opacity: _fade,
+          child: GestureDetector(
+            // Tap outside content → dismiss
+            onTap: _dismiss,
+            behavior: HitTestBehavior.opaque,
+            child: Stack(
+              children: [
+                // ── Blurred dark background ──────────────────────────────────
+                Positioned.fill(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.62),
                     ),
                   ),
                 ),
-              ),
-            ],
+
+                // ── Bottom-anchored content (search bar + results) ───────────
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: GestureDetector(
+                    // Prevent taps on content from dismissing the overlay
+                    onTap: () {},
+                    behavior: HitTestBehavior.opaque,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // ── 2-row horizontal results ───────────────────────
+                          appsAsync.when(
+                            loading: () => const SizedBox(height: 160),
+                            error: (_, __) => const SizedBox(height: 160),
+                            data: (all) {
+                              final recentPkgs = ref.watch(recentAppsProvider);
+                              final pkgMap = {
+                                for (final a in all) a.packageName: a,
+                              };
+                              final recentApps =
+                                  recentPkgs
+                                      .map((pkg) => pkgMap[pkg])
+                                      .whereType<AppInfo>()
+                                      .toList();
+
+                              final results = _sortedResults(all);
+                              if (results.isEmpty && _query.isNotEmpty) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 36,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'No apps found',
+                                      style: GoogleFonts.sora(
+                                        color: Colors.white24,
+                                        fontSize: 13,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              // Empty query: show recents (or a placeholder if none yet).
+                              if (_query.isEmpty && recentApps.isEmpty) {
+                                return Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 36,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'Start typing to search',
+                                      style: GoogleFonts.sora(
+                                        color: Colors.white24,
+                                        fontSize: 13,
+                                        letterSpacing: 0.4,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              return _TwoRowResults(
+                                results: _query.isEmpty ? recentApps : results,
+                                isRecents: _query.isEmpty,
+                                accent: accent,
+                                rightHanded: rightHanded,
+                                pickMode: widget.pickMode,
+                                onAppPicked: widget.onAppPicked,
+                                onDismiss: _dismiss,
+                                onLaunched:
+                                    (pkg) => ref
+                                        .read(recentAppsProvider.notifier)
+                                        .recordLaunch(pkg),
+                                multiPickMode: widget.multiPickMode,
+                                selectedPkgs: _selected,
+                                onToggle:
+                                    (pkg) => setState(() {
+                                      if (_selected.contains(pkg)) {
+                                        _selected.remove(pkg);
+                                      } else {
+                                        _selected.add(pkg);
+                                      }
+                                    }),
+                              );
+                            },
+                          ),
+
+                          // ── Search bar ─────────────────────────────────────
+                          _SearchBar(
+                            controller: _controller,
+                            focusNode: _focusNode,
+                            accent: accent,
+                            pickMode: widget.pickMode,
+                            onChanged: (v) {
+                              // Debounce: wait 200 ms after the user stops typing
+                              // before filtering/sorting 200+ apps.
+                              _debounce?.cancel();
+                              _debounce = Timer(
+                                const Duration(milliseconds: 200),
+                                () {
+                                  if (mounted) {
+                                    setState(
+                                      () => _query = v.trim().toLowerCase(),
+                                    );
+                                  }
+                                },
+                              );
+                            },
+                            onClear: () {
+                              _controller.clear();
+                              setState(() => _query = '');
+                            },
+                            onDismiss: _dismiss,
+                          ),
+
+                          SizedBox(height: mq.padding.bottom + 8),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 }
@@ -367,10 +369,7 @@ class _TwoRowResults extends StatelessWidget {
                   : '${selectedPkgs.length} SELECTED · GO BACK TO ADD',
               style: GoogleFonts.sora(
                 fontSize: 10,
-                color:
-                    selectedPkgs.isEmpty
-                        ? Colors.white38
-                        : accent,
+                color: selectedPkgs.isEmpty ? Colors.white38 : accent,
                 letterSpacing: 1.5,
               ),
             ),
@@ -429,15 +428,10 @@ class _TwoRowResults extends StatelessWidget {
                                 size: _iconSize,
                                 isSelected:
                                     multiPickMode &&
-                                    selectedPkgs.contains(
-                                      col.top!.packageName,
-                                    ),
+                                    selectedPkgs.contains(col.top!.packageName),
                                 accent: accent,
                                 onTap:
-                                    () => _handleTap(
-                                      ctx,
-                                      col.top!.packageName,
-                                    ),
+                                    () => _handleTap(ctx, col.top!.packageName),
                               )
                               : const SizedBox(),
                     ),
