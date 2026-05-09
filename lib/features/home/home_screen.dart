@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -94,6 +96,12 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
               ),
             ),
 
+            // ── Clock ────────────────────────────────────────────────────
+            const Padding(
+              padding: EdgeInsets.only(left: 20, top: 28),
+              child: _ClockWidget(),
+            ),
+
             // ── Negative space / wallpaper zone ─────────────────────────
             const Spacer(),
 
@@ -128,7 +136,84 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
   }
 }
 
-/// Subtle accent radial glow from the bottom — Obsidian Pulse signature.
+/// Live clock — updates every second.
+/// Displays a large time (HH:mm) and a small date row below, left-aligned.
+class _ClockWidget extends StatefulWidget {
+  const _ClockWidget();
+
+  @override
+  State<_ClockWidget> createState() => _ClockWidgetState();
+}
+
+class _ClockWidgetState extends State<_ClockWidget> {
+  late DateTime _now;
+  Timer? _timer;
+
+  static const _days = [
+    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+  ];
+  static const _months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _now = DateTime.now();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  String get _timeString {
+    final h = _now.hour.toString().padLeft(2, '0');
+    final m = _now.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  String get _dateString {
+    final day = _days[_now.weekday - 1];
+    final month = _months[_now.month - 1];
+    return '$day, $month ${_now.day}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _timeString,
+          style: GoogleFonts.sora(
+            fontSize: 64,
+            height: 1.0,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -1.5,
+            color: Colors.white.withValues(alpha: 0.82),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          _dateString.toUpperCase(),
+          style: GoogleFonts.hankenGrotesk(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 2.0,
+            color: Colors.white.withValues(alpha: 0.38),
+          ),
+        ),
+      ],
+    );
+  }
+}
 class _BottomGlow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
