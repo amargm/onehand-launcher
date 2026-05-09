@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/folders_provider.dart';
 import '../../core/providers/recent_apps_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/apps_service.dart';
@@ -68,12 +70,40 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
     // rather than waiting for the next resume (which can race with PackageManager).
     // Also prune any uninstalled packages from the recent-apps list so they
     // don't occupy a slot in the search-recents strip.
-    _packageSub = AppsService.packageChangeEvents.listen((pkg) {
-      if (mounted) {
-        ref.invalidate(appsProvider);
-        if (pkg != null) {
-          ref.read(recentAppsProvider.notifier).prunePackage(pkg);
+    _packageSub = AppsService.packageChangeEvents.listen((event) {
+      if (!mounted || event == null) return;
+
+      final colon = event.indexOf(':');
+      final action = colon > 0 ? event.substring(0, colon) : 'CHANGED';
+      final pkg    = colon > 0 ? event.substring(colon + 1) : event;
+
+      if (action == 'REMOVED') {
+        final prevApps = ref.read(appsProvider).valueOrNull ?? <AppInfo>[];
+        String appName = pkg;
+        for (final a in prevApps) {
+          if (a.packageName == pkg) { appName = a.appName; break; }
         }
+
+        ref.invalidate(appsProvider);
+        ref.read(recentAppsProvider.notifier).prunePackage(pkg);
+        ref.read(foldersProvider.notifier).removeFromAllFolders(pkg);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$appName uninstalled',
+              style: GoogleFonts.sora(fontSize: 13),
+            ),
+            backgroundColor: const Color(0xFF1A1A1A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        ref.invalidate(appsProvider);
       }
     });
   }

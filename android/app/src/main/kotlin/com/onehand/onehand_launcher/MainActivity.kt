@@ -2,9 +2,6 @@ package com.onehand.onehand_launcher
 
 import android.app.WallpaperManager
 import android.app.role.RoleManager
-import android.bluetooth.BluetoothA2dp
-import android.bluetooth.BluetoothHeadset
-import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -48,47 +45,33 @@ class MainActivity : FlutterActivity() {
     private var packageEventSink: EventChannel.EventSink? = null
 
     // Fires when a package is installed, removed, or replaced.
+    // Sends "ACTION:packageName" so Flutter can distinguish uninstalls from
+    // updates and skip the removal toast for app-update events.
     // ACTION_PACKAGE_* intents require addDataScheme("package") to fire.
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            packageEventSink?.success(intent.data?.schemeSpecificPart)
+            val pkg = intent.data?.schemeSpecificPart ?: return
+            val prefix = when (intent.action) {
+                Intent.ACTION_PACKAGE_REMOVED -> {
+                    // EXTRA_REPLACING=true means the package is being updated,
+                    // not fully uninstalled — treat as CHANGED, not REMOVED.
+                    val replacing = intent.getBooleanExtra(Intent.EXTRA_REPLACING, false)
+                    if (replacing) "CHANGED:" else "REMOVED:"
+                }
+                Intent.ACTION_PACKAGE_ADDED -> "ADDED:"
+                else -> "CHANGED:"
+            }
+            packageEventSink?.success("$prefix$pkg")
         }
     }
 
-    // Fires on wired plug/unplug and BT A2DP / SCO connect/disconnect.
-    //
-    // BT events carry the new profile state in EXTRA_STATE:
-    //   STATE_CONNECTED (2)    → push true immediately (AudioManager already updated).
-    //   STATE_DISCONNECTED (0) → delay 300 ms so AudioManager finishes removing the
-    //                            device before we query it.
-    //   CONNECTING / DISCONNECTING → ignored; wait for the final state.
-    // Wired events always call isHeadphoneConnected() directly (instant).
-    private val audioReceiver = object : BroadcastReceiver() {
-        override fun onReceive(context: Context, intent: Intent) {
-            when (intent.action) {
-                BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED,
-                BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
-                    val state = intent.getIntExtra(
-                        BluetoothProfile.EXTRA_STATE,
-                        BluetoothProfile.STATE_DISCONNECTED,
-                    )
-                    when (state) {
-                        BluetoothProfile.STATE_CONNECTED -> {
-                            headphoneEventSink?.success(true)
-                        }
-                        BluetoothProfile.STATE_DISCONNECTED -> {
-                            // AudioManager can lag on BT disconnect — wait briefly.
-                            mainHandler.postDelayed({
-                                headphoneEventSink?.success(isHeadphoneConnected())
-                            }, 300L)
-                        }
-                        // CONNECTING / DISCONNECTING → wait for final state.
-                    }
-                }
-                else -> headphoneEventSink?.success(isHeadphoneConnected())
-            }
-        }
-    }
+    // Detects ALL audio device changes — wired, USB-C, and Bluetooth A2DP/SCO —
+    // without requiring BLUETOOTH_CONNECT or any other Bluetooth permission.
+    // On Android 12+ the old BroadcastReceiver approach
+    // (BluetoothA2dp/HeadsetProfile ACTION_CONNECTION_STATE_CHANGED) is silently
+    // dropped unless the app holds BLUETOOTH_CONNECT at runtime.
+    // AudioDeviceCallback (API 23+) has no such restriction.
+    private var audioDeviceCallback: AudioManager.AudioDeviceCallback? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -289,22 +272,15 @@ class MainActivity : FlutterActivity() {
         })
     }
 
-    // ── Receiver lifecycle ───────────────────────────────────────────────────
-    // Register when the activity is foregrounded; unregister on pause.
-    // This means no wakeups while the launcher is behind another app.
-    override fun onResume() {
-        super.onResume()
-        val filter = IntentFilter().apply {
-            addAction(Intent.ACTION_HEADSET_PLUG)                        // wired
-            addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)     // BT stereo
-            addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)  // BT mono/SCO
-        }
-        registerReceiver(audioReceiver, filter)
-        // Sync state in case it changed while we were paused.
-        headphoneEventSink?.success(isHeadphoneConnected())
+    // ── Receiver / callback lifecycle ────────────────────────────────────────
+    // packageReceiver: onStart/onStop — stays registered during brief overlaps
+    //   such as the system uninstall dialog so ACTION_PACKAGE_REMOVED is never
+    //   missed even when the launcher is temporarily backgrounded by that dialog.
+    // audioDeviceCallback: onResume/onPause — only needed while launcher is
+    //   visible; current state is synced on every resume.
 
-        // Register for package changes so Flutter knows immediately when
-        // an app is installed or uninstalled.
+    override fun onStart() {
+        super.onStart()
         val pkgFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -314,10 +290,38 @@ class MainActivity : FlutterActivity() {
         registerReceiver(packageReceiver, pkgFilter)
     }
 
+    override fun onStop() {
+        super.onStop()
+        try { unregisterReceiver(packageReceiver) } catch (_: Exception) {}
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Register AudioDeviceCallback for real-time headphone/BT detection.
+        // Covers wired, USB-C, Bluetooth A2DP and SCO — no permissions needed.
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioDeviceCallback = object : AudioManager.AudioDeviceCallback() {
+            override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) {
+                headphoneEventSink?.success(isHeadphoneConnected())
+            }
+            override fun onAudioDevicesRemoved(removedDevices: Array<AudioDeviceInfo>) {
+                // Small delay: AudioManager may not have finalised the removal yet.
+                mainHandler.postDelayed({
+                    headphoneEventSink?.success(isHeadphoneConnected())
+                }, 300L)
+            }
+        }
+        am.registerAudioDeviceCallback(audioDeviceCallback, mainHandler)
+        // Push current state in case it changed while we were paused.
+        headphoneEventSink?.success(isHeadphoneConnected())
+    }
+
     override fun onPause() {
         super.onPause()
-        try { unregisterReceiver(audioReceiver) } catch (_: Exception) {}
-        try { unregisterReceiver(packageReceiver) } catch (_: Exception) {}
+        mainHandler.removeCallbacksAndMessages(null)
+        val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioDeviceCallback?.let { am.unregisterAudioDeviceCallback(it) }
+        audioDeviceCallback = null
     }
 
     // ── App list ───────────────────────────────────────────────────────────
