@@ -13,13 +13,43 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
+import '../widgets/widgets_screen.dart';
 import 'widgets/app_dock.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  late final PageController _pageController;
+  final _widgetKey = GlobalKey<WidgetsScreenState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _pageController.addListener(_onPageScroll);
+  }
+
+  @override
+  void dispose() {
+    _pageController.removeListener(_onPageScroll);
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onPageScroll() {
+    final page = _pageController.page;
+    if (page != null && page < 0.5) {
+      _widgetKey.currentState?.resetToCurrentYear();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final wallpaper = ref.watch(wallpaperPathProvider);
 
     // Scaffold background: wallpaper file if one is set, otherwise pure black.
@@ -37,12 +67,36 @@ class HomeScreen extends ConsumerWidget {
             )
             : const SizedBox.shrink();
 
-    // Intercept back press — a launcher should never exit
+    // Intercept back press — a launcher should never exit.
+    // If already on the widget page, animate back to home instead of exiting.
     return PopScope(
       canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          final page = _pageController.page;
+          if (page != null && page > 0.5) {
+            _pageController.animateToPage(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        }
+      },
       child: Scaffold(
         backgroundColor: Colors.black,
-        body: Stack(fit: StackFit.expand, children: [background, _HomeBody()]),
+        body: PageView(
+          controller: _pageController,
+          children: [
+            // Page 0 — main home (wallpaper + dock)
+            Stack(
+              fit: StackFit.expand,
+              children: [background, _HomeBody()],
+            ),
+            // Page 1 — widgets screen (always pure black, no wallpaper)
+            WidgetsScreen(key: _widgetKey),
+          ],
+        ),
       ),
     );
   }

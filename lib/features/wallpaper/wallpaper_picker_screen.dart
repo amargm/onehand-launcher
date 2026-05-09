@@ -342,30 +342,28 @@ class _WallpaperPreviewScreenState
         children: [
           // ── Full-screen image ─────────────────────────────────────────
           Positioned.fill(
-            child: _imageError
-                ? _ImageErrorRetry(
-                    onRetry: () => setState(() => _imageError = false),
-                  )
-                : CachedNetworkImage(
-                    imageUrl: widget.entry.url,
-                    fit: BoxFit.cover,
-                    placeholder:
-                        (_, __) => const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white24,
-                            strokeWidth: 1.5,
+            child:
+                _imageError
+                    ? _ImageErrorRetry(
+                      onRetry: () => setState(() => _imageError = false),
+                    )
+                    : CachedNetworkImage(
+                      imageUrl: widget.entry.url,
+                      fit: BoxFit.cover,
+                      placeholder:
+                          (_, __) => const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white24,
+                              strokeWidth: 1.5,
+                            ),
                           ),
-                        ),
-                    errorWidget:
-                        (_, __, ___) {
-                          WidgetsBinding.instance.addPostFrameCallback(
-                            (_) {
-                              if (mounted) setState(() => _imageError = true);
-                            },
-                          );
-                          return const SizedBox.shrink();
-                        },
-                  ),
+                      errorWidget: (_, __, ___) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _imageError = true);
+                        });
+                        return const SizedBox.shrink();
+                      },
+                    ),
           ),
 
           // ── Bottom gradient + Set button ──────────────────────────────

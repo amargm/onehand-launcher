@@ -917,8 +917,7 @@ class _ClockFontSection extends ConsumerWidget {
             children: [
               for (final f in fonts)
                 GestureDetector(
-                  onTap:
-                      () => ref.read(clockFontProvider.notifier).set(f.key),
+                  onTap: () => ref.read(clockFontProvider.notifier).set(f.key),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
                     padding: const EdgeInsets.symmetric(
@@ -946,10 +945,7 @@ class _ClockFontSection extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             fonts
-                .firstWhere(
-                  (f) => f.key == current,
-                  orElse: () => fonts.first,
-                )
+                .firstWhere((f) => f.key == current, orElse: () => fonts.first)
                 .label,
             style: GoogleFonts.sora(
               fontSize: 10,

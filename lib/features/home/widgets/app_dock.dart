@@ -693,9 +693,10 @@ class _DockCircleState extends State<_DockCircle>
       vsync: this,
       duration: const Duration(milliseconds: 80),
     );
-    _pressScale = Tween<double>(begin: 1.0, end: 0.88).animate(
-      CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut),
-    );
+    _pressScale = Tween<double>(
+      begin: 1.0,
+      end: 0.88,
+    ).animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
   }
 
   @override
