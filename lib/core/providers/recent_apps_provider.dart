@@ -10,8 +10,8 @@ const _kMaxCount = 5;
 /// Backed by SharedPreferences so it survives app restarts.
 final recentAppsProvider =
     StateNotifierProvider<RecentAppsNotifier, List<String>>((ref) {
-  return RecentAppsNotifier();
-});
+      return RecentAppsNotifier();
+    });
 
 class RecentAppsNotifier extends StateNotifier<List<String>> {
   RecentAppsNotifier() : super(const []) {
@@ -28,10 +28,11 @@ class RecentAppsNotifier extends StateNotifier<List<String>> {
 
   /// Inserts [packageName] at the front, deduplicates, trims to [_kMaxCount].
   void recordLaunch(String packageName) {
-    state = [
-      packageName,
-      ...state.where((p) => p != packageName),
-    ].take(_kMaxCount).toList();
+    state =
+        [
+          packageName,
+          ...state.where((p) => p != packageName),
+        ].take(_kMaxCount).toList();
     _persist();
   }
 

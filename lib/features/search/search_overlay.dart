@@ -141,10 +141,11 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                             final pkgMap = {
                               for (final a in all) a.packageName: a,
                             };
-                            final recentApps = recentPkgs
-                                .map((pkg) => pkgMap[pkg])
-                                .whereType<AppInfo>()
-                                .toList();
+                            final recentApps =
+                                recentPkgs
+                                    .map((pkg) => pkgMap[pkg])
+                                    .whereType<AppInfo>()
+                                    .toList();
 
                             final results = _sortedResults(all);
                             if (results.isEmpty && _query.isNotEmpty) {
@@ -183,8 +184,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                               );
                             }
                             return _TwoRowResults(
-                              results:
-                                  _query.isEmpty ? recentApps : results,
+                              results: _query.isEmpty ? recentApps : results,
                               isRecents: _query.isEmpty,
                               accent: accent,
                               rightHanded: rightHanded,
