@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -15,10 +16,27 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final wallpaperPath = ref.watch(wallpaperPathProvider);
+
+    // Scaffold background: wallpaper file if one is set, otherwise pure black.
+    final Widget background =
+        wallpaperPath != null
+            ? Image.file(
+              File(wallpaperPath),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              gaplessPlayback: true, // no flicker on wallpaper change
+            )
+            : const SizedBox.shrink();
+
     // Intercept back press — a launcher should never exit
     return PopScope(
       canPop: false,
-      child: Scaffold(backgroundColor: Colors.black, body: _HomeBody()),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(fit: StackFit.expand, children: [background, _HomeBody()]),
+      ),
     );
   }
 }

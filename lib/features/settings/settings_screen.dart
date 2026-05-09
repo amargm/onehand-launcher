@@ -242,11 +242,12 @@ class _AppearanceScreen extends ConsumerWidget {
             color: Colors.white24,
             size: 20,
           ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const WallpaperPickerScreen(),
-            ),
-          ),
+          onTap:
+              () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const WallpaperPickerScreen(),
+                ),
+              ),
         ),
         const SizedBox(height: 8),
         _SettingsTile(

@@ -1,19 +1,22 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 
 import '../../core/data/wallpapers.dart';
-import '../../core/services/apps_service.dart';
+import '../../core/providers/settings_provider.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WallpaperPickerScreen
 //
 // Three-category filter chip row + 3-column thumbnail grid.
 // Tap a thumbnail → full-screen preview with "Set Wallpaper" button.
-// Download + apply runs on the platform channel (WallpaperManager).
+// Applies by downloading the image to app documents dir and updating
+// wallpaperPathProvider — the home screen DecorationImage reads that path.
 // ─────────────────────────────────────────────────────────────────────────────
 
 class WallpaperPickerScreen extends StatefulWidget {
@@ -26,9 +29,10 @@ class WallpaperPickerScreen extends StatefulWidget {
 class _WallpaperPickerScreenState extends State<WallpaperPickerScreen> {
   WallpaperCategory? _filter; // null = show all
 
-  List<WallpaperEntry> get _visible => _filter == null
-      ? kWallpapers
-      : kWallpapers.where((w) => w.category == _filter).toList();
+  List<WallpaperEntry> get _visible =>
+      _filter == null
+          ? kWallpapers
+          : kWallpapers.where((w) => w.category == _filter).toList();
 
   @override
   Widget build(BuildContext context) {
@@ -75,9 +79,10 @@ class _WallpaperPickerScreenState extends State<WallpaperPickerScreen> {
                     label: cat.label,
                     selected: _filter == cat,
                     accent: accent,
-                    onTap: () => setState(
-                      () => _filter = _filter == cat ? null : cat,
-                    ),
+                    onTap:
+                        () => setState(
+                          () => _filter = _filter == cat ? null : cat,
+                        ),
                   ),
                   const SizedBox(width: 8),
                 ],
@@ -106,8 +111,7 @@ class _WallpaperPickerScreenState extends State<WallpaperPickerScreen> {
                   onTap:
                       () => Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder:
-                              (_) => _WallpaperPreviewScreen(entry: entry),
+                          builder: (_) => _WallpaperPreviewScreen(entry: entry),
                         ),
                       ),
                 );
@@ -245,31 +249,46 @@ class _WallpaperThumb extends StatelessWidget {
 }
 
 // ── Full-screen preview screen ────────────────────────────────────────────────
-class _WallpaperPreviewScreen extends StatefulWidget {
+class _WallpaperPreviewScreen extends ConsumerStatefulWidget {
   const _WallpaperPreviewScreen({required this.entry});
 
   final WallpaperEntry entry;
 
   @override
-  State<_WallpaperPreviewScreen> createState() =>
+  ConsumerState<_WallpaperPreviewScreen> createState() =>
       _WallpaperPreviewScreenState();
 }
 
-class _WallpaperPreviewScreenState extends State<_WallpaperPreviewScreen> {
+class _WallpaperPreviewScreenState
+    extends ConsumerState<_WallpaperPreviewScreen> {
   _SetState _state = _SetState.idle;
 
+  /// Downloads the full-res image, saves it to the app documents directory,
+  /// and updates wallpaperPathProvider so the home screen redraws immediately.
   Future<void> _apply() async {
     if (_state == _SetState.loading) return;
     setState(() => _state = _SetState.loading);
     try {
       final response = await http.get(Uri.parse(widget.entry.url));
       if (response.statusCode != 200) throw Exception('Download failed');
-      final Uint8List bytes = response.bodyBytes;
-      await AppsService.setWallpaper(bytes);
+
+      // Persist to a fixed filename so old wallpapers are automatically
+      // replaced and no orphan files accumulate.
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/wallpaper.jpg');
+      await file.writeAsBytes(response.bodyBytes, flush: true);
+
+      // Update the provider — home screen will rebuild immediately.
+      ref.read(wallpaperPathProvider.notifier).set(file.path);
+
       if (mounted) setState(() => _state = _SetState.done);
-      // Brief delay so the "Applied!" label is readable before pop.
       await Future<void>.delayed(const Duration(milliseconds: 800));
-      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        // Pop preview, then pop picker — user lands back on home with wallpaper
+        Navigator.of(context)
+          ..pop() // preview
+          ..pop(); // picker
+      }
     } catch (e) {
       if (mounted) {
         setState(() => _state = _SetState.idle);
@@ -302,7 +321,11 @@ class _WallpaperPreviewScreenState extends State<_WallpaperPreviewScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+          icon: const Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Colors.white,
+            size: 18,
+          ),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),

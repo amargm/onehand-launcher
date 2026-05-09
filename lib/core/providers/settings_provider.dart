@@ -96,3 +96,32 @@ final use24HourClockProvider = StateNotifierProvider<_BoolNotifier, bool>((
   final prefs = ref.watch(sharedPreferencesProvider);
   return _BoolNotifier(prefs, _kUse24HourClock, defaultValue: true);
 });
+
+// ── Wallpaper ──────────────────────────────────────────────────────────────
+
+const _kWallpaperPath = 'wallpaper_path';
+
+/// Absolute path to the locally-saved wallpaper image, or `null` if none set.
+final wallpaperPathProvider = StateNotifierProvider<_StringNotifier, String?>((
+  ref,
+) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _StringNotifier(prefs, _kWallpaperPath);
+});
+
+class _StringNotifier extends StateNotifier<String?> {
+  _StringNotifier(this._prefs, this._key) : super(_prefs.getString(_key));
+
+  final SharedPreferences _prefs;
+  final String _key;
+
+  void set(String path) {
+    state = path;
+    _prefs.setString(_key, path);
+  }
+
+  void clear() {
+    state = null;
+    _prefs.remove(_key);
+  }
+}
