@@ -11,6 +11,7 @@ import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/context_settings_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/services/apps_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../search/search_overlay.dart';
 import '../wallpaper/wallpaper_picker_screen.dart';
@@ -91,11 +92,243 @@ class SettingsScreen extends ConsumerWidget {
                   context,
                 ).push(MaterialPageRoute(builder: (_) => const _AboutScreen())),
           ),
+          const SizedBox(height: 8),
+          _NavTile(
+            icon: Icons.article_outlined,
+            label: 'Note from Developer',
+            subtitle: 'Release notes & updates',
+            onTap: () => _showDeveloperNote(context),
+          ),
+          const SizedBox(height: 8),
+          _NavTile(
+            icon: Icons.favorite_outline_rounded,
+            label: 'Share Feedback',
+            subtitle: 'Help shape the next version',
+            onTap: () => _showFeedbackDialog(context),
+          ),
           const SizedBox(height: 32),
         ],
       ),
     );
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dialogs opened from the main settings screen
+// ─────────────────────────────────────────────────────────────────────────────
+
+void _showDeveloperNote(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.70),
+    builder:
+        (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.article_outlined,
+                      color: Colors.white54,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'NOTE FROM DEVELOPER',
+                      style: GoogleFonts.sora(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white38,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'v1.0.0  ·  Obsidian Pulse',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Welcome to the first release of One-Handed Launcher.\n\n'
+                  'This is the foundation — a minimal, ergonomic launcher built around the Obsidian Pulse aesthetic. '
+                  'Everything you see has been crafted to keep your most-used apps within one thumb\'s reach.\n\n'
+                  'Future notes about new features, improvements, and fixes will appear right here.',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 13,
+                    color: Colors.white54,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'Got it',
+                        style: GoogleFonts.sora(
+                          fontSize: 12,
+                          color: Colors.white60,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+  );
+}
+
+void _showFeedbackDialog(BuildContext context) {
+  showDialog<void>(
+    context: context,
+    barrierColor: Colors.black.withValues(alpha: 0.70),
+    builder:
+        (_) => Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A1A1A),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.favorite_outline_rounded,
+                      color: Colors.white54,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'SHARE FEEDBACK',
+                      style: GoogleFonts.sora(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white38,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Your ideas shape this app.',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'One-Handed Launcher is under active development and every piece of feedback directly influences what gets built next. '
+                  'Have a feature idea? Found something that could feel better? '
+                  'We genuinely want to hear it — no suggestion is too small.',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 13,
+                    color: Colors.white54,
+                    height: 1.6,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onTap: () {
+                    AppsService.openUrl(
+                      'mailto:feedback@onehandlauncher.app'
+                      '?subject=Feedback%20%E2%80%94%20One-Handed%20Launcher'
+                      '&body=Hi%2C%0A%0AApp%20version%3A%20v1.0.0%0A%0A',
+                    );
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.09),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.mail_outline_rounded,
+                          color: Colors.white60,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Send Email Feedback',
+                          style: GoogleFonts.sora(
+                            fontSize: 13,
+                            color: Colors.white70,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Padding(
+                      padding: const EdgeInsets.all(4),
+                      child: Text(
+                        'Maybe later',
+                        style: GoogleFonts.sora(
+                          fontSize: 12,
+                          color: Colors.white30,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+  );
 }
 
 // ── Navigation tile ─────────────────────────────────────────────────────────
@@ -385,10 +618,107 @@ class _AboutScreen extends StatelessWidget {
     return _SubScreen(
       title: 'About',
       children: [
+        // ── App identity ──────────────────────────────────────────────────
         _SettingsTile(
           icon: Icons.info_outline_rounded,
           label: 'One-Handed Launcher',
           subtitle: 'v1.0.0  ·  Obsidian Pulse',
+        ),
+        const SizedBox(height: 8),
+
+        // ── Legal & policies (Play Store requirements) ────────────────────
+        _SettingsTile(
+          icon: Icons.privacy_tip_outlined,
+          label: 'Privacy Policy',
+          subtitle: 'How we handle your data',
+          trailing: const Icon(
+            Icons.open_in_new_rounded,
+            color: Colors.white24,
+            size: 16,
+          ),
+          onTap: () => AppsService.openUrl(
+            'https://onehandlauncher.app/privacy',
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SettingsTile(
+          icon: Icons.gavel_outlined,
+          label: 'Terms of Service',
+          subtitle: 'Usage terms and conditions',
+          trailing: const Icon(
+            Icons.open_in_new_rounded,
+            color: Colors.white24,
+            size: 16,
+          ),
+          onTap: () => AppsService.openUrl(
+            'https://onehandlauncher.app/terms',
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SettingsTile(
+          icon: Icons.balance_outlined,
+          label: 'Open-Source Licenses',
+          subtitle: 'Third-party libraries used in this app',
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white24,
+            size: 20,
+          ),
+          onTap: () => showLicensePage(
+            context: context,
+            applicationName: 'One-Handed Launcher',
+            applicationVersion: 'v1.0.0',
+            applicationLegalese: '© 2025 One-Handed Launcher',
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // ── Contact ───────────────────────────────────────────────────────
+        _SettingsTile(
+          icon: Icons.mail_outline_rounded,
+          label: 'Contact & Support',
+          subtitle: 'support@onehandlauncher.app',
+          trailing: const Icon(
+            Icons.open_in_new_rounded,
+            color: Colors.white24,
+            size: 16,
+          ),
+          onTap: () => AppsService.openUrl(
+            'mailto:support@onehandlauncher.app'
+            '?subject=Support%20%E2%80%94%20One-Handed%20Launcher',
+          ),
+        ),
+        const SizedBox(height: 8),
+
+        // ── Data collection disclosure ────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.shield_outlined,
+                color: Colors.white38,
+                size: 18,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  'This app does not collect, store, or transmit any personal data. '
+                  'All settings are stored locally on your device.',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 12,
+                    color: Colors.white38,
+                    height: 1.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

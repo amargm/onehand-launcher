@@ -51,6 +51,22 @@ class AppsService {
     } catch (_) {}
   }
 
+  /// Opens the default browser with the address / search bar focused and
+  /// the software keyboard raised — triggered by long-pressing the search
+  /// circle on the dock.
+  static Future<void> openBrowserSearch() async {
+    try {
+      await _channel.invokeMethod<void>('openBrowserSearch');
+    } catch (_) {}
+  }
+
+  /// Opens [url] in the default browser.
+  static Future<void> openUrl(String url) async {
+    try {
+      await _channel.invokeMethod<void>('openUrl', {'url': url});
+    } catch (_) {}
+  }
+
   /// Returns apps that can play audio (music players, podcast apps, etc.).
   /// Used to populate the quick-launch strip when headphones are connected.
   static Future<List<AppInfo>> getMediaApps() async {

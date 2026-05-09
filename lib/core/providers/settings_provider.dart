@@ -110,9 +110,9 @@ typedef WallpaperState = ({String? path, int version});
 
 final wallpaperPathProvider =
     StateNotifierProvider<_WallpaperNotifier, WallpaperState>((ref) {
-  final prefs = ref.watch(sharedPreferencesProvider);
-  return _WallpaperNotifier(prefs);
-});
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return _WallpaperNotifier(prefs);
+    });
 
 class _WallpaperNotifier extends StateNotifier<WallpaperState> {
   _WallpaperNotifier(this._prefs)

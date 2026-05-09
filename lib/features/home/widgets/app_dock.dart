@@ -71,6 +71,7 @@ class _AppDockState extends ConsumerState<AppDock> {
         setState(() => _activeFolderId = null);
         _openSearch(context);
       },
+      onLongPress: () => AppsService.openBrowserSearch(),
     );
 
     final folderCircles =
@@ -110,10 +111,16 @@ class _AppDockState extends ConsumerState<AppDock> {
           // so AnimatedSize always has a real-sized child. Switching to
           // SizedBox.shrink() on close gives a 0-size child immediately,
           // collapsing the height before the opacity can finish fading.
-          AnimatedSize(
-            duration: const Duration(milliseconds: 380),
-            curve: Curves.easeInOutQuart,
-            child:
+          //
+          // ClipRRect wraps AnimatedSize so the height-transition clip stays
+          // rounded (matching the panel's own 24-radius corners) instead of
+          // momentarily showing sharp rectangular edges as rows are added/removed.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 380),
+              curve: Curves.easeInOutQuart,
+              child:
                 displayFolder != null
                     ? AnimatedOpacity(
                       opacity: activeFolder != null ? 1.0 : 0.0,
@@ -134,6 +141,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                       ),
                     )
                     : const SizedBox.shrink(),
+            ),
           ),
 
           // ── Outer shell + inner dock ────────────────────────────────────
@@ -528,6 +536,7 @@ class _DockCircle extends StatelessWidget {
     required this.label,
     required this.showLabel,
     required this.onTap,
+    this.onLongPress,
   });
 
   final IconData icon;
@@ -537,6 +546,7 @@ class _DockCircle extends StatelessWidget {
   final String label;
   final bool showLabel;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
 
   static const double _size = 56;
 
@@ -589,6 +599,7 @@ class _DockCircle extends StatelessWidget {
 
     return GestureDetector(
       onTap: onTap,
+      onLongPress: onLongPress,
       behavior: HitTestBehavior.opaque,
       child:
           showLabel

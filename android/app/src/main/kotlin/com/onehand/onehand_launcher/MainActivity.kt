@@ -151,6 +151,45 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARG", "bytes is null", null)
                     }
                 }
+                "openBrowserSearch" -> {
+                    // Fire ACTION_WEB_SEARCH with an empty query so the default
+                    // browser (or search app) opens with its search bar focused
+                    // and the keyboard raised.
+                    try {
+                        val intent = Intent(Intent.ACTION_WEB_SEARCH).apply {
+                            putExtra(android.app.SearchManager.QUERY, "")
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        if (intent.resolveActivity(packageManager) != null) {
+                            startActivity(intent)
+                        } else {
+                            // Fallback: open the default browser's homepage
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com"))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                        }
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("OPEN_FAILED", e.message, null)
+                    }
+                }
+                "openUrl" -> {
+                    val url = call.argument<String>("url")
+                    if (url != null) {
+                        try {
+                            startActivity(
+                                Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url))
+                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            )
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("OPEN_FAILED", e.message, null)
+                        }
+                    } else {
+                        result.error("INVALID_ARG", "url is null", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
