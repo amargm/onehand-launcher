@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -77,7 +78,10 @@ class _AppDockState extends ConsumerState<AppDock> {
         setState(() => _activeFolderId = null);
         _openSearch(context);
       },
-      onLongPress: () => AppsService.openBrowserSearch(),
+      onLongPress: () {
+        HapticFeedback.lightImpact();
+        AppsService.openBrowserSearch();
+      },
     );
 
     final folderCircles =

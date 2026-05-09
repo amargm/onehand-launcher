@@ -61,6 +61,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
       duration: const Duration(milliseconds: 220),
     );
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
+    // Rebuild every animation tick so blurSigma updates frame-by-frame
+    _animCtrl.addListener(() { if (mounted) setState(() {}); });
     _animCtrl.forward();
     // Ensure keyboard appears as soon as the overlay animates in
     WidgetsBinding.instance.addPostFrameCallback(
@@ -113,6 +115,16 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
     final mq = MediaQuery.of(context);
     final accent = Theme.of(context).colorScheme.primary;
 
+    // Blur sigma tracks the keyboard rise/fall in real-time.
+    // When keyboard is absent (overlay opening/closing), fall back to the
+    // animation controller value so the blur still animates with the overlay.
+    const kKeyboardApproxHeight = 260.0;
+    final kbFraction =
+        mq.viewInsets.bottom > 8
+            ? (mq.viewInsets.bottom / kKeyboardApproxHeight).clamp(0.0, 1.0)
+            : _fade.value;
+    final blurSigma = kbFraction * 20.0;
+
     // Material(transparency) is required so that IconButton / InkWell widgets
     // inside this overlay can find a Material ancestor. PageRouteBuilder does
     // NOT inject Material the way MaterialPageRoute does, so we must add it
@@ -133,9 +145,13 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
             child: Stack(
               children: [
                 // ── Blurred dark background ──────────────────────────────────
+                // Blur sigma is driven by keyboard height for perfect sync.
                 Positioned.fill(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    filter: ImageFilter.blur(
+                      sigmaX: blurSigma,
+                      sigmaY: blurSigma,
+                    ),
                     child: Container(
                       color: Colors.black.withValues(alpha: 0.62),
                     ),

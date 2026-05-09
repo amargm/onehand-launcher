@@ -6,6 +6,7 @@ library;
 class WallpaperEntry {
   const WallpaperEntry({
     required this.id,
+    required this.displayId,
     required this.url,
     required this.thumbUrl,
     required this.credit,
@@ -13,6 +14,8 @@ class WallpaperEntry {
   });
 
   final String id;
+  /// Sequential number within its category, starting from 1.
+  final int displayId;
   final String url;
   final String thumbUrl;
   final String credit;
@@ -42,6 +45,7 @@ const List<WallpaperEntry> kWallpapers = [
   // ── Nebula / Space ──────────────────────────────────────────────────────
   WallpaperEntry(
     id: 'n1',
+    displayId: 1,
     url:
         'https://images.unsplash.com/photo-1462331940025-496dfbfc7564?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -51,6 +55,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'n2',
+    displayId: 2,
     url:
         'https://images.unsplash.com/photo-1506703719100-a0f3a48c0f86?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -60,6 +65,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'n3',
+    displayId: 3,
     url:
         'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -69,6 +75,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'n4',
+    displayId: 4,
     url:
         'https://images.unsplash.com/photo-1543722530-d2c3201371e7?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -78,6 +85,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'n5',
+    displayId: 5,
     url:
         'https://images.unsplash.com/photo-1520034475321-cbe63696469a?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -87,6 +95,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'n6',
+    displayId: 6,
     url:
         'https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -99,6 +108,7 @@ const List<WallpaperEntry> kWallpapers = [
   // Dark fluid, ink, and minimal wallpapers that frame well in portrait.
   WallpaperEntry(
     id: 'a1',
+    displayId: 1,
     url:
         'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -108,6 +118,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'a2',
+    displayId: 2,
     url:
         'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -117,6 +128,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'a3',
+    displayId: 3,
     url:
         'https://images.unsplash.com/photo-1604871000636-074fa5117945?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -126,6 +138,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'a4',
+    displayId: 4,
     url:
         'https://images.unsplash.com/photo-1557682224-5b8590cd9ec5?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -135,6 +148,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'a5',
+    displayId: 5,
     url:
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -147,6 +161,7 @@ const List<WallpaperEntry> kWallpapers = [
   // Pure and near-black solid-tone backgrounds — favourite for AMOLED screens.
   WallpaperEntry(
     id: 'g1',
+    displayId: 1,
     url:
         'https://images.unsplash.com/photo-1547149617-609fafa00a6b?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -156,6 +171,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'g2',
+    displayId: 2,
     url:
         'https://images.unsplash.com/photo-1488330890490-c291ecf62571?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -165,6 +181,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'g3',
+    displayId: 3,
     url:
         'https://images.unsplash.com/photo-1517999144091-3d9dca6d1e43?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -174,6 +191,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'g4',
+    displayId: 4,
     url:
         'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -183,6 +201,7 @@ const List<WallpaperEntry> kWallpapers = [
   ),
   WallpaperEntry(
     id: 'g5',
+    displayId: 5,
     url:
         'https://images.unsplash.com/photo-1567225557594-88d73e55f2cb?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
