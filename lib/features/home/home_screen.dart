@@ -90,6 +90,9 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Reset the search overlay flag in case the overlay was open when the
+      // app was backgrounded — prevents the clock staying invisible on return.
+      ref.read(searchOverlayActiveProvider.notifier).state = false;
       _checkDefaultLauncher();
       // Refresh installed apps list so newly installed/uninstalled
       // apps appear immediately when the user returns to the launcher.

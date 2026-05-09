@@ -276,6 +276,26 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                                 },
                               );
                             },
+                            onSubmitted: (v) {
+                              // Cancel any pending debounce and apply the query now.
+                              _debounce?.cancel();
+                              final q = v.trim().toLowerCase();
+                              setState(() => _query = q);
+                              // In pick/multi-pick mode let the user select manually.
+                              if (widget.pickMode || widget.multiPickMode) return;
+                              // Single result → launch it immediately and dismiss.
+                              final all =
+                                  ref.read(appsProvider).valueOrNull ?? [];
+                              final hits = _sortedResults(all);
+                              if (hits.length == 1) {
+                                CircularAppIcon.launch(hits.first.packageName);
+                                ref
+                                    .read(recentAppsProvider.notifier)
+                                    .recordLaunch(hits.first.packageName);
+                                _dismiss();
+                              }
+                              // Multiple results → overlay stays open for manual pick.
+                            },
                             onClear: () {
                               _controller.clear();
                               setState(() => _query = '');
@@ -547,6 +567,7 @@ class _SearchBar extends StatefulWidget {
     required this.accent,
     required this.pickMode,
     required this.onChanged,
+    required this.onSubmitted,
     required this.onClear,
     required this.onDismiss,
   });
@@ -556,6 +577,7 @@ class _SearchBar extends StatefulWidget {
   final Color accent;
   final bool pickMode;
   final void Function(String) onChanged;
+  final void Function(String) onSubmitted;
   final VoidCallback onClear;
   final VoidCallback onDismiss;
 
@@ -628,6 +650,11 @@ class _SearchBarState extends State<_SearchBar> {
                 fontWeight: FontWeight.w400,
               ),
               cursorColor: accent,
+              // Keyboard search/done key: flush debounce, commit the query.
+              // If exactly one app matches, launch it directly and dismiss.
+              // Otherwise keep the overlay open so the user can tap a result.
+              textInputAction: TextInputAction.search,
+              onSubmitted: widget.onSubmitted,
               decoration: InputDecoration(
                 hintText: widget.pickMode ? 'Search to pin…' : 'Search apps…',
                 hintStyle: GoogleFonts.hankenGrotesk(
