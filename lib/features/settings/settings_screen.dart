@@ -58,8 +58,8 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 8),
           _NavTile(
             icon: Icons.grid_view_rounded,
-            label: 'Dock',
-            subtitle: 'Labels, handedness',
+            label: 'Dock & Folders',
+            subtitle: 'Labels, handedness, app folders',
             onTap:
                 () => Navigator.of(
                   context,
@@ -73,16 +73,6 @@ class SettingsScreen extends ConsumerWidget {
             onTap:
                 () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const _ContextScreen()),
-                ),
-          ),
-          const SizedBox(height: 8),
-          _NavTile(
-            icon: Icons.folder_outlined,
-            label: 'Folders',
-            subtitle: 'Manage dock app folders',
-            onTap:
-                () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const _FoldersScreen()),
                 ),
           ),
           const SizedBox(height: 8),
@@ -555,8 +545,9 @@ class _DockScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final folders = ref.watch(foldersProvider);
     return _SubScreen(
-      title: 'Dock',
+      title: 'Dock & Folders',
       children: [
         _SectionHeader('Labels'),
         _ToggleTile(
@@ -576,6 +567,22 @@ class _DockScreen extends ConsumerWidget {
         const SizedBox(height: 24),
         _SectionHeader('Layout'),
         _HandednessTile(),
+        const SizedBox(height: 24),
+        _SectionHeader('Dock folders'),
+        for (final folder in folders) ...[  
+          _FolderTile(folder: folder),
+          const SizedBox(height: 8),
+        ],
+        if (folders.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'No folders yet · create one via the + button',
+                style: GoogleFonts.sora(fontSize: 12, color: Colors.white24),
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -595,36 +602,6 @@ class _ContextScreen extends ConsumerWidget {
         const SizedBox(height: 24),
         _SectionHeader('Schedules'),
         _ScheduleRulesSection(),
-      ],
-    );
-  }
-}
-
-// ── Folders sub-screen ───────────────────────────────────────────────────────
-class _FoldersScreen extends ConsumerWidget {
-  const _FoldersScreen();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final folders = ref.watch(foldersProvider);
-    return _SubScreen(
-      title: 'Folders',
-      children: [
-        _SectionHeader('Dock folders'),
-        for (final folder in folders) ...[
-          _FolderTile(folder: folder),
-          const SizedBox(height: 8),
-        ],
-        if (folders.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: Center(
-              child: Text(
-                'No folders yet · create one via the + button',
-                style: GoogleFonts.sora(fontSize: 12, color: Colors.white24),
-              ),
-            ),
-          ),
       ],
     );
   }
