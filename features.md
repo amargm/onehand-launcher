@@ -5,10 +5,9 @@ Glad you're happy with it. Here are the most impactful things still missing, gro
 ### High impact — core launcher functionality
 
 **1. App grid / home screen**
-There's a clock but no scrollable app grid on the home screen. Most launchers need this — a single-column or 2-column list anchored to the bottom half of the screen so the thumb reaches everything.
+There's a clock 
 
-**2. Pinned apps row**
-A persistent strip of 4–5 favourite apps above the dock (like Android's default launcher). Currently tapping a folder is the only way to reach apps without search.
+
 
 **3. App long-press menu**
 Long-pressing an app icon anywhere (folder panel, search results, home grid) should offer: pin to home, add to folder, uninstall shortcut. This is the standard mental model users expect.
@@ -50,6 +49,3 @@ When the search bar is empty, show the 5 most recently launched apps instead of 
 
 ---
 
-### The single highest-ROI item
-
-**App grid + swipe-up to search** (#1 + #4 together). Without a way to reach apps that aren't in folders or recently used, the launcher currently requires the user to know exactly what they want and search for it — which is friction. An app grid makes it a complete launcher.

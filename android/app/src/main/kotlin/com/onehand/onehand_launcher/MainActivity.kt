@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
@@ -83,6 +84,17 @@ class MainActivity : FlutterActivity() {
                         } catch (e: Exception) {
                             runOnUiThread { result.error("ERROR", e.message, null) }
                         }
+                    }
+                }
+                "uninstallApp" -> {
+                    val pkg = call.argument<String>("packageName")
+                    if (pkg != null) {
+                        startActivity(
+                            Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg"))
+                        )
+                        result.success(null)
+                    } else {
+                        result.error("INVALID_ARG", "packageName is null", null)
                     }
                 }
                 else -> result.notImplemented()

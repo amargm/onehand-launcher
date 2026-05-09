@@ -9,9 +9,11 @@ import '../../../core/providers/apps_provider.dart';
 import '../../../core/providers/context_apps_provider.dart';
 import '../../../core/providers/folders_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
+import '../../../core/providers/recent_apps_provider.dart';
 import '../../../core/providers/settings_provider.dart';
 import '../../../core/services/apps_service.dart';
 import '../../search/search_overlay.dart';
+import 'circular_app_icon.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AppDock
@@ -352,47 +354,74 @@ class _FolderPanel extends ConsumerWidget {
   }
 }
 
-// ── Folder panel app icon (44 px) ─────────────────────────────────────────────
-class _FolderPanelIcon extends StatelessWidget {
+// ── Folder panel app icon (44 px + 8 px label) ───────────────────────────────
+// ConsumerWidget so it can access foldersProvider (long-press menu) and
+// recentAppsProvider (records launches for the search recents list).
+class _FolderPanelIcon extends ConsumerWidget {
   const _FolderPanelIcon({this.app});
 
   final AppInfo? app;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     if (app == null) {
-      // Empty slot — invisible spacer to keep grid alignment.
-      return const SizedBox(width: 44, height: 44);
+      // Invisible spacer — keeps grid columns aligned.
+      return const SizedBox(width: 44);
     }
     return GestureDetector(
-      onTap: () => AppsService.openApp(app!.packageName),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFF1E1E1E),
-        ),
-        child: ClipOval(
-          child:
-              app!.icon != null
-                  ? Image.memory(
-                    app!.icon!,
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
-                    errorBuilder:
-                        (_, __, ___) => const Icon(
-                          Icons.apps_rounded,
-                          size: 20,
-                          color: Colors.white54,
-                        ),
-                  )
-                  : const Icon(
-                    Icons.apps_rounded,
-                    size: 20,
-                    color: Colors.white54,
-                  ),
-        ),
+      onTap: () {
+        ref.read(recentAppsProvider.notifier).recordLaunch(app!.packageName);
+        AppsService.openApp(app!.packageName);
+      },
+      onLongPress: () => showAppContextMenu(context, ref, app!),
+      behavior: HitTestBehavior.opaque,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF1E1E1E),
+            ),
+            child: ClipOval(
+              child:
+                  app!.icon != null
+                      ? Image.memory(
+                        app!.icon!,
+                        fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        errorBuilder:
+                            (_, __, ___) => const Icon(
+                              Icons.apps_rounded,
+                              size: 20,
+                              color: Colors.white54,
+                            ),
+                      )
+                      : const Icon(
+                        Icons.apps_rounded,
+                        size: 20,
+                        color: Colors.white54,
+                      ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 52,
+            child: Text(
+              app!.appName,
+              style: GoogleFonts.sora(
+                fontSize: 8,
+                color: Colors.white54,
+                letterSpacing: 0.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
       ),
     );
   }

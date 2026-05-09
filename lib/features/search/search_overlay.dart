@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/recent_apps_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../home/widgets/circular_app_icon.dart';
 
@@ -136,6 +137,15 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                           loading: () => const SizedBox(height: 160),
                           error: (_, __) => const SizedBox(height: 160),
                           data: (all) {
+                            final recentPkgs = ref.watch(recentAppsProvider);
+                            final pkgMap = {
+                              for (final a in all) a.packageName: a,
+                            };
+                            final recentApps = recentPkgs
+                                .map((pkg) => pkgMap[pkg])
+                                .whereType<AppInfo>()
+                                .toList();
+
                             final results = _sortedResults(all);
                             if (results.isEmpty && _query.isNotEmpty) {
                               return Padding(
@@ -154,16 +164,37 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                                 ),
                               );
                             }
+                            // Empty query: show recents (or a placeholder if none yet).
+                            if (_query.isEmpty && recentApps.isEmpty) {
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 36,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    'Start typing to search',
+                                    style: GoogleFonts.sora(
+                                      color: Colors.white24,
+                                      fontSize: 13,
+                                      letterSpacing: 0.4,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }
                             return _TwoRowResults(
                               results:
-                                  _query.isEmpty
-                                      ? all.take(32).toList()
-                                      : results,
+                                  _query.isEmpty ? recentApps : results,
+                              isRecents: _query.isEmpty,
                               accent: accent,
                               rightHanded: rightHanded,
                               pickMode: widget.pickMode,
                               onAppPicked: widget.onAppPicked,
                               onDismiss: _dismiss,
+                              onLaunched:
+                                  (pkg) => ref
+                                      .read(recentAppsProvider.notifier)
+                                      .recordLaunch(pkg),
                             );
                           },
                         ),
@@ -225,19 +256,23 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
 class _TwoRowResults extends StatelessWidget {
   const _TwoRowResults({
     required this.results,
+    required this.isRecents,
     required this.accent,
     required this.rightHanded,
     required this.pickMode,
     required this.onAppPicked,
     required this.onDismiss,
+    required this.onLaunched,
   });
 
   final List<AppInfo> results;
+  final bool isRecents;
   final Color accent;
   final bool rightHanded;
   final bool pickMode;
   final void Function(String)? onAppPicked;
   final VoidCallback onDismiss;
+  final void Function(String packageName) onLaunched;
 
   static const double _iconSize = 50.0;
   static const double _rowH = _iconSize + 20.0; // icon + label
@@ -265,6 +300,7 @@ class _TwoRowResults extends StatelessWidget {
       onAppPicked!(pkg);
     } else {
       CircularAppIcon.launch(pkg);
+      onLaunched(pkg);
     }
     onDismiss();
   }
@@ -285,6 +321,19 @@ class _TwoRowResults extends StatelessWidget {
               style: GoogleFonts.sora(
                 fontSize: 10,
                 color: accent.withValues(alpha: 0.65),
+                letterSpacing: 2,
+              ),
+            ),
+          ),
+        // Recents label
+        if (isRecents)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              'RECENT',
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color: Colors.white24,
                 letterSpacing: 2,
               ),
             ),

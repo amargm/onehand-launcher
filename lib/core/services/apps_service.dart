@@ -42,6 +42,15 @@ class AppsService {
     } catch (_) {}
   }
 
+  /// Opens the system uninstall dialog for [packageName].
+  static Future<void> requestUninstall(String packageName) async {
+    try {
+      await _channel.invokeMethod<void>('uninstallApp', {
+        'packageName': packageName,
+      });
+    } catch (_) {}
+  }
+
   /// Returns apps that can play audio (music players, podcast apps, etc.).
   /// Used to populate the quick-launch strip when headphones are connected.
   static Future<List<AppInfo>> getMediaApps() async {

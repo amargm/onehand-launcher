@@ -28,7 +28,7 @@ class CircularAppIcon extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GestureDetector(
       onTap: onTap,
-      onLongPress: onLongPress ?? () => _showFolderMenu(context, ref),
+      onLongPress: onLongPress ?? () => showAppContextMenu(context, ref, app),
       behavior: HitTestBehavior.opaque,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -54,46 +54,71 @@ class CircularAppIcon extends ConsumerWidget {
     );
   }
 
-  void _showFolderMenu(BuildContext context, WidgetRef ref) {
-    final folders = ref.read(foldersProvider);
-    final accent = Theme.of(context).colorScheme.primary;
+  /// Launch an app by package name via the platform channel.
+  static Future<void> launch(String packageName) async {
+    await AppsService.openApp(packageName);
+  }
+}
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF111111),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder:
-          (_) => Padding(
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _AppCircle(icon: app.icon, size: 40),
-                    const SizedBox(width: 12),
-                    Text(
+// ── App context menu (add to folder + uninstall) ──────────────────────────────
+// Top-level so it's reachable from any widget (folder panel, search results).
+void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
+  final folders = ref.read(foldersProvider);
+  final accent = Theme.of(context).colorScheme.primary;
+
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: const Color(0xFF111111),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder:
+        (_) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  _AppCircle(icon: app.icon, size: 40),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
                       app.appName,
                       style: GoogleFonts.sora(
                         color: Colors.white,
                         fontSize: 15,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'ADD TO FOLDER',
-                  style: GoogleFonts.sora(
-                    color: Colors.white24,
-                    fontSize: 10,
-                    letterSpacing: 2,
                   ),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              // Add to folder section
+              Text(
+                'ADD TO FOLDER',
+                style: GoogleFonts.sora(
+                  color: Colors.white24,
+                  fontSize: 10,
+                  letterSpacing: 2,
                 ),
-                const SizedBox(height: 12),
+              ),
+              const SizedBox(height: 12),
+              if (folders.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'No folders yet · create one in Settings',
+                    style: GoogleFonts.sora(
+                      color: Colors.white24,
+                      fontSize: 12,
+                    ),
+                  ),
+                )
+              else
                 for (final folder in folders)
                   ListTile(
                     leading: Icon(
@@ -128,16 +153,31 @@ class CircularAppIcon extends ConsumerWidget {
                       );
                     },
                   ),
-              ],
-            ),
-          ),
-    );
-  }
 
-  /// Launch an app by package name via the platform channel.
-  static Future<void> launch(String packageName) async {
-    await AppsService.openApp(packageName);
-  }
+              // Uninstall section
+              const Divider(color: Colors.white12),
+              ListTile(
+                leading: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.redAccent,
+                  size: 20,
+                ),
+                title: Text(
+                  'Uninstall',
+                  style: GoogleFonts.sora(
+                    color: Colors.redAccent,
+                    fontSize: 14,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  AppsService.requestUninstall(app.packageName);
+                },
+              ),
+            ],
+          ),
+        ),
+  );
 }
 
 class _AppCircle extends StatelessWidget {
