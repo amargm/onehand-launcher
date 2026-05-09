@@ -1,8 +1,12 @@
 package com.onehand.onehand_launcher
 
 import android.app.role.RoleManager
+import android.bluetooth.BluetoothA2dp
+import android.bluetooth.BluetoothHeadset
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -13,19 +17,29 @@ import android.os.Build
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
+import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
 
-    private val appsChannel     = "com.onehand.onehand_launcher/apps"
-    private val launcherChannel = "com.onehand.onehand_launcher/launcher"
+    private val appsChannel      = "com.onehand.onehand_launcher/apps"
+    private val launcherChannel  = "com.onehand.onehand_launcher/launcher"
+    private val headphoneChannel = "com.onehand.onehand_launcher/headphone_events"
 
     // Off-main-thread executor for icon-loading operations.
-    // Using a cached pool so concurrent getInstalledApps + getMediaApps calls
-    // don't block each other during first-launch warm-up.
     private val executor = Executors.newCachedThreadPool()
+
+    // EventChannel sink — null when Flutter is not listening.
+    private var headphoneEventSink: EventChannel.EventSink? = null
+
+    // Fires on wired plug/unplug and BT A2DP / SCO connect/disconnect.
+    private val audioReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            headphoneEventSink?.success(isHeadphoneConnected())
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -90,6 +104,44 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // ── Headphone event channel ──────────────────────────────────────────
+        // Dart subscribes once; we push true/false whenever the
+        // BroadcastReceiver fires. Initial value sent in onListen so
+        // Flutter gets current state without waiting for first event.
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            headphoneChannel,
+        ).setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                headphoneEventSink = sink
+                // Push current state immediately.
+                sink.success(isHeadphoneConnected())
+            }
+            override fun onCancel(arguments: Any?) {
+                headphoneEventSink = null
+            }
+        })
+    }
+
+    // ── Receiver lifecycle ───────────────────────────────────────────────────
+    // Register when the activity is foregrounded; unregister on pause.
+    // This means no wakeups while the launcher is behind another app.
+    override fun onResume() {
+        super.onResume()
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_HEADSET_PLUG)                        // wired
+            addAction(BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED)     // BT stereo
+            addAction(BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED)  // BT mono/SCO
+        }
+        registerReceiver(audioReceiver, filter)
+        // Sync state in case it changed while we were paused.
+        headphoneEventSink?.success(isHeadphoneConnected())
+    }
+
+    override fun onPause() {
+        super.onPause()
+        try { unregisterReceiver(audioReceiver) } catch (_: Exception) {}
     }
 
     // ── App list ───────────────────────────────────────────────────────────

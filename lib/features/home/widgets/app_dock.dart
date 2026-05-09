@@ -111,29 +111,30 @@ class _AppDockState extends ConsumerState<AppDock> {
           AnimatedSize(
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeInOutQuart,
-            child: displayFolder != null
-                ? AnimatedOpacity(
-                    opacity: activeFolder != null ? 1.0 : 0.0,
-                    duration: activeFolder != null
-                        ? const Duration(milliseconds: 500)
-                        : const Duration(milliseconds: 500),
-                    curve: activeFolder != null
-                        ? Curves.easeIn
-                        : Curves.easeOut,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _FolderPanel(
-                          key: ValueKey(displayFolder.id),
-                          folder: displayFolder,
-                          onClose:
-                              () => setState(() => _activeFolderId = null),
-                        ),
-                        const SizedBox(height: 8),
-                      ],
-                    ),
-                  )
-                : const SizedBox.shrink(),
+            child:
+                displayFolder != null
+                    ? AnimatedOpacity(
+                      opacity: activeFolder != null ? 1.0 : 0.0,
+                      duration:
+                          activeFolder != null
+                              ? const Duration(milliseconds: 500)
+                              : const Duration(milliseconds: 500),
+                      curve:
+                          activeFolder != null ? Curves.easeIn : Curves.easeOut,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _FolderPanel(
+                            key: ValueKey(displayFolder.id),
+                            folder: displayFolder,
+                            onClose:
+                                () => setState(() => _activeFolderId = null),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    )
+                    : const SizedBox.shrink(),
           ),
 
           // ── Outer shell + inner dock ────────────────────────────────────
@@ -521,33 +522,30 @@ class _DockCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isSearch ? accent : const Color(0xFF121212),
-        boxShadow: isSearch
-            ? [
-                BoxShadow(
-                  color: accent.withValues(alpha: 0.30),
-                  blurRadius: 20,
-                  spreadRadius: 0,
-                ),
-              ]
-            : isActive
+        boxShadow:
+            isSearch
                 ? [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.40),
-                      blurRadius: 18,
-                      spreadRadius: 1,
-                    ),
-                  ]
-                : null,
-        border: isSearch
-            ? null
-            : isActive
-                ? Border.all(
-                    color: accent.withValues(alpha: 0.85),
-                    width: 2,
-                  )
-                : Border.all(
-                    color: Colors.white.withValues(alpha: 0.08),
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.30),
+                    blurRadius: 20,
+                    spreadRadius: 0,
                   ),
+                ]
+                : isActive
+                ? [
+                  BoxShadow(
+                    color: accent.withValues(alpha: 0.40),
+                    blurRadius: 18,
+                    spreadRadius: 1,
+                  ),
+                ]
+                : null,
+        border:
+            isSearch
+                ? null
+                : isActive
+                ? Border.all(color: accent.withValues(alpha: 0.85), width: 2)
+                : Border.all(color: Colors.white.withValues(alpha: 0.08)),
       ),
       child: Icon(
         icon,

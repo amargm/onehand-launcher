@@ -24,4 +24,15 @@ class LauncherService {
   static Future<bool> isHeadphoneConnected() async {
     return await _channel.invokeMethod<bool>('isHeadphoneConnected') ?? false;
   }
+
+  static const _eventChannel = EventChannel(
+    'com.onehand.onehand_launcher/headphone_events',
+  );
+
+  /// Stream of `true`/`false` pushed by a native BroadcastReceiver whenever
+  /// an audio device is connected or disconnected.
+  /// Zero battery cost when nothing changes; instant on plug/unplug.
+  /// The first event is emitted immediately on subscribe with the current state.
+  static Stream<bool> get headphoneEvents =>
+      _eventChannel.receiveBroadcastStream().map((e) => e as bool);
 }

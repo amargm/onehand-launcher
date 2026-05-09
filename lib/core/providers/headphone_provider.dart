@@ -7,18 +7,18 @@ import 'context_settings_provider.dart';
 
 /// Single source of truth for wired / Bluetooth headphone connection state.
 ///
-/// Polling is gated on the "Headphones" toggle in Settings → Context indicators.
-/// When that toggle is OFF the timer is stopped and state is forced to false
-/// so the context shell stays hidden regardless of what is physically connected.
+/// Backed by a native BroadcastReceiver via EventChannel — zero battery cost
+/// when nothing changes, instant response on plug/unplug/BT connect.
+/// The 2-second polling timer is removed entirely.
+///
+/// Gated on the "Headphones" toggle in Settings → Context indicators.
+/// When OFF: stream cancelled, state forced false immediately.
 final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
-  // Read the initial value of the headphone setting.
   final initiallyEnabled = ref
       .read(contextItemsProvider)
       .contains(ContextItemType.headphone);
   final notifier = HeadphoneNotifier(enabled: initiallyEnabled);
 
-  // React to settings changes without recreating the notifier (avoids a
-  // state reset / timer restart on every unrelated settings change).
   ref.listen<Set<ContextItemType>>(contextItemsProvider, (_, next) {
     notifier.setEnabled(next.contains(ContextItemType.headphone));
   });
@@ -29,48 +29,44 @@ final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
 class HeadphoneNotifier extends StateNotifier<bool> {
   HeadphoneNotifier({required bool enabled}) : super(false) {
     _enabled = enabled;
-    if (enabled) _startPolling();
+    if (enabled) _subscribe();
   }
 
   bool _enabled = false;
-  Timer? _timer;
+  StreamSubscription<bool>? _sub;
 
-  /// Called when the Settings toggle changes.
+  /// Called when the Settings "Headphones" toggle changes.
   void setEnabled(bool enabled) {
     if (enabled == _enabled) return;
     _enabled = enabled;
     if (enabled) {
-      _startPolling();
+      _subscribe();
     } else {
-      _stopPolling();
-      // Immediately hide the context shell.
+      _unsubscribe();
       if (mounted) state = false;
     }
   }
 
-  void _startPolling() {
-    _poll(); // immediate first check
-    _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
+  void _subscribe() {
+    _sub?.cancel();
+    _sub = LauncherService.headphoneEvents.listen(
+      (connected) {
+        if (mounted && connected != state) state = connected;
+      },
+      onError: (_) {
+        // BroadcastReceiver unavailable (emulator / restricted env) — silent.
+      },
+    );
   }
 
-  void _stopPolling() {
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  Future<void> _poll() async {
-    try {
-      final connected = await LauncherService.isHeadphoneConnected();
-      // Only mutate state (and trigger rebuilds) when value actually changes.
-      if (mounted && connected != state) state = connected;
-    } catch (_) {
-      // Benign: emulator or audio service unavailable — keep current state.
-    }
+  void _unsubscribe() {
+    _sub?.cancel();
+    _sub = null;
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _sub?.cancel();
     super.dispose();
   }
 }
