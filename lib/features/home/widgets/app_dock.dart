@@ -205,7 +205,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                       ),
                       decoration: BoxDecoration(
                         color: const Color(0xFF272727),
-                        borderRadius: BorderRadius.circular(32),
+                        borderRadius: BorderRadius.circular(40),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
