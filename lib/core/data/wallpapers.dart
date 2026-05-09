@@ -19,7 +19,7 @@ class WallpaperEntry {
   final WallpaperCategory category;
 }
 
-enum WallpaperCategory { nebula, abstract, minimal }
+enum WallpaperCategory { nebula, abstract, grid }
 
 extension WallpaperCategoryLabel on WallpaperCategory {
   String get label {
@@ -28,8 +28,8 @@ extension WallpaperCategoryLabel on WallpaperCategory {
         return 'Nebula';
       case WallpaperCategory.abstract:
         return 'Abstract';
-      case WallpaperCategory.minimal:
-        return 'Minimal';
+      case WallpaperCategory.grid:
+        return 'Grid';
     }
   }
 }
@@ -142,50 +142,50 @@ const List<WallpaperEntry> kWallpapers = [
     category: WallpaperCategory.abstract,
   ),
 
-  // ── Minimal / Dark Architecture ─────────────────────────────────────────
+  // ── Grid / Dark Geometric Patterns ─────────────────────────────────────
   WallpaperEntry(
-    id: 'm1',
+    id: 'g1',
     url:
-        'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1557683316-973673baf926?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1516912481808-3406841bd33c?w=400&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
-    category: WallpaperCategory.minimal,
+        'https://images.unsplash.com/photo-1557683316-973673baf926?w=400&q=70&fm=jpg&fit=crop',
+    credit: 'Pawel Czerwinski / Unsplash',
+    category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
-    id: 'm2',
+    id: 'g2',
     url:
-        'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
-    category: WallpaperCategory.minimal,
+    category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
-    id: 'm3',
+    id: 'g3',
     url:
-        'https://images.unsplash.com/photo-1500964757637-c85e8a162429?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1500964757637-c85e8a162429?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1604076913837-52ab5629fde9?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
-    category: WallpaperCategory.minimal,
+    category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
-    id: 'm4',
+    id: 'g4',
     url:
-        'https://images.unsplash.com/photo-1448375240586-882707db888b?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1614854262340-ab04ca8223c7?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1448375240586-882707db888b?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1614854262340-ab04ca8223c7?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
-    category: WallpaperCategory.minimal,
+    category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
-    id: 'm5',
+    id: 'g5',
     url:
-        'https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1636955816868-fcb881e57954?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1532274402911-5a369e4c4bb5?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1636955816868-fcb881e57954?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
-    category: WallpaperCategory.minimal,
+    category: WallpaperCategory.grid,
   ),
 ];
