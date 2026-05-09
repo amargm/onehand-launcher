@@ -2540,8 +2540,7 @@ class _SpecialDatesScreen extends ConsumerWidget {
                           mins < 60 ? '$mins min' : '${mins ~/ 60} hr',
                           style: GoogleFonts.sora(
                             fontSize: 11,
-                            color:
-                                snoozeMins == mins ? accent : Colors.white38,
+                            color: snoozeMins == mins ? accent : Colors.white38,
                             fontWeight:
                                 snoozeMins == mins
                                     ? FontWeight.w600
