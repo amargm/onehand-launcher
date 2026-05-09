@@ -7,6 +7,7 @@ import '../../../core/models/app_folder.dart';
 import '../../../core/models/app_info.dart';
 import '../../../core/providers/apps_provider.dart';
 import '../../../core/providers/context_apps_provider.dart';
+import '../../../core/providers/day_context_provider.dart';
 import '../../../core/providers/folders_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
 import '../../../core/providers/recent_apps_provider.dart';
@@ -46,9 +47,13 @@ class _AppDockState extends ConsumerState<AppDock> {
     final folders = ref.watch(foldersProvider);
     final rightHanded = ref.watch(rightHandedProvider);
     final headphones = ref.watch(headphoneProvider);
+    final dayActive = ref.watch(isDayContextActiveProvider);
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
     final showSearchLabel = ref.watch(showSearchLabelProvider);
     final accent = Theme.of(context).colorScheme.primary;
+
+    // Outer shell visible when either context source is active.
+    final shellVisible = headphones || dayActive;
 
     // If the active folder was removed, clear selection.
     final activeFolder =
@@ -153,14 +158,16 @@ class _AppDockState extends ConsumerState<AppDock> {
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 700),
               curve: Curves.easeInOutQuart,
-              padding: headphones ? const EdgeInsets.all(8) : EdgeInsets.zero,
+              padding: shellVisible ? const EdgeInsets.all(8) : EdgeInsets.zero,
               decoration: BoxDecoration(
                 color:
-                    headphones ? const Color(0xFF111111) : Colors.transparent,
+                    shellVisible
+                        ? const Color(0xFF111111)
+                        : Colors.transparent,
                 borderRadius: BorderRadius.circular(40),
                 border: Border.all(
                   color:
-                      headphones
+                      shellVisible
                           ? Colors.white.withValues(alpha: 0.16)
                           : Colors.transparent,
                 ),
@@ -168,25 +175,39 @@ class _AppDockState extends ConsumerState<AppDock> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Context shell ─────────────────────────────────────────
-                  // AnimatedSize handles height 0→full.
-                  // AnimatedOpacity independently fades content in/out.
-                  // Avoid AnimatedSwitcher here — it remeasures both children
-                  // simultaneously which fights AnimatedSize and feels abrupt.
+                  // ── Context shell rows ────────────────────────────────────
+                  // AnimatedSize handles 0-height → 1-row → 2-row smoothly.
                   AnimatedSize(
                     duration: const Duration(milliseconds: 700),
                     curve: Curves.easeInOutQuart,
                     child:
-                        headphones
+                        shellVisible
                             ? AnimatedOpacity(
                               opacity: 1.0,
                               duration: const Duration(milliseconds: 500),
                               curve: Curves.easeIn,
-                              child: const Column(
+                              child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  _ContextShellRow(),
-                                  SizedBox(height: 6),
+                                  // Top row: day-of-week apps (when day active)
+                                  if (dayActive)
+                                    const _DayContextShellRow(),
+                                  // Separator between two active rows
+                                  if (dayActive && headphones)
+                                    Container(
+                                      height: 1,
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 4,
+                                      ),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.06,
+                                      ),
+                                    ),
+                                  // Bottom row: headphone apps (when headphones)
+                                  if (headphones)
+                                    const _ContextShellRow(),
+                                  const SizedBox(height: 6),
                                 ],
                               ),
                             )
@@ -194,11 +215,14 @@ class _AppDockState extends ConsumerState<AppDock> {
                               opacity: 0.0,
                               duration: const Duration(milliseconds: 200),
                               curve: Curves.easeOut,
-                              child: const Column(
+                              child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  _ContextShellRow(),
-                                  SizedBox(height: 6),
+                                  if (dayActive)
+                                    const _DayContextShellRow(),
+                                  if (headphones)
+                                    const _ContextShellRow(),
+                                  const SizedBox(height: 6),
                                 ],
                               ),
                             ),
@@ -520,6 +544,55 @@ class _ContextAppIcon extends StatelessWidget {
                     color: Colors.white54,
                   ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Day-of-week context shell row ─────────────────────────────────────────────
+/// Shown inside the outer shell on the user's selected days of the week.
+/// Displays up to [kDayContextMaxApps] (5) app icons as 32 px circles.
+class _DayContextShellRow extends ConsumerWidget {
+  const _DayContextShellRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final configuredPkgs = ref.watch(dayContextAppsProvider);
+    final appsAsync = ref.watch(appsProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    final pkgMap = {
+      for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
+    };
+
+    final apps =
+        configuredPkgs
+            .take(kDayContextMaxApps)
+            .map((pkg) => pkgMap[pkg])
+            .whereType<AppInfo>()
+            .toList();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        mainAxisAlignment:
+            apps.isEmpty ? MainAxisAlignment.center : MainAxisAlignment.spaceAround,
+        children:
+            apps.isEmpty
+                ? List.generate(
+                  2,
+                  (_) => Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: accent.withValues(alpha: 0.15),
+                      ),
+                    ),
+                  ),
+                )
+                : apps.map((app) => _ContextAppIcon(app: app)).toList(),
       ),
     );
   }

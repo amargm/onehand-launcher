@@ -9,6 +9,7 @@ import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/context_settings_provider.dart';
+import '../../core/providers/day_context_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/apps_service.dart';
@@ -578,8 +579,11 @@ class _ContextScreen extends ConsumerWidget {
         _SectionHeader('Context indicators'),
         _ContextItemsSection(),
         const SizedBox(height: 24),
-        _SectionHeader('Context shell apps'),
+        _SectionHeader('Headphone apps'),
         _ContextShellAppsSection(),
+        const SizedBox(height: 24),
+        _SectionHeader('Day of week apps'),
+        _DayContextSection(),
       ],
     );
   }
@@ -1650,6 +1654,294 @@ class _ContextShellAppsSection extends ConsumerWidget {
               pickMode: true,
               onAppPicked:
                   (pkg) => ref.read(contextShellAppsProvider.notifier).add(pkg),
+            ),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+}
+
+// ── Day-of-week context section ───────────────────────────────────────────────
+/// Lets the user enable day-of-week context, pick which days trigger it, and
+/// configure up to [kDayContextMaxApps] apps shown in the top context row.
+class _DayContextSection extends ConsumerWidget {
+  const _DayContextSection();
+
+  static const _days = [
+    (label: 'M', full: 'Monday', weekday: 1),
+    (label: 'T', full: 'Tuesday', weekday: 2),
+    (label: 'W', full: 'Wednesday', weekday: 3),
+    (label: 'T', full: 'Thursday', weekday: 4),
+    (label: 'F', full: 'Friday', weekday: 5),
+    (label: 'S', full: 'Saturday', weekday: 6),
+    (label: 'S', full: 'Sunday', weekday: 7),
+  ];
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final enabled = ref.watch(dayContextEnabledProvider);
+    final selectedDays = ref.watch(dayContextDaysProvider);
+    final configured = ref.watch(dayContextAppsProvider);
+    final appsAsync = ref.watch(appsProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    final pkgMap = {
+      for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
+    };
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ── Enable toggle ─────────────────────────────────────────────
+          Row(
+            children: [
+              Icon(Icons.calendar_today_outlined, color: accent, size: 18),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Show day-specific apps in context shell',
+                  style: GoogleFonts.hankenGrotesk(
+                    fontSize: 12,
+                    color: Colors.white38,
+                  ),
+                ),
+              ),
+              Switch(
+                value: enabled,
+                onChanged:
+                    (v) => ref.read(dayContextEnabledProvider.notifier).set(v),
+                activeColor: accent,
+                trackColor: WidgetStateProperty.resolveWith(
+                  (s) =>
+                      s.contains(WidgetState.selected)
+                          ? accent.withValues(alpha: 0.30)
+                          : Colors.white12,
+                ),
+                thumbColor: WidgetStateProperty.all(Colors.white),
+              ),
+            ],
+          ),
+
+          if (enabled) ...[
+            const SizedBox(height: 16),
+
+            // ── Day picker chips ──────────────────────────────────────────
+            Text(
+              'Active days',
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color: Colors.white38,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children:
+                  _days.map((d) {
+                    final selected = selectedDays.contains(d.weekday);
+                    return GestureDetector(
+                      onTap:
+                          () => ref
+                              .read(dayContextDaysProvider.notifier)
+                              .toggle(d.weekday),
+                      child: Tooltip(
+                        message: d.full,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color:
+                                selected
+                                    ? accent.withValues(alpha: 0.20)
+                                    : Colors.white.withValues(alpha: 0.06),
+                            border: Border.all(
+                              color:
+                                  selected
+                                      ? accent.withValues(alpha: 0.70)
+                                      : Colors.white.withValues(alpha: 0.10),
+                              width: selected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Center(
+                            child: Text(
+                              d.label,
+                              style: GoogleFonts.sora(
+                                fontSize: 11,
+                                fontWeight:
+                                    selected
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                color:
+                                    selected ? accent : Colors.white38,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+            ),
+
+            const SizedBox(height: 20),
+
+            // ── App slots ────────────────────────────────────────────────
+            Text(
+              'Apps  ·  max $kDayContextMaxApps',
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color: Colors.white38,
+                letterSpacing: 0.8,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(kDayContextMaxApps, (i) {
+                final pkg = i < configured.length ? configured[i] : null;
+                final app = pkg != null ? pkgMap[pkg] : null;
+
+                if (app != null) {
+                  return GestureDetector(
+                    onTap:
+                        () => ref
+                            .read(dayContextAppsProvider.notifier)
+                            .remove(pkg!),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xFF1E1E1E),
+                                border: Border.all(
+                                  color: accent.withValues(alpha: 0.30),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: ClipOval(
+                                child:
+                                    app.icon != null
+                                        ? Image.memory(
+                                          app.icon!,
+                                          fit: BoxFit.cover,
+                                          gaplessPlayback: true,
+                                        )
+                                        : Icon(
+                                          Icons.apps_rounded,
+                                          color: Colors.white54,
+                                          size: 24,
+                                        ),
+                              ),
+                            ),
+                            Positioned(
+                              top: -2,
+                              right: -2,
+                              child: Container(
+                                width: 18,
+                                height: 18,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: const Color(0xFF0D0D0D),
+                                  border: Border.all(color: Colors.white12),
+                                ),
+                                child: const Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.white54,
+                                  size: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 5),
+                        SizedBox(
+                          width: 52,
+                          child: Text(
+                            app.appName,
+                            style: GoogleFonts.sora(
+                              fontSize: 8.5,
+                              color: Colors.white38,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                } else {
+                  final canAdd = configured.length < kDayContextMaxApps;
+                  return GestureDetector(
+                    onTap:
+                        canAdd ? () => _pickDayApp(context, ref) : null,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color:
+                                  canAdd ? Colors.white24 : Colors.white10,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: Icon(
+                            Icons.add_rounded,
+                            color:
+                                canAdd ? Colors.white38 : Colors.white12,
+                            size: 22,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          canAdd ? 'Add' : '',
+                          style: GoogleFonts.sora(
+                            fontSize: 8.5,
+                            color: Colors.white24,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              }),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _pickDayApp(BuildContext context, WidgetRef ref) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked:
+                  (pkg) =>
+                      ref.read(dayContextAppsProvider.notifier).add(pkg),
             ),
         transitionsBuilder:
             (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
