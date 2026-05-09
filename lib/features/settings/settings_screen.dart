@@ -2498,7 +2498,7 @@ class _SpecialDatesScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Snooze � $snoozeMins min',
+                'Snooze · $snoozeMins min',
                 style: GoogleFonts.sora(fontSize: 13, color: Colors.white70),
               ),
               const SizedBox(height: 4),
@@ -2663,7 +2663,7 @@ class _SpecialDateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateLabel =
-        '${_months[event.month - 1]} ${event.day}${event.isRecurring ? ' � every year' : ''}';
+        '${_months[event.month - 1]} ${event.day}${event.isRecurring ? ' · every year' : ''}';
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -3035,32 +3035,37 @@ class _SpecialDateEditScreenState
               height: 48,
               child: ListView(
                 scrollDirection: Axis.horizontal,
-                children: kSpecialDateIcons.entries.map((entry) {
-                  final selected = _iconKey == entry.key;
-                  return GestureDetector(
-                    onTap: () => setState(() => _iconKey = entry.key),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 160),
-                      width: 44,
-                      height: 44,
-                      margin: const EdgeInsets.only(right: 8),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: selected
-                            ? _amber.withValues(alpha: 0.18)
-                            : Colors.white.withValues(alpha: 0.06),
-                        border: Border.all(
-                          color: selected
-                              ? _amber.withValues(alpha: 0.70)
-                              : Colors.white.withValues(alpha: 0.10),
+                children:
+                    kSpecialDateIcons.entries.map((entry) {
+                      final selected = _iconKey == entry.key;
+                      return GestureDetector(
+                        onTap: () => setState(() => _iconKey = entry.key),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          width: 44,
+                          height: 44,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color:
+                                selected
+                                    ? _amber.withValues(alpha: 0.18)
+                                    : Colors.white.withValues(alpha: 0.06),
+                            border: Border.all(
+                              color:
+                                  selected
+                                      ? _amber.withValues(alpha: 0.70)
+                                      : Colors.white.withValues(alpha: 0.10),
+                            ),
+                          ),
+                          child: Icon(
+                            entry.value,
+                            size: 20,
+                            color: selected ? _amber : Colors.white38,
+                          ),
                         ),
-                      ),
-                      child: Icon(entry.value,
-                          size: 20,
-                          color: selected ? _amber : Colors.white38),
-                    ),
-                  );
-                }).toList(),
+                      );
+                    }).toList(),
               ),
             ),
           ),
@@ -3437,7 +3442,7 @@ class _ParagraphEditorState extends State<_ParagraphEditor> {
             textAlign: p.align,
             maxLines: null,
             decoration: InputDecoration(
-              hintText: 'Write something special�',
+              hintText: 'Write something...',
               hintStyle: GoogleFonts.sora(fontSize: 12, color: Colors.white12),
               border: InputBorder.none,
               isDense: true,
@@ -3546,7 +3551,7 @@ class _MessagePreview extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
-                p.isBullet ? '�  ${p.text}' : p.text,
+                p.isBullet ? '•  ${p.text}' : p.text,
                 textAlign: p.align,
                 style: GoogleFonts.sora(
                   fontSize: 13,

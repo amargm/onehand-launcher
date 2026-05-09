@@ -59,6 +59,13 @@ class _AppDockState extends ConsumerState<AppDock> {
     final activeSpecialEvents = ref.watch(activeSpecialDateEventsProvider);
     final globalSnoozeMins = ref.watch(snoozeDurationProvider);
 
+    // Auto-close the message panel if all events were dismissed/snoozed.
+    if (activeSpecialEvents.isEmpty && _messageBoxOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _messageBoxOpen = false);
+      });
+    }
+
     // Outer shell visible when either context source is active.
     final shellVisible = headphones || dayActive;
 
@@ -292,14 +299,16 @@ class _AppDockState extends ConsumerState<AppDock> {
                   right: 0,
                   child: _SpecialDateDot(
                     isOpen: _messageBoxOpen,
-                    onTap: () => setState(() {
-                      if (!_messageBoxOpen) {
-                        // Close any open folder before showing the message box
-                        _activeFolderId = null;
-                        _lastActiveFolder = null;
-                      }
-                      _messageBoxOpen = !_messageBoxOpen;
-                    }),
+                    onTap:
+                        () => setState(() {
+                          if (!_messageBoxOpen) {
+                            // Close any open folder before showing the message box.
+                            // Do NOT null _lastActiveFolder — it is kept so the
+                            // folder close animation has content to fade out.
+                            _activeFolderId = null;
+                          }
+                          _messageBoxOpen = !_messageBoxOpen;
+                        }),
                   ),
                 ),
             ],
@@ -767,7 +776,7 @@ class _SpecialDateDot extends StatefulWidget {
 }
 
 class _SpecialDateDotState extends State<_SpecialDateDot>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _pulse;
   late final Animation<double> _scale;
 
@@ -776,6 +785,7 @@ class _SpecialDateDotState extends State<_SpecialDateDot>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _pulse = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -787,7 +797,18 @@ class _SpecialDateDotState extends State<_SpecialDateDot>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
+    } else if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive) {
+      _pulse.stop();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _pulse.dispose();
     super.dispose();
   }

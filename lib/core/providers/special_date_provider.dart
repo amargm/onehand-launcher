@@ -147,13 +147,19 @@ class _SnoozeNotifier extends StateNotifier<Map<String, DateTime>> {
 final activeSpecialDateEventsProvider = Provider<List<SpecialDateEvent>>((ref) {
   final now = ref.watch(_specialTickProvider);
   final events = ref.watch(specialDateEventsProvider);
-  final dismissed = ref.watch(_dismissedProvider.notifier);
-  final snooze = ref.watch(_snoozeProvider.notifier);
+  // Watch the state maps directly so the provider rebuilds immediately after
+  // dismiss/snooze — watching .notifier gives a stable object that never
+  // triggers a rebuild.
+  final dismissedMap = ref.watch(_dismissedProvider);
+  final snoozeMap = ref.watch(_snoozeProvider);
 
   return events.where((e) {
     if (!e.isToday(now)) return false;
-    if (dismissed.isDismissedForYear(e.id, now.year)) return false;
-    if (snooze.isSnoozed(e.id)) return false;
+    // 9999 is used as a permanent dismissal year for non-recurring events.
+    final dismissedYear = dismissedMap[e.id];
+    if (dismissedYear == 9999 || dismissedYear == now.year) return false;
+    final until = snoozeMap[e.id];
+    if (until != null && DateTime.now().isBefore(until)) return false;
     return true;
   }).toList();
 });
@@ -165,7 +171,10 @@ final hasActiveSpecialDateProvider = Provider<bool>((ref) {
 // -- Public action helpers --------------------------------------------------
 
 void dismissSpecialDate(WidgetRef ref, SpecialDateEvent event) {
-  ref.read(_dismissedProvider.notifier).dismiss(event.id, DateTime.now().year);
+  // Non-recurring: use 9999 as a permanent year so it is never shown again.
+  // Recurring: use current year so it shows again next year.
+  final year = event.isRecurring ? DateTime.now().year : 9999;
+  ref.read(_dismissedProvider.notifier).dismiss(event.id, year);
 }
 
 void snoozeSpecialDate(

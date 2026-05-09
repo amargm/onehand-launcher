@@ -35,7 +35,12 @@ class RichParagraph {
     text: j['text'] as String? ?? '',
     bold: j['bold'] as bool? ?? false,
     italic: j['italic'] as bool? ?? false,
-    align: TextAlign.values[(j['align'] as int?) ?? 0],
+    align: () {
+      final i = (j['align'] as int?) ?? 0;
+      return (i >= 0 && i < TextAlign.values.length)
+          ? TextAlign.values[i]
+          : TextAlign.left;
+    }(),
     isBullet: j['isBullet'] as bool? ?? false,
   );
 

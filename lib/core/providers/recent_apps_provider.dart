@@ -3,26 +3,36 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'settings_provider.dart';
+
 const _kPrefKey = 'recent_apps';
 const _kMaxCount = 5;
 
 /// Tracks the [_kMaxCount] most-recently-launched apps by package name.
 /// Backed by SharedPreferences so it survives app restarts.
+/// Uses the injected [sharedPreferencesProvider] (same instance as all other
+/// providers) to avoid a separate async getInstance() call on every persist.
 final recentAppsProvider =
     StateNotifierProvider<RecentAppsNotifier, List<String>>((ref) {
-      return RecentAppsNotifier();
+      final prefs = ref.watch(sharedPreferencesProvider);
+      return RecentAppsNotifier(prefs);
     });
 
 class RecentAppsNotifier extends StateNotifier<List<String>> {
-  RecentAppsNotifier() : super(const []) {
-    _load();
-  }
+  RecentAppsNotifier(this._prefs)
+    : super(
+        _load(_prefs),
+      );
 
-  Future<void> _load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_kPrefKey);
-    if (raw != null && mounted) {
-      state = (jsonDecode(raw) as List).cast<String>();
+  final SharedPreferences _prefs;
+
+  static List<String> _load(SharedPreferences prefs) {
+    try {
+      final raw = prefs.getString(_kPrefKey);
+      if (raw == null) return const [];
+      return (jsonDecode(raw) as List).cast<String>();
+    } catch (_) {
+      return const [];
     }
   }
 
@@ -33,11 +43,6 @@ class RecentAppsNotifier extends StateNotifier<List<String>> {
           packageName,
           ...state.where((p) => p != packageName),
         ].take(_kMaxCount).toList();
-    _persist();
-  }
-
-  Future<void> _persist() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_kPrefKey, jsonEncode(state));
+    _prefs.setString(_kPrefKey, jsonEncode(state));
   }
 }
