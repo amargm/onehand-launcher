@@ -146,6 +146,10 @@ final snoozeDurationProvider = StateNotifierProvider<_IntNotifier, int>((ref) {
   return _IntNotifier(prefs, _kSnoozeDurationMins, defaultValue: 30);
 });
 
+/// Transient UI flag — true while the search overlay is open.
+/// Watched by the home screen clock to fade in/out in sync with the overlay.
+final searchOverlayActiveProvider = StateProvider<bool>((ref) => false);
+
 class _IntNotifier extends StateNotifier<int> {
   _IntNotifier(this._prefs, this._key, {required int defaultValue})
     : super(_prefs.getInt(_key) ?? defaultValue);

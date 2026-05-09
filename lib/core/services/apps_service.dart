@@ -17,9 +17,7 @@ class AppsService {
   /// installed, uninstalled, or replaced on the device.
   /// Subscribe once in the home screen to keep the app list in sync.
   static Stream<String?> get packageChangeEvents =>
-      _packageEventChannel
-          .receiveBroadcastStream()
-          .map((e) => e as String?);
+      _packageEventChannel.receiveBroadcastStream().map((e) => e as String?);
 
   /// Returns all user-installed launchable apps, sorted alphabetically.
   static Future<List<AppInfo>> getInstalledApps() async {

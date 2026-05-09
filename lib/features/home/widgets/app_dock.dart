@@ -893,18 +893,8 @@ class _SpecialDateMessagePanel extends ConsumerWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Amber top-border strip
-          Container(
-            height: 2.5,
-            decoration: BoxDecoration(
-              color: _amber.withValues(alpha: 0.80),
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
-              ),
-            ),
-          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 0),
             child: Row(
               children: [
                 Icon(icon, color: _amber, size: 14),

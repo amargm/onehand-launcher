@@ -66,6 +66,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
       if (mounted) setState(() {});
     });
     _animCtrl.forward();
+    // Mark search as active so the home clock fades out in sync.
+    ref.read(searchOverlayActiveProvider.notifier).state = true;
     // Ensure keyboard appears as soon as the overlay animates in
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _focusNode.requestFocus(),
@@ -82,6 +84,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   }
 
   void _dismiss() {
+    // Fade the home clock back in before the overlay reverse-animates.
+    ref.read(searchOverlayActiveProvider.notifier).state = false;
     // In multi-pick mode commit whatever was selected before animating out.
     if (widget.multiPickMode) {
       widget.onMultiPicked?.call(_selected.toList());

@@ -130,9 +130,19 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
             ),
 
             // ── Clock ────────────────────────────────────────────────────
-            const Padding(
-              padding: EdgeInsets.only(left: 20, top: 28),
-              child: _ClockWidget(),
+            Consumer(
+              builder: (context, ref, _) {
+                final searchOpen = ref.watch(searchOverlayActiveProvider);
+                return AnimatedOpacity(
+                  opacity: searchOpen ? 0.0 : 1.0,
+                  duration: const Duration(milliseconds: 220),
+                  curve: Curves.easeOut,
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 20, top: 28),
+                    child: _ClockWidget(),
+                  ),
+                );
+              },
             ),
 
             // ── Negative space / wallpaper zone ─────────────────────────
