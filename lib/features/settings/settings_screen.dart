@@ -7,12 +7,14 @@ import '../../core/constants/folder_icons.dart';
 import '../../core/models/app_folder.dart';
 import '../../core/models/app_info.dart';
 import '../../core/models/schedule_rule.dart';
+import '../../core/models/special_date_event.dart';
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/context_settings_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/schedule_rules_provider.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/providers/special_date_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../search/search_overlay.dart';
@@ -82,6 +84,18 @@ class SettingsScreen extends ConsumerWidget {
             onTap:
                 () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const _FoldersScreen()),
+                ),
+          ),
+          const SizedBox(height: 8),
+          _NavTile(
+            icon: Icons.celebration_outlined,
+            label: 'Special Dates',
+            subtitle: 'Birthdays, anniversaries & reminders',
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => const _SpecialDatesScreen(),
+                  ),
                 ),
           ),
           const SizedBox(height: 8),
@@ -2484,6 +2498,1225 @@ class _TimeTile extends StatelessWidget {
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -------------------------------------------------------------------------------
+// SPECIAL DATES
+// -------------------------------------------------------------------------------
+
+// -- Special Dates sub-screen --------------------------------------------------
+class _SpecialDatesScreen extends ConsumerWidget {
+  const _SpecialDatesScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final events = ref.watch(specialDateEventsProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+    final snoozeMins = ref.watch(snoozeDurationProvider);
+
+    return _SubScreen(
+      title: 'Special Dates',
+      children: [
+        // -- Snooze duration setting -------------------------------------
+        _SectionHeader('Default snooze duration'),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF181818),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Snooze � $snoozeMins min',
+                style: GoogleFonts.sora(fontSize: 13, color: Colors.white70),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'How long to wait before re-showing a reminder',
+                style: GoogleFonts.sora(fontSize: 10.5, color: Colors.white30),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  for (final mins in [15, 30, 60, 120])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: GestureDetector(
+                        onTap:
+                            () => ref
+                                .read(snoozeDurationProvider.notifier)
+                                .set(mins),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 160),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 7,
+                          ),
+                          decoration: BoxDecoration(
+                            color:
+                                snoozeMins == mins
+                                    ? accent.withValues(alpha: 0.18)
+                                    : Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color:
+                                  snoozeMins == mins
+                                      ? accent.withValues(alpha: 0.60)
+                                      : Colors.white.withValues(alpha: 0.10),
+                            ),
+                          ),
+                          child: Text(
+                            mins < 60 ? '$mins min' : '${mins ~/ 60} hr',
+                            style: GoogleFonts.sora(
+                              fontSize: 11,
+                              color:
+                                  snoozeMins == mins ? accent : Colors.white38,
+                              fontWeight:
+                                  snoozeMins == mins
+                                      ? FontWeight.w600
+                                      : FontWeight.w400,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // -- Events list -------------------------------------------------
+        _SectionHeader('Your dates'),
+        if (events.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20),
+            child: Center(
+              child: Text(
+                'No special dates yet.\nTap + below to add your first.',
+                style: GoogleFonts.sora(
+                  fontSize: 12,
+                  color: Colors.white24,
+                  height: 1.6,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else
+          for (final event in events) ...[
+            _SpecialDateCard(
+              event: event,
+              onTap:
+                  () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder:
+                          (_) => _SpecialDateEditScreen(
+                            event: event,
+                            isNew: false,
+                          ),
+                    ),
+                  ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        const SizedBox(height: 16),
+
+        // -- Add button --------------------------------------------------
+        GestureDetector(
+          onTap: () {
+            final blank = SpecialDateEvent.blank().copyWith(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+            );
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder:
+                    (_) => _SpecialDateEditScreen(event: blank, isNew: true),
+              ),
+            );
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: accent.withValues(alpha: 0.30)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, color: accent, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'New special date',
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    color: accent,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+}
+
+// -- Event card (list item) ----------------------------------------------------
+class _SpecialDateCard extends StatelessWidget {
+  const _SpecialDateCard({required this.event, required this.onTap});
+
+  final SpecialDateEvent event;
+  final VoidCallback onTap;
+
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final dateLabel =
+        '${_months[event.month - 1]} ${event.day}${event.isRecurring ? ' � every year' : ''}';
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF181818),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Row(
+          children: [
+            // Date badge
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFFB830).withValues(alpha: 0.12),
+                border: Border.all(
+                  color: const Color(0xFFFFB830).withValues(alpha: 0.35),
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '${event.day}',
+                    style: GoogleFonts.sora(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFFFB830),
+                      height: 1.0,
+                    ),
+                  ),
+                  Text(
+                    _months[event.month - 1].toUpperCase(),
+                    style: GoogleFonts.sora(
+                      fontSize: 7,
+                      color: const Color(0xFFFFB830).withValues(alpha: 0.70),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    event.name.isEmpty ? 'Unnamed' : event.name,
+                    style: GoogleFonts.sora(
+                      fontSize: 13,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    dateLabel,
+                    style: GoogleFonts.sora(
+                      fontSize: 10.5,
+                      color: Colors.white38,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white24,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -- Event edit screen ---------------------------------------------------------
+class _SpecialDateEditScreen extends ConsumerStatefulWidget {
+  const _SpecialDateEditScreen({required this.event, required this.isNew});
+
+  final SpecialDateEvent event;
+  final bool isNew;
+
+  @override
+  ConsumerState<_SpecialDateEditScreen> createState() =>
+      _SpecialDateEditScreenState();
+}
+
+class _SpecialDateEditScreenState
+    extends ConsumerState<_SpecialDateEditScreen> {
+  late final TextEditingController _nameCtrl;
+  late int _month;
+  late int _day;
+  late bool _recurring;
+  late int _snoozeMins;
+  late List<RichParagraph> _paragraphs;
+  bool _previewMode = false;
+
+  static const _months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+  static const _amber = Color(0xFFFFB830);
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.event.name);
+    _month = widget.event.month;
+    _day = widget.event.day;
+    _recurring = widget.event.isRecurring;
+    _snoozeMins = widget.event.snoozeMinutes;
+    _paragraphs = List.from(widget.event.message);
+    if (_paragraphs.isEmpty) _paragraphs.add(const RichParagraph(text: ''));
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final updated = widget.event.copyWith(
+      name: _nameCtrl.text.trim(),
+      month: _month,
+      day: _day,
+      isRecurring: _recurring,
+      message: _paragraphs,
+      snoozeMinutes: _snoozeMins,
+    );
+    if (widget.isNew) {
+      ref.read(specialDateEventsProvider.notifier).add(updated);
+    } else {
+      ref.read(specialDateEventsProvider.notifier).update(updated);
+    }
+    Navigator.of(context).pop();
+  }
+
+  int get _daysInMonth {
+    const d = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    return d[_month - 1];
+  }
+
+  void _addParagraph() {
+    setState(() => _paragraphs.add(const RichParagraph(text: '')));
+  }
+
+  void _updateParagraph(int i, RichParagraph p) {
+    setState(() => _paragraphs[i] = p);
+  }
+
+  void _removeParagraph(int i) {
+    if (_paragraphs.length <= 1) return;
+    setState(() => _paragraphs.removeAt(i));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          widget.isNew ? 'New date' : 'Edit date',
+          style: GoogleFonts.sora(
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            letterSpacing: 1.2,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: _save,
+            child: Text(
+              'Save',
+              style: GoogleFonts.sora(
+                fontSize: 13,
+                color: accent,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
+        children: [
+          // -- Name ------------------------------------------------------
+          _EditSection(
+            label: 'NAME',
+            child: TextField(
+              controller: _nameCtrl,
+              style: GoogleFonts.sora(fontSize: 14, color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'e.g. Mom\'s Birthday',
+                hintStyle: GoogleFonts.sora(
+                  fontSize: 13,
+                  color: Colors.white24,
+                ),
+                filled: true,
+                fillColor: const Color(0xFF1A1A1A),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 13,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // -- Date picker -----------------------------------------------
+          _EditSection(
+            label: 'DATE',
+            child: Row(
+              children: [
+                // Month
+                Expanded(
+                  flex: 3,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final picked = await showDialog<int>(
+                        context: context,
+                        builder: (_) => _MonthPickerDialog(current: _month),
+                      );
+                      if (picked != null) {
+                        setState(() {
+                          _month = picked;
+                          if (_day > _daysInMonth) _day = _daysInMonth;
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 13,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        _months[_month - 1],
+                        style: GoogleFonts.sora(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                // Day
+                Expanded(
+                  flex: 2,
+                  child: GestureDetector(
+                    onTap: () async {
+                      final picked = await showDialog<int>(
+                        context: context,
+                        builder:
+                            (_) => _DayPickerDialog(
+                              current: _day,
+                              maxDay: _daysInMonth,
+                            ),
+                      );
+                      if (picked != null) setState(() => _day = picked);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 13,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A1A1A),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '$_day',
+                        style: GoogleFonts.sora(
+                          fontSize: 13,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // -- Recurring toggle ------------------------------------------
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF181818),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Repeats every year',
+                        style: GoogleFonts.sora(
+                          fontSize: 13,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      Text(
+                        _recurring
+                            ? 'Shown on this date each year'
+                            : 'Shown once only',
+                        style: GoogleFonts.sora(
+                          fontSize: 10.5,
+                          color: Colors.white30,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _recurring,
+                  onChanged: (v) => setState(() => _recurring = v),
+                  activeColor: accent,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // -- Per-event snooze override ---------------------------------
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF181818),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Snooze for this date',
+                        style: GoogleFonts.sora(
+                          fontSize: 13,
+                          color: Colors.white70,
+                        ),
+                      ),
+                      Text(
+                        _snoozeMins == 0
+                            ? 'Using global default'
+                            : '$_snoozeMins min',
+                        style: GoogleFonts.sora(
+                          fontSize: 10.5,
+                          color: Colors.white30,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Row(
+                  children: [
+                    for (final mins in [0, 15, 30, 60])
+                      Padding(
+                        padding: const EdgeInsets.only(left: 6),
+                        child: GestureDetector(
+                          onTap: () => setState(() => _snoozeMins = mins),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 160),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
+                            decoration: BoxDecoration(
+                              color:
+                                  _snoozeMins == mins
+                                      ? accent.withValues(alpha: 0.18)
+                                      : Colors.white.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color:
+                                    _snoozeMins == mins
+                                        ? accent.withValues(alpha: 0.60)
+                                        : Colors.white.withValues(alpha: 0.10),
+                              ),
+                            ),
+                            child: Text(
+                              mins == 0
+                                  ? 'Auto'
+                                  : mins < 60
+                                  ? '${mins}m'
+                                  : '${mins ~/ 60}h',
+                              style: GoogleFonts.sora(
+                                fontSize: 10,
+                                color:
+                                    _snoozeMins == mins
+                                        ? accent
+                                        : Colors.white38,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // -- Message editor --------------------------------------------
+          _EditSection(
+            label: 'MESSAGE',
+            trailing: GestureDetector(
+              onTap: () => setState(() => _previewMode = !_previewMode),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      _previewMode
+                          ? _amber.withValues(alpha: 0.18)
+                          : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        _previewMode
+                            ? _amber.withValues(alpha: 0.50)
+                            : Colors.white.withValues(alpha: 0.10),
+                  ),
+                ),
+                child: Text(
+                  _previewMode ? 'Edit' : 'Preview',
+                  style: GoogleFonts.sora(
+                    fontSize: 10,
+                    color: _previewMode ? _amber : Colors.white38,
+                  ),
+                ),
+              ),
+            ),
+            child:
+                _previewMode
+                    ? _MessagePreview(paragraphs: _paragraphs)
+                    : _MessageEditor(
+                      paragraphs: _paragraphs,
+                      accent: accent,
+                      onUpdate: _updateParagraph,
+                      onRemove: _removeParagraph,
+                      onAdd: _addParagraph,
+                    ),
+          ),
+          const SizedBox(height: 32),
+
+          // -- Delete ----------------------------------------------------
+          if (!widget.isNew) ...[
+            GestureDetector(
+              onTap: () {
+                ref
+                    .read(specialDateEventsProvider.notifier)
+                    .remove(widget.event.id);
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.red.withValues(alpha: 0.70),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Delete this date',
+                      style: GoogleFonts.sora(
+                        fontSize: 13,
+                        color: Colors.red.withValues(alpha: 0.70),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// -- Message editor ------------------------------------------------------------
+class _MessageEditor extends StatelessWidget {
+  const _MessageEditor({
+    required this.paragraphs,
+    required this.accent,
+    required this.onUpdate,
+    required this.onRemove,
+    required this.onAdd,
+  });
+
+  final List<RichParagraph> paragraphs;
+  final Color accent;
+  final void Function(int, RichParagraph) onUpdate;
+  final void Function(int) onRemove;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        for (var i = 0; i < paragraphs.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _ParagraphEditor(
+              index: i,
+              paragraph: paragraphs[i],
+              accent: accent,
+              onUpdate: (p) => onUpdate(i, p),
+              onRemove: paragraphs.length > 1 ? () => onRemove(i) : null,
+            ),
+          ),
+        GestureDetector(
+          onTap: onAdd,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.add_rounded, size: 15, color: Colors.white24),
+                const SizedBox(width: 6),
+                Text(
+                  'Add paragraph',
+                  style: GoogleFonts.sora(fontSize: 11, color: Colors.white24),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// -- Single paragraph editor row -----------------------------------------------
+class _ParagraphEditor extends StatefulWidget {
+  const _ParagraphEditor({
+    required this.index,
+    required this.paragraph,
+    required this.accent,
+    required this.onUpdate,
+    this.onRemove,
+  });
+
+  final int index;
+  final RichParagraph paragraph;
+  final Color accent;
+  final ValueChanged<RichParagraph> onUpdate;
+  final VoidCallback? onRemove;
+
+  @override
+  State<_ParagraphEditor> createState() => _ParagraphEditorState();
+}
+
+class _ParagraphEditorState extends State<_ParagraphEditor> {
+  late final TextEditingController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = TextEditingController(text: widget.paragraph.text);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _emit({
+    String? text,
+    bool? bold,
+    bool? italic,
+    TextAlign? align,
+    bool? isBullet,
+  }) {
+    widget.onUpdate(
+      widget.paragraph.copyWith(
+        text: text ?? _ctrl.text,
+        bold: bold,
+        italic: italic,
+        align: align,
+        isBullet: isBullet,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.paragraph;
+    final accent = widget.accent;
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Formatting toolbar
+          Row(
+            children: [
+              _FmtBtn(
+                label: 'B',
+                active: p.bold,
+                accent: accent,
+                bold: true,
+                onTap: () => _emit(bold: !p.bold),
+              ),
+              const SizedBox(width: 6),
+              _FmtBtn(
+                label: 'I',
+                active: p.italic,
+                accent: accent,
+                italic: true,
+                onTap: () => _emit(italic: !p.italic),
+              ),
+              const SizedBox(width: 6),
+              _FmtBtn(
+                label: '�',
+                active: p.isBullet,
+                accent: accent,
+                onTap: () => _emit(isBullet: !p.isBullet),
+              ),
+              const SizedBox(width: 10),
+              // Alignment buttons
+              for (final align in [
+                TextAlign.left,
+                TextAlign.center,
+                TextAlign.right,
+              ])
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: GestureDetector(
+                    onTap: () => _emit(align: align),
+                    child: Icon(
+                      align == TextAlign.left
+                          ? Icons.format_align_left_rounded
+                          : align == TextAlign.center
+                          ? Icons.format_align_center_rounded
+                          : Icons.format_align_right_rounded,
+                      size: 16,
+                      color: p.align == align ? accent : Colors.white30,
+                    ),
+                  ),
+                ),
+              const Spacer(),
+              if (widget.onRemove != null)
+                GestureDetector(
+                  onTap: widget.onRemove,
+                  child: const Icon(
+                    Icons.close_rounded,
+                    size: 15,
+                    color: Colors.white24,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Text field
+          TextField(
+            controller: _ctrl,
+            style: GoogleFonts.sora(
+              fontSize: 13,
+              color: Colors.white,
+              fontWeight: p.bold ? FontWeight.w700 : FontWeight.w400,
+              fontStyle: p.italic ? FontStyle.italic : FontStyle.normal,
+            ),
+            textAlign: p.align,
+            maxLines: null,
+            decoration: InputDecoration(
+              hintText: 'Write something special�',
+              hintStyle: GoogleFonts.sora(fontSize: 12, color: Colors.white12),
+              border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+            onChanged: (t) => _emit(text: t),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// -- Format button -------------------------------------------------------------
+class _FmtBtn extends StatelessWidget {
+  const _FmtBtn({
+    required this.label,
+    required this.active,
+    required this.accent,
+    required this.onTap,
+    this.bold = false,
+    this.italic = false,
+  });
+
+  final String label;
+  final bool active;
+  final Color accent;
+  final VoidCallback onTap;
+  final bool bold;
+  final bool italic;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 26,
+        height: 24,
+        decoration: BoxDecoration(
+          color:
+              active
+                  ? accent.withValues(alpha: 0.20)
+                  : Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color:
+                active
+                    ? accent.withValues(alpha: 0.55)
+                    : Colors.white.withValues(alpha: 0.10),
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: active ? accent : Colors.white38,
+              fontWeight: bold ? FontWeight.w800 : FontWeight.w400,
+              fontStyle: italic ? FontStyle.italic : FontStyle.normal,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// -- Message preview -----------------------------------------------------------
+class _MessagePreview extends StatelessWidget {
+  const _MessagePreview({required this.paragraphs});
+
+  final List<RichParagraph> paragraphs;
+
+  static const _amber = Color(0xFFFFB830);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _amber.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.celebration_rounded, color: _amber, size: 13),
+              const SizedBox(width: 6),
+              Text(
+                'Preview',
+                style: GoogleFonts.sora(
+                  fontSize: 10,
+                  color: _amber,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          for (final p in paragraphs)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                p.isBullet ? '�  ${p.text}' : p.text,
+                textAlign: p.align,
+                style: GoogleFonts.sora(
+                  fontSize: 13,
+                  color: Colors.white.withValues(alpha: 0.82),
+                  fontWeight: p.bold ? FontWeight.w700 : FontWeight.w400,
+                  fontStyle: p.italic ? FontStyle.italic : FontStyle.normal,
+                  height: 1.55,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+// -- Month picker dialog -------------------------------------------------------
+class _MonthPickerDialog extends StatelessWidget {
+  const _MonthPickerDialog({required this.current});
+
+  final int current;
+
+  static const _months = [
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Dialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select month',
+              style: GoogleFonts.sora(
+                fontSize: 14,
+                color: Colors.white70,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: List.generate(12, (i) {
+                final selected = (i + 1) == current;
+                return GestureDetector(
+                  onTap: () => Navigator.of(context).pop(i + 1),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 140),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 7,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          selected
+                              ? accent.withValues(alpha: 0.18)
+                              : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color:
+                            selected
+                                ? accent.withValues(alpha: 0.60)
+                                : Colors.white.withValues(alpha: 0.10),
+                      ),
+                    ),
+                    child: Text(
+                      _months[i].substring(0, 3),
+                      style: GoogleFonts.sora(
+                        fontSize: 12,
+                        color: selected ? accent : Colors.white54,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -- Day picker dialog ---------------------------------------------------------
+class _DayPickerDialog extends StatelessWidget {
+  const _DayPickerDialog({required this.current, required this.maxDay});
+
+  final int current;
+  final int maxDay;
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    return Dialog(
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Select day',
+              style: GoogleFonts.sora(
+                fontSize: 14,
+                color: Colors.white70,
+                letterSpacing: 0.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 260,
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 7,
+                  crossAxisSpacing: 4,
+                  mainAxisSpacing: 4,
+                  childAspectRatio: 1,
+                ),
+                itemCount: maxDay,
+                itemBuilder: (_, i) {
+                  final day = i + 1;
+                  final selected = day == current;
+                  return GestureDetector(
+                    onTap: () => Navigator.of(context).pop(day),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 140),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color:
+                            selected
+                                ? accent.withValues(alpha: 0.22)
+                                : Colors.transparent,
+                        border: Border.all(
+                          color:
+                              selected
+                                  ? accent.withValues(alpha: 0.55)
+                                  : Colors.transparent,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          '$day',
+                          style: GoogleFonts.sora(
+                            fontSize: 11,
+                            color: selected ? accent : Colors.white54,
+                            fontWeight:
+                                selected ? FontWeight.w600 : FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

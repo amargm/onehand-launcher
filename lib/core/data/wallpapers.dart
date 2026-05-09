@@ -14,6 +14,7 @@ class WallpaperEntry {
   });
 
   final String id;
+
   /// Sequential number within its category, starting from 1.
   final int displayId;
   final String url;

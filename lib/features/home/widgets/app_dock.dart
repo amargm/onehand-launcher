@@ -7,6 +7,7 @@ import '../../../core/constants/folder_icons.dart';
 import '../../../core/models/app_folder.dart';
 import '../../../core/models/app_info.dart';
 import '../../../core/models/schedule_rule.dart';
+import '../../../core/models/special_date_event.dart';
 import '../../../core/providers/apps_provider.dart';
 import '../../../core/providers/context_apps_provider.dart';
 import '../../../core/providers/schedule_rules_provider.dart';
@@ -14,6 +15,7 @@ import '../../../core/providers/folders_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
 import '../../../core/providers/recent_apps_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/special_date_provider.dart';
 import '../../../core/services/apps_service.dart';
 import '../../search/search_overlay.dart';
 import 'circular_app_icon.dart';
@@ -40,6 +42,7 @@ class AppDock extends ConsumerStatefulWidget {
 
 class _AppDockState extends ConsumerState<AppDock> {
   String? _activeFolderId;
+  bool _messageBoxOpen = false;
   // Retains the last opened folder so close animation renders content
   // while opacity fades and height shrinks — avoids instant collapse.
   AppFolder? _lastActiveFolder;
@@ -53,6 +56,9 @@ class _AppDockState extends ConsumerState<AppDock> {
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
     final showSearchLabel = ref.watch(showSearchLabelProvider);
     final accent = Theme.of(context).colorScheme.primary;
+    final hasSpecialDate = ref.watch(hasActiveSpecialDateProvider);
+    final activeSpecialEvents = ref.watch(activeSpecialDateEventsProvider);
+    final globalSnoozeMins = ref.watch(snoozeDurationProvider);
 
     // Outer shell visible when either context source is active.
     final shellVisible = headphones || dayActive;
@@ -94,13 +100,15 @@ class _AppDockState extends ConsumerState<AppDock> {
                 accent: accent,
                 label: f.name,
                 showLabel: showFolderLabels,
-                // Toggle: tap same folder to close, different folder to open.
+                // Folder tap is locked while the message box is open.
                 onTap:
-                    () => setState(
-                      () =>
-                          _activeFolderId =
-                              _activeFolderId == f.id ? null : f.id,
-                    ),
+                    _messageBoxOpen
+                        ? () {}
+                        : () => setState(
+                          () =>
+                              _activeFolderId =
+                                  _activeFolderId == f.id ? null : f.id,
+                        ),
               ),
             )
             .toList();
@@ -115,16 +123,37 @@ class _AppDockState extends ConsumerState<AppDock> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Special-date message box ───────────────────────────────────
+          // Slides in above the dock when the amber dot is tapped.
+          // Independent of the outer shell — visible even when shell is off.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: AnimatedSize(
+              duration: const Duration(milliseconds: 340),
+              curve: Curves.easeInOutQuart,
+              child:
+                  _messageBoxOpen && activeSpecialEvents.isNotEmpty
+                      ? AnimatedOpacity(
+                        opacity: 1.0,
+                        duration: const Duration(milliseconds: 250),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _SpecialDateMessagePanel(
+                              events: activeSpecialEvents,
+                              globalSnoozeMins: globalSnoozeMins,
+                              onClose:
+                                  () => setState(() => _messageBoxOpen = false),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      )
+                      : const SizedBox.shrink(),
+            ),
+          ),
+
           // ── Folder panel ───────────────────────────────────────────────
-          // AnimatedSize + AnimatedOpacity (same pattern as context shell).
-          // Key fix: both open AND close branches render the actual _FolderPanel
-          // so AnimatedSize always has a real-sized child. Switching to
-          // SizedBox.shrink() on close gives a 0-size child immediately,
-          // collapsing the height before the opacity can finish fading.
-          //
-          // ClipRRect wraps AnimatedSize so the height-transition clip stays
-          // rounded (matching the panel's own 24-radius corners) instead of
-          // momentarily showing sharp rectangular edges as rows are added/removed.
           ClipRRect(
             borderRadius: BorderRadius.circular(24),
             child: AnimatedSize(
@@ -156,103 +185,120 @@ class _AppDockState extends ConsumerState<AppDock> {
             ),
           ),
 
-          // ── Outer shell + inner dock ────────────────────────────────────
-          // Center + AnimatedContainer: outer shell is centred so it wraps
-          // the inner dock tightly (no full-width stretch).
-          Center(
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 700),
-              curve: Curves.easeInOutQuart,
-              padding: shellVisible ? const EdgeInsets.all(8) : EdgeInsets.zero,
-              decoration: BoxDecoration(
-                color:
-                    shellVisible ? const Color(0xFF111111) : Colors.transparent,
-                borderRadius: BorderRadius.circular(40),
-                border: Border.all(
-                  color:
-                      shellVisible
-                          ? Colors.white.withValues(alpha: 0.16)
-                          : Colors.transparent,
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // ── Context shell rows ────────────────────────────────────
-                  // AnimatedSize handles 0-height → 1-row → 2-row smoothly.
-                  AnimatedSize(
-                    duration: const Duration(milliseconds: 700),
-                    curve: Curves.easeInOutQuart,
-                    child:
+          // ── Outer shell + inner dock — wrapped in Stack for amber dot ──
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              // Outer shell + inner dock (unchanged layout)
+              Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 700),
+                  curve: Curves.easeInOutQuart,
+                  padding:
+                      shellVisible ? const EdgeInsets.all(8) : EdgeInsets.zero,
+                  decoration: BoxDecoration(
+                    color:
                         shellVisible
-                            ? AnimatedOpacity(
-                              opacity: 1.0,
-                              duration: const Duration(milliseconds: 500),
-                              curve: Curves.easeIn,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  // Top row: day-of-week apps (when day active)
-                                  if (dayActive) const _DayContextShellRow(),
-                                  // Separator between two active rows
-                                  if (dayActive && headphones)
-                                    Container(
-                                      height: 1,
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 16,
-                                        vertical: 4,
-                                      ),
-                                      color: Colors.white.withValues(
-                                        alpha: 0.06,
-                                      ),
-                                    ),
-                                  // Bottom row: headphone apps (when headphones)
-                                  if (headphones) const _ContextShellRow(),
-                                  const SizedBox(height: 6),
-                                ],
-                              ),
-                            )
-                            : AnimatedOpacity(
-                              opacity: 0.0,
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeOut,
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (dayActive) const _DayContextShellRow(),
-                                  if (headphones) const _ContextShellRow(),
-                                  const SizedBox(height: 6),
-                                ],
-                              ),
-                            ),
-                  ),
-
-                  // ── Inner dock ────────────────────────────────────────────
-                  // IntrinsicWidth: shrinks to the natural width of its
-                  // children (circles + spacing) — no full-width stretch.
-                  IntrinsicWidth(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 14,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF272727),
-                        borderRadius: BorderRadius.circular(40),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children:
-                            dockRow
-                                .expand((c) => [c, const SizedBox(width: 16)])
-                                .toList()
-                              ..removeLast(), // remove trailing SizedBox
-                      ),
+                            ? const Color(0xFF111111)
+                            : Colors.transparent,
+                    borderRadius: BorderRadius.circular(40),
+                    border: Border.all(
+                      color:
+                          shellVisible
+                              ? Colors.white.withValues(alpha: 0.16)
+                              : Colors.transparent,
                     ),
                   ),
-                ],
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 700),
+                        curve: Curves.easeInOutQuart,
+                        child:
+                            shellVisible
+                                ? AnimatedOpacity(
+                                  opacity: 1.0,
+                                  duration: const Duration(milliseconds: 500),
+                                  curve: Curves.easeIn,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (dayActive)
+                                        const _DayContextShellRow(),
+                                      if (dayActive && headphones)
+                                        Container(
+                                          height: 1,
+                                          margin: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 4,
+                                          ),
+                                          color: Colors.white.withValues(
+                                            alpha: 0.06,
+                                          ),
+                                        ),
+                                      if (headphones) const _ContextShellRow(),
+                                      const SizedBox(height: 6),
+                                    ],
+                                  ),
+                                )
+                                : AnimatedOpacity(
+                                  opacity: 0.0,
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeOut,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (dayActive)
+                                        const _DayContextShellRow(),
+                                      if (headphones) const _ContextShellRow(),
+                                      const SizedBox(height: 6),
+                                    ],
+                                  ),
+                                ),
+                      ),
+
+                      // ── Inner dock ──────────────────────────────────────
+                      IntrinsicWidth(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF272727),
+                            borderRadius: BorderRadius.circular(40),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children:
+                                dockRow
+                                    .expand(
+                                      (c) => [c, const SizedBox(width: 16)],
+                                    )
+                                    .toList()
+                                  ..removeLast(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
+
+              // ── Amber dot — floats top-right, fully independent ─────────
+              if (hasSpecialDate)
+                Positioned(
+                  top: -6,
+                  right: 0,
+                  child: _SpecialDateDot(
+                    isOpen: _messageBoxOpen,
+                    onTap:
+                        () =>
+                            setState(() => _messageBoxOpen = !_messageBoxOpen),
+                  ),
+                ),
+            ],
           ),
         ],
       ),
@@ -699,6 +745,329 @@ class _DockCircle extends StatelessWidget {
                 ],
               )
               : circle,
+    );
+  }
+}
+
+// ── Amber dot — pulsing special-date indicator ────────────────────────────────
+/// Fully independent of the outer shell. Pulsing scale + glow animation.
+/// Tapping toggles the message box open/closed.
+class _SpecialDateDot extends StatefulWidget {
+  const _SpecialDateDot({required this.isOpen, required this.onTap});
+
+  final bool isOpen;
+  final VoidCallback onTap;
+
+  @override
+  State<_SpecialDateDot> createState() => _SpecialDateDotState();
+}
+
+class _SpecialDateDotState extends State<_SpecialDateDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  late final Animation<double> _scale;
+
+  static const _amber = Color(0xFFFFB830);
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(
+      begin: 0.88,
+      end: 1.14,
+    ).animate(CurvedAnimation(parent: _pulse, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        widget.onTap();
+      },
+      child: AnimatedBuilder(
+        animation: _scale,
+        builder:
+            (_, __) => Transform.scale(
+              scale: widget.isOpen ? 1.0 : _scale.value,
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color:
+                      widget.isOpen ? _amber.withValues(alpha: 0.55) : _amber,
+                  boxShadow:
+                      widget.isOpen
+                          ? null
+                          : [
+                            BoxShadow(
+                              color: _amber.withValues(alpha: 0.55),
+                              blurRadius: 10,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.30),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Icon(
+                  Icons.celebration_rounded,
+                  size: 10,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+      ),
+    );
+  }
+}
+
+// ── Special-date message panel ────────────────────────────────────────────────
+/// Slides in above the dock when the amber dot is tapped.
+/// Styled like the folder panel — dark rounded container.
+/// Top border uses amber to visually link it to the dot.
+/// Each event card has its own Dismiss and Snooze buttons.
+class _SpecialDateMessagePanel extends ConsumerWidget {
+  const _SpecialDateMessagePanel({
+    required this.events,
+    required this.globalSnoozeMins,
+    required this.onClose,
+  });
+
+  final List<SpecialDateEvent> events;
+  final int globalSnoozeMins;
+  final VoidCallback onClose;
+
+  static const _amber = Color(0xFFFFB830);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF141414),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Amber top-border strip
+          Container(
+            height: 2.5,
+            decoration: BoxDecoration(
+              color: _amber.withValues(alpha: 0.80),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.celebration_rounded,
+                      color: _amber,
+                      size: 14,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        events.length == 1 ? events.first.name : 'Special day',
+                        style: GoogleFonts.sora(
+                          fontSize: 11,
+                          color: _amber.withValues(alpha: 0.90),
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: onClose,
+                      child: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: Colors.white24,
+                        size: 20,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // One card per event
+                for (var i = 0; i < events.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                      color: Colors.white.withValues(alpha: 0.06),
+                      height: 20,
+                    ),
+                  _EventCard(
+                    event: events[i],
+                    globalSnoozeMins: globalSnoozeMins,
+                    onAction: onClose,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Single event card inside the message panel ────────────────────────────────
+class _EventCard extends ConsumerWidget {
+  const _EventCard({
+    required this.event,
+    required this.globalSnoozeMins,
+    required this.onAction,
+  });
+
+  final SpecialDateEvent event;
+  final int globalSnoozeMins;
+  final VoidCallback onAction; // called after dismiss/snooze to close panel
+
+  static const _amber = Color(0xFFFFB830);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (event.name.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(
+              event.name,
+              style: GoogleFonts.sora(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.white.withValues(alpha: 0.85),
+              ),
+            ),
+          ),
+        // Rich-text message render
+        _RichMessageDisplay(paragraphs: event.message),
+        const SizedBox(height: 14),
+        // Action buttons
+        Row(
+          children: [
+            _ActionButton(
+              label: 'Dismiss',
+              icon: Icons.check_rounded,
+              color: Colors.white38,
+              onTap: () {
+                dismissSpecialDate(ref, event);
+                onAction();
+              },
+            ),
+            const SizedBox(width: 10),
+            _ActionButton(
+              label: 'Snooze',
+              icon: Icons.snooze_rounded,
+              color: _amber.withValues(alpha: 0.80),
+              onTap: () {
+                snoozeSpecialDate(ref, event, globalSnoozeMins);
+                onAction();
+              },
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+// ── Rich message display ──────────────────────────────────────────────────────
+class _RichMessageDisplay extends StatelessWidget {
+  const _RichMessageDisplay({required this.paragraphs});
+
+  final List<RichParagraph> paragraphs;
+
+  @override
+  Widget build(BuildContext context) {
+    if (paragraphs.isEmpty) return const SizedBox.shrink();
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children:
+          paragraphs.map((p) {
+            final style = GoogleFonts.sora(
+              fontSize: 12.5,
+              color: Colors.white.withValues(alpha: 0.80),
+              fontWeight: p.bold ? FontWeight.w700 : FontWeight.w400,
+              fontStyle: p.italic ? FontStyle.italic : FontStyle.normal,
+              height: 1.55,
+            );
+            final text = p.isBullet ? '•  ${p.text}' : p.text;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 3),
+              child: Text(text, style: style, textAlign: p.align),
+            );
+          }).toList(),
+    );
+  }
+}
+
+// ── Action button (Dismiss / Snooze) ─────────────────────────────────────────
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: color.withValues(alpha: 0.30)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 13, color: color),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: GoogleFonts.sora(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

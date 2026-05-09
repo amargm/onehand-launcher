@@ -8,6 +8,7 @@ const _kAccentColorKey = 'accent_color';
 const _kShowFolderLabels = 'show_folder_labels';
 const _kShowSearchLabel = 'show_search_label';
 const _kRightHanded = 'right_handed';
+const _kSnoozeDurationMins = 'snooze_duration_mins';
 
 /// Injected at app startup — see main.dart.
 final sharedPreferencesProvider = Provider<SharedPreferences>(
@@ -133,5 +134,27 @@ class _WallpaperNotifier extends StateNotifier<WallpaperState> {
   void clear() {
     state = (path: null, version: state.version + 1);
     _prefs.remove(_kWallpaperPath);
+  }
+}
+
+// ── Special-date snooze duration ───────────────────────────────────────────
+
+/// Global default snooze duration in minutes (default 30).
+/// Can be overridden per-event in the event's own snoozeMinutes field.
+final snoozeDurationProvider = StateNotifierProvider<_IntNotifier, int>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _IntNotifier(prefs, _kSnoozeDurationMins, defaultValue: 30);
+});
+
+class _IntNotifier extends StateNotifier<int> {
+  _IntNotifier(this._prefs, this._key, {required int defaultValue})
+    : super(_prefs.getInt(_key) ?? defaultValue);
+
+  final SharedPreferences _prefs;
+  final String _key;
+
+  void set(int value) {
+    state = value;
+    _prefs.setInt(_key, value);
   }
 }

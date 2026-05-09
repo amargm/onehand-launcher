@@ -62,7 +62,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
     );
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     // Rebuild every animation tick so blurSigma updates frame-by-frame
-    _animCtrl.addListener(() { if (mounted) setState(() {}); });
+    _animCtrl.addListener(() {
+      if (mounted) setState(() {});
+    });
     _animCtrl.forward();
     // Ensure keyboard appears as soon as the overlay animates in
     WidgetsBinding.instance.addPostFrameCallback(
