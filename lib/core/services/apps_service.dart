@@ -9,6 +9,18 @@ class AppsService {
 
   static const _channel = MethodChannel('com.onehand.onehand_launcher/apps');
 
+  static const _packageEventChannel = EventChannel(
+    'com.onehand.onehand_launcher/package_events',
+  );
+
+  /// Stream that emits the affected package name whenever an app is
+  /// installed, uninstalled, or replaced on the device.
+  /// Subscribe once in the home screen to keep the app list in sync.
+  static Stream<String?> get packageChangeEvents =>
+      _packageEventChannel
+          .receiveBroadcastStream()
+          .map((e) => e as String?);
+
   /// Returns all user-installed launchable apps, sorted alphabetically.
   static Future<List<AppInfo>> getInstalledApps() async {
     try {

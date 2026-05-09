@@ -164,10 +164,7 @@ void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
                 ),
                 title: Text(
                   'App info',
-                  style: GoogleFonts.sora(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+                  style: GoogleFonts.sora(color: Colors.white70, fontSize: 14),
                 ),
                 onTap: () {
                   Navigator.of(context).pop();

@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/settings_provider.dart';
+import '../../core/services/apps_service.dart';
 import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
 import 'widgets/app_dock.dart';
@@ -52,6 +53,7 @@ class _HomeBody extends ConsumerStatefulWidget {
 class _HomeBodyState extends ConsumerState<_HomeBody>
     with WidgetsBindingObserver {
   bool _isDefault = true; // optimistic until first check
+  StreamSubscription<String?>? _packageSub;
 
   @override
   void initState() {
@@ -61,10 +63,16 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
       ref.read(appsProvider); // warm up app list
       _checkDefaultLauncher();
     });
+    // Invalidate app list immediately when any package is installed/removed,
+    // rather than waiting for the next resume (which can race with PackageManager).
+    _packageSub = AppsService.packageChangeEvents.listen((_) {
+      if (mounted) ref.invalidate(appsProvider);
+    });
   }
 
   @override
   void dispose() {
+    _packageSub?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

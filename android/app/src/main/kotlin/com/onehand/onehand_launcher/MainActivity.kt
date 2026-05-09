@@ -33,6 +33,7 @@ class MainActivity : FlutterActivity() {
     private val appsChannel      = "com.onehand.onehand_launcher/apps"
     private val launcherChannel  = "com.onehand.onehand_launcher/launcher"
     private val headphoneChannel = "com.onehand.onehand_launcher/headphone_events"
+    private val packageChannel   = "com.onehand.onehand_launcher/package_events"
 
     // Off-main-thread executor for icon-loading operations.
     private val executor = Executors.newCachedThreadPool()
@@ -42,6 +43,17 @@ class MainActivity : FlutterActivity() {
 
     // EventChannel sink — null when Flutter is not listening.
     private var headphoneEventSink: EventChannel.EventSink? = null
+
+    // EventChannel sink for package install/remove events.
+    private var packageEventSink: EventChannel.EventSink? = null
+
+    // Fires when a package is installed, removed, or replaced.
+    // ACTION_PACKAGE_* intents require addDataScheme("package") to fire.
+    private val packageReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context, intent: Intent) {
+            packageEventSink?.success(intent.data?.schemeSpecificPart)
+        }
+    }
 
     // Fires on wired plug/unplug and BT A2DP / SCO connect/disconnect.
     //
@@ -259,6 +271,22 @@ class MainActivity : FlutterActivity() {
                 headphoneEventSink = null
             }
         })
+
+        // ── Package change event channel ─────────────────────────────────────
+        // Pushes the affected package name whenever an app is installed,
+        // uninstalled, or updated so Flutter can immediately refresh its
+        // app list without waiting for the next resume.
+        EventChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            packageChannel,
+        ).setStreamHandler(object : EventChannel.StreamHandler {
+            override fun onListen(arguments: Any?, sink: EventChannel.EventSink) {
+                packageEventSink = sink
+            }
+            override fun onCancel(arguments: Any?) {
+                packageEventSink = null
+            }
+        })
     }
 
     // ── Receiver lifecycle ───────────────────────────────────────────────────
@@ -274,11 +302,22 @@ class MainActivity : FlutterActivity() {
         registerReceiver(audioReceiver, filter)
         // Sync state in case it changed while we were paused.
         headphoneEventSink?.success(isHeadphoneConnected())
+
+        // Register for package changes so Flutter knows immediately when
+        // an app is installed or uninstalled.
+        val pkgFilter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addDataScheme("package")
+        }
+        registerReceiver(packageReceiver, pkgFilter)
     }
 
     override fun onPause() {
         super.onPause()
         try { unregisterReceiver(audioReceiver) } catch (_: Exception) {}
+        try { unregisterReceiver(packageReceiver) } catch (_: Exception) {}
     }
 
     // ── App list ───────────────────────────────────────────────────────────
