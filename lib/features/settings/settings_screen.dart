@@ -69,7 +69,7 @@ class SettingsScreen extends ConsumerWidget {
           _NavTile(
             icon: Icons.sensors_rounded,
             label: 'Context & Shell',
-            subtitle: 'Context indicators, quick-launch strip',
+            subtitle: 'Headphone apps · Schedule rules',
             onTap:
                 () => Navigator.of(context).push(
                   MaterialPageRoute(builder: (_) => const _ContextScreen()),
@@ -2507,47 +2507,72 @@ class _SpecialDatesScreen extends ConsumerWidget {
                 style: GoogleFonts.sora(fontSize: 10.5, color: Colors.white30),
               ),
               const SizedBox(height: 14),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   for (final mins in [15, 30, 60, 120])
-                    Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: GestureDetector(
-                        onTap:
-                            () => ref
-                                .read(snoozeDurationProvider.notifier)
-                                .set(mins),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 160),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 7,
-                          ),
-                          decoration: BoxDecoration(
+                    GestureDetector(
+                      onTap:
+                          () => ref
+                              .read(snoozeDurationProvider.notifier)
+                              .set(mins),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color:
+                              snoozeMins == mins
+                                  ? accent.withValues(alpha: 0.18)
+                                  : Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
                             color:
                                 snoozeMins == mins
-                                    ? accent.withValues(alpha: 0.18)
-                                    : Colors.white.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color:
-                                  snoozeMins == mins
-                                      ? accent.withValues(alpha: 0.60)
-                                      : Colors.white.withValues(alpha: 0.10),
-                            ),
+                                    ? accent.withValues(alpha: 0.60)
+                                    : Colors.white.withValues(alpha: 0.10),
                           ),
-                          child: Text(
-                            mins < 60 ? '$mins min' : '${mins ~/ 60} hr',
-                            style: GoogleFonts.sora(
-                              fontSize: 11,
-                              color:
-                                  snoozeMins == mins ? accent : Colors.white38,
-                              fontWeight:
-                                  snoozeMins == mins
-                                      ? FontWeight.w600
-                                      : FontWeight.w400,
-                            ),
+                        ),
+                        child: Text(
+                          mins < 60 ? '$mins min' : '${mins ~/ 60} hr',
+                          style: GoogleFonts.sora(
+                            fontSize: 11,
+                            color:
+                                snoozeMins == mins ? accent : Colors.white38,
+                            fontWeight:
+                                snoozeMins == mins
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
                           ),
+                        ),
+                      ),
+                    ),
+                  // Show an extra chip for any legacy value not in the preset list.
+                  if (![15, 30, 60, 120].contains(snoozeMins))
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: accent.withValues(alpha: 0.60),
+                        ),
+                      ),
+                      child: Text(
+                        snoozeMins < 60
+                            ? '$snoozeMins min'
+                            : '${snoozeMins ~/ 60} hr',
+                        style: GoogleFonts.sora(
+                          fontSize: 11,
+                          color: accent,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),

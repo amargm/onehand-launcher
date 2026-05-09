@@ -547,28 +547,15 @@ class _ContextShellRow extends ConsumerWidget {
             .whereType<AppInfo>()
             .toList();
 
+    // No apps configured — headphone gating means this branch is only reached
+    // while the app list is loading. Return nothing rather than ghost circles.
+    if (shellApps.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
-        mainAxisAlignment:
-            shellApps.isEmpty
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.spaceAround,
-        children:
-            shellApps.isEmpty
-                // Ghost placeholders hint that apps can be configured in Settings
-                ? List.generate(
-                  2,
-                  (_) => Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white10),
-                    ),
-                  ),
-                )
-                : shellApps.map((app) => _ContextAppIcon(app: app)).toList(),
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: shellApps.map((app) => _ContextAppIcon(app: app)).toList(),
       ),
     );
   }

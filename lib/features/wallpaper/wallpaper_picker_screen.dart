@@ -269,7 +269,9 @@ class _WallpaperPreviewScreenState
     if (_state == _SetState.loading) return;
     setState(() => _state = _SetState.loading);
     try {
-      final response = await http.get(Uri.parse(widget.entry.url));
+      final response = await http
+          .get(Uri.parse(widget.entry.url))
+          .timeout(const Duration(seconds: 20));
       if (response.statusCode != 200) throw Exception('Download failed');
 
       // Persist to a fixed filename so old wallpapers are automatically

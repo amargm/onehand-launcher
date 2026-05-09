@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/settings_provider.dart';
+import 'widgets/app_grid.dart';
 import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
 import 'widgets/app_dock.dart';
@@ -75,6 +76,9 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _checkDefaultLauncher();
+      // Refresh installed apps list so newly installed/uninstalled
+      // apps appear immediately when the user returns to the launcher.
+      ref.invalidate(appsProvider);
     }
   }
 
@@ -126,6 +130,11 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
 
             // ── Negative space / wallpaper zone ─────────────────────────
             const Spacer(),
+
+            // ── Pinned apps grid (4×2) ────────────────────────────────
+            const AppGrid(),
+
+            const SizedBox(height: 12),
 
             // ── Unified dock (context row + action buttons) ───────────────
             const AppDock(),
@@ -200,8 +209,22 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
   void initState() {
     super.initState();
     _now = DateTime.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+    // Tick once per minute — display only shows HH:MM, so per-second
+    // rebuilds are wasteful. Align the first tick to the next minute
+    // boundary so the display switches over exactly on time.
+    _scheduleNextTick();
+  }
+
+  void _scheduleNextTick() {
+    final now = DateTime.now();
+    final msUntilNextMinute =
+        (60 - now.second) * 1000 - now.millisecond;
+    _timer = Timer(Duration(milliseconds: msUntilNextMinute), () {
       if (mounted) setState(() => _now = DateTime.now());
+      // After the first aligned tick, fire every full minute.
+      _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() => _now = DateTime.now());
+      });
     });
   }
 

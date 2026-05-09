@@ -99,8 +99,6 @@ class _DismissedNotifier extends StateNotifier<Map<String, int>> {
     state = {...state, id: year};
     _prefs.setString(_kDismissedKey, json.encode(state));
   }
-
-  bool isDismissedForYear(String id, int year) => state[id] == year;
 }
 
 // -- Snooze state -----------------------------------------------------------
@@ -120,7 +118,13 @@ class _SnoozeNotifier extends StateNotifier<Map<String, DateTime>> {
     try {
       final raw = p.getString(_kSnoozeUntilKey) ?? '{}';
       final decoded = json.decode(raw) as Map<String, dynamic>;
-      return decoded.map((k, v) => MapEntry(k, DateTime.parse(v as String)));
+      final now = DateTime.now();
+      // Prune entries whose snooze has already expired to keep prefs tidy.
+      return Map.fromEntries(
+        decoded.entries
+            .map((e) => MapEntry(e.key, DateTime.parse(e.value as String)))
+            .where((e) => e.value.isAfter(now)),
+      );
     } catch (_) {
       return {};
     }
@@ -133,12 +137,6 @@ class _SnoozeNotifier extends StateNotifier<Map<String, DateTime>> {
       _kSnoozeUntilKey,
       json.encode(state.map((k, v) => MapEntry(k, v.toIso8601String()))),
     );
-  }
-
-  bool isSnoozed(String id) {
-    final until = state[id];
-    if (until == null) return false;
-    return DateTime.now().isBefore(until);
   }
 }
 

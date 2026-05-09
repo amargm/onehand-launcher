@@ -7,16 +7,13 @@ import 'context_apps_provider.dart';
 
 /// Single source of truth for wired / Bluetooth headphone connection state.
 ///
-/// Uses a 3-second polling timer — the EventChannel / BroadcastReceiver
-/// approach failed to reliably detect Bluetooth state changes on some devices.
-/// Polling is simple, predictable, and the battery cost is negligible
-/// (one lightweight AudioManager query every 3 seconds, only while the
-///  launcher is in the foreground and the feature is enabled).
+/// Driven by the native EventChannel (BroadcastReceiver) so state updates are
+/// instant on plug/unplug — no polling cost. The stream pushes the current
+/// state on subscribe, so no separate initial query is needed.
 ///
 /// Gated on whether the user has configured at least one headphone app in
-/// Settings → Context & Shell. If the list is empty there is nothing to show,
-/// so polling is stopped immediately and state is forced false.
-/// The poll interval (3 s) is unchanged — only the on/off gate changes.
+/// Settings → Context & Shell. If the list is empty the subscription is
+/// cancelled and state is forced false.
 final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
   final initiallyEnabled = ref.read(contextShellAppsProvider).isNotEmpty;
   final notifier = HeadphoneNotifier(enabled: initiallyEnabled);
@@ -31,46 +28,39 @@ final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
 class HeadphoneNotifier extends StateNotifier<bool> {
   HeadphoneNotifier({required bool enabled}) : super(false) {
     _enabled = enabled;
-    if (enabled) _startPolling();
+    if (enabled) _subscribe();
   }
 
-  static const _pollInterval = Duration(seconds: 3);
-
   bool _enabled = false;
-  Timer? _timer;
+  StreamSubscription<bool>? _sub;
 
-  /// Called when the Settings "Headphones" toggle changes.
+  /// Called when the user adds or removes all headphone apps.
   void setEnabled(bool enabled) {
     if (enabled == _enabled) return;
     _enabled = enabled;
     if (enabled) {
-      _startPolling();
+      _subscribe();
     } else {
-      _stopPolling();
+      _unsubscribe();
       if (mounted) state = false;
     }
   }
 
-  void _startPolling() {
-    _stopPolling();
-    // Query immediately so state is correct at once, then repeat.
-    _poll();
-    _timer = Timer.periodic(_pollInterval, (_) => _poll());
+  void _subscribe() {
+    _unsubscribe();
+    _sub = LauncherService.headphoneEvents.listen((connected) {
+      if (mounted && connected != state) state = connected;
+    });
   }
 
-  void _stopPolling() {
-    _timer?.cancel();
-    _timer = null;
-  }
-
-  Future<void> _poll() async {
-    final connected = await LauncherService.isHeadphoneConnected();
-    if (mounted && connected != state) state = connected;
+  void _unsubscribe() {
+    _sub?.cancel();
+    _sub = null;
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _sub?.cancel();
     super.dispose();
   }
 }
