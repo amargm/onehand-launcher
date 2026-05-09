@@ -200,12 +200,11 @@ class _AppDockState extends ConsumerState<AppDock> {
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: dockRow
-                            .expand(
-                              (c) => [c, const SizedBox(width: 16)],
-                            )
-                            .toList()
-                          ..removeLast(), // remove trailing SizedBox
+                        children:
+                            dockRow
+                                .expand((c) => [c, const SizedBox(width: 16)])
+                                .toList()
+                              ..removeLast(), // remove trailing SizedBox
                       ),
                     ),
                   ),

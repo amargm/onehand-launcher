@@ -3,26 +3,60 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/launcher_service.dart';
+import 'context_settings_provider.dart';
 
 /// Single source of truth for wired / Bluetooth headphone connection state.
 ///
-/// Previously every widget that cared about headphones (ContextSection,
-/// _ContextMiniRow) kept its own 5-second Timer and its own platform-channel
-/// call. This provider replaces all of them with one shared polling timer so
-/// the audio-device query runs exactly once every 5 s regardless of how many
-/// widgets watch this provider.
-final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>(
-  (_) => HeadphoneNotifier(),
-);
+/// Polling is gated on the "Headphones" toggle in Settings → Context indicators.
+/// When that toggle is OFF the timer is stopped and state is forced to false
+/// so the context shell stays hidden regardless of what is physically connected.
+final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
+  // Read the initial value of the headphone setting.
+  final initiallyEnabled = ref
+      .read(contextItemsProvider)
+      .contains(ContextItemType.headphone);
+  final notifier = HeadphoneNotifier(enabled: initiallyEnabled);
+
+  // React to settings changes without recreating the notifier (avoids a
+  // state reset / timer restart on every unrelated settings change).
+  ref.listen<Set<ContextItemType>>(contextItemsProvider, (_, next) {
+    notifier.setEnabled(next.contains(ContextItemType.headphone));
+  });
+
+  return notifier;
+});
 
 class HeadphoneNotifier extends StateNotifier<bool> {
-  HeadphoneNotifier() : super(false) {
-    _poll();
-    // Poll every 2 s instead of 5 s so wired/USB plug-in is detected promptly.
+  HeadphoneNotifier({required bool enabled}) : super(false) {
+    _enabled = enabled;
+    if (enabled) _startPolling();
+  }
+
+  bool _enabled = false;
+  Timer? _timer;
+
+  /// Called when the Settings toggle changes.
+  void setEnabled(bool enabled) {
+    if (enabled == _enabled) return;
+    _enabled = enabled;
+    if (enabled) {
+      _startPolling();
+    } else {
+      _stopPolling();
+      // Immediately hide the context shell.
+      if (mounted) state = false;
+    }
+  }
+
+  void _startPolling() {
+    _poll(); // immediate first check
     _timer = Timer.periodic(const Duration(seconds: 2), (_) => _poll());
   }
 
-  late final Timer _timer;
+  void _stopPolling() {
+    _timer?.cancel();
+    _timer = null;
+  }
 
   Future<void> _poll() async {
     try {
@@ -36,7 +70,7 @@ class HeadphoneNotifier extends StateNotifier<bool> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 }
