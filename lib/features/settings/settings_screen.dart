@@ -6,11 +6,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/constants/folder_icons.dart';
 import '../../core/models/app_folder.dart';
 import '../../core/models/app_info.dart';
+import '../../core/models/schedule_rule.dart';
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/context_settings_provider.dart';
-import '../../core/providers/day_context_provider.dart';
 import '../../core/providers/folders_provider.dart';
+import '../../core/providers/schedule_rules_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -582,8 +583,8 @@ class _ContextScreen extends ConsumerWidget {
         _SectionHeader('Headphone apps'),
         _ContextShellAppsSection(),
         const SizedBox(height: 24),
-        _SectionHeader('Day of week apps'),
-        _DayContextSection(),
+        _SectionHeader('Schedules'),
+        _ScheduleRulesSection(),
       ],
     );
   }
@@ -1662,27 +1663,18 @@ class _ContextShellAppsSection extends ConsumerWidget {
   }
 }
 
-// ── Day-of-week context section ───────────────────────────────────────────────
-/// Lets the user enable day-of-week context, pick which days trigger it, and
-/// configure up to [kDayContextMaxApps] apps shown in the top context row.
-class _DayContextSection extends ConsumerWidget {
-  const _DayContextSection();
+// ─────────────────────────────────────────────────────────────────────────────
+// Schedule rules
+// ─────────────────────────────────────────────────────────────────────────────
 
-  static const _days = [
-    (label: 'M', full: 'Monday', weekday: 1),
-    (label: 'T', full: 'Tuesday', weekday: 2),
-    (label: 'W', full: 'Wednesday', weekday: 3),
-    (label: 'T', full: 'Thursday', weekday: 4),
-    (label: 'F', full: 'Friday', weekday: 5),
-    (label: 'S', full: 'Saturday', weekday: 6),
-    (label: 'S', full: 'Sunday', weekday: 7),
-  ];
+// ── Rules list (shown in Context & Shell screen) ──────────────────────────────
+
+class _ScheduleRulesSection extends ConsumerWidget {
+  const _ScheduleRulesSection();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final enabled = ref.watch(dayContextEnabledProvider);
-    final selectedDays = ref.watch(dayContextDaysProvider);
-    final configured = ref.watch(dayContextAppsProvider);
+    final rules = ref.watch(scheduleRulesProvider);
     final appsAsync = ref.watch(appsProvider);
     final accent = Theme.of(context).colorScheme.primary;
 
@@ -1690,100 +1682,483 @@ class _DayContextSection extends ConsumerWidget {
       for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
     };
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141414),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // ── Enable toggle ─────────────────────────────────────────────
-          Row(
-            children: [
-              Icon(Icons.calendar_today_outlined, color: accent, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Show day-specific apps in context shell',
-                  style: GoogleFonts.hankenGrotesk(
-                    fontSize: 12,
-                    color: Colors.white38,
-                  ),
-                ),
-              ),
-              Switch(
-                value: enabled,
-                onChanged:
-                    (v) => ref.read(dayContextEnabledProvider.notifier).set(v),
-                activeColor: accent,
-                trackColor: WidgetStateProperty.resolveWith(
-                  (s) =>
-                      s.contains(WidgetState.selected)
-                          ? accent.withValues(alpha: 0.30)
-                          : Colors.white12,
-                ),
-                thumbColor: WidgetStateProperty.all(Colors.white),
-              ),
-            ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // ── Description ──────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Text(
+            'Show specific apps in the context shell on chosen days and times. '
+            'Multiple rules can be active at once — higher rules fill slots first.',
+            style: GoogleFonts.hankenGrotesk(
+              fontSize: 12,
+              color: Colors.white38,
+              height: 1.5,
+            ),
           ),
+        ),
 
-          if (enabled) ...[
-            const SizedBox(height: 16),
+        // ── Existing rules ────────────────────────────────────────────────
+        for (final rule in rules) ...[
+          _RuleCard(rule: rule, pkgMap: pkgMap, accent: accent),
+          const SizedBox(height: 8),
+        ],
 
-            // ── Day picker chips ──────────────────────────────────────────
-            Text(
-              'Active days',
-              style: GoogleFonts.sora(
-                fontSize: 10,
-                color: Colors.white38,
-                letterSpacing: 0.8,
+        // ── Empty state ───────────────────────────────────────────────────
+        if (rules.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+            child: Text(
+              'No schedules yet. Add one below.',
+              style: GoogleFonts.hankenGrotesk(
+                fontSize: 12,
+                color: Colors.white24,
               ),
             ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children:
-                  _days.map((d) {
-                    final selected = selectedDays.contains(d.weekday);
-                    return GestureDetector(
-                      onTap:
-                          () => ref
-                              .read(dayContextDaysProvider.notifier)
-                              .toggle(d.weekday),
-                      child: Tooltip(
-                        message: d.full,
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 180),
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color:
-                                selected
-                                    ? accent.withValues(alpha: 0.20)
-                                    : Colors.white.withValues(alpha: 0.06),
-                            border: Border.all(
-                              color:
-                                  selected
-                                      ? accent.withValues(alpha: 0.70)
-                                      : Colors.white.withValues(alpha: 0.10),
-                              width: selected ? 1.5 : 1,
+          ),
+
+        const SizedBox(height: 4),
+
+        // ── Add button ────────────────────────────────────────────────────
+        GestureDetector(
+          onTap:
+              () => Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder:
+                      (_) => _ScheduleEditScreen(
+                        rule: ScheduleRule.blank(),
+                        isNew: true,
+                      ),
+                ),
+              ),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: accent.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.add_rounded, color: accent, size: 18),
+                const SizedBox(width: 8),
+                Text(
+                  'New schedule',
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    color: accent,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Single rule card ──────────────────────────────────────────────────────────
+
+class _RuleCard extends StatelessWidget {
+  const _RuleCard({
+    required this.rule,
+    required this.pkgMap,
+    required this.accent,
+  });
+
+  final ScheduleRule rule;
+  final Map<String, AppInfo> pkgMap;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final apps =
+        rule.apps.map((p) => pkgMap[p]).whereType<AppInfo>().take(3).toList();
+    final extra = rule.apps.length > 3 ? rule.apps.length - 3 : 0;
+
+    return GestureDetector(
+      onTap:
+          () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => _ScheduleEditScreen(rule: rule, isNew: false),
+            ),
+          ),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 12, 14, 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A1A),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Row(
+          children: [
+            // ── Rule info ────────────────────────────────────────────────
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    rule.name.isEmpty ? 'Untitled' : rule.name,
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Row(
+                    children: [
+                      Text(
+                        rule.daysLabel,
+                        style: GoogleFonts.sora(
+                          fontSize: 10,
+                          color: accent.withValues(alpha: 0.80),
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white24,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        rule.timeLabel,
+                        style: GoogleFonts.sora(
+                          fontSize: 10,
+                          color: Colors.white38,
+                          letterSpacing: 0.2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (apps.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        for (final app in apps) ...[
+                          Container(
+                            width: 26,
+                            height: 26,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFF2A2A2A),
+                            ),
+                            child: ClipOval(
+                              child:
+                                  app.icon != null
+                                      ? Image.memory(
+                                        app.icon!,
+                                        fit: BoxFit.cover,
+                                        gaplessPlayback: true,
+                                      )
+                                      : const Icon(
+                                        Icons.apps_rounded,
+                                        size: 14,
+                                        color: Colors.white38,
+                                      ),
                             ),
                           ),
-                          child: Center(
-                            child: Text(
-                              d.label,
-                              style: GoogleFonts.sora(
-                                fontSize: 11,
-                                fontWeight:
-                                    selected
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                color:
-                                    selected ? accent : Colors.white38,
-                              ),
+                          const SizedBox(width: 4),
+                        ],
+                        if (extra > 0)
+                          Text(
+                            '+$extra',
+                            style: GoogleFonts.sora(
+                              fontSize: 10,
+                              color: Colors.white24,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white24,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Create / edit screen ──────────────────────────────────────────────────────
+
+class _ScheduleEditScreen extends ConsumerStatefulWidget {
+  const _ScheduleEditScreen({required this.rule, required this.isNew});
+
+  final ScheduleRule rule;
+  final bool isNew;
+
+  @override
+  ConsumerState<_ScheduleEditScreen> createState() =>
+      _ScheduleEditScreenState();
+}
+
+class _ScheduleEditScreenState extends ConsumerState<_ScheduleEditScreen> {
+  late final TextEditingController _nameCtrl;
+  late Set<int> _days;
+  late int _startMinutes;
+  late int _endMinutes;
+  late List<String> _apps;
+  bool _allDay = false;
+
+  static const _dayDefs = [
+    (label: 'M', full: 'Monday', weekday: 1),
+    (label: 'T', full: 'Tue', weekday: 2),
+    (label: 'W', full: 'Wed', weekday: 3),
+    (label: 'T', full: 'Thu', weekday: 4),
+    (label: 'F', full: 'Fri', weekday: 5),
+    (label: 'S', full: 'Sat', weekday: 6),
+    (label: 'S', full: 'Sun', weekday: 7),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    final r = widget.rule;
+    _nameCtrl = TextEditingController(text: r.name);
+    _days = Set.from(r.days);
+    _startMinutes = r.startMinutes;
+    _endMinutes = r.endMinutes;
+    _apps = List.from(r.apps);
+    _allDay = r.isAllDay;
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  // ── Save ────────────────────────────────────────────────────────────────
+
+  void _save() {
+    final rule = widget.rule.copyWith(
+      name:
+          _nameCtrl.text.trim().isEmpty ? 'My schedule' : _nameCtrl.text.trim(),
+      days: _days,
+      startMinutes: _allDay ? 0 : _startMinutes,
+      endMinutes: _allDay ? 1439 : _endMinutes,
+      apps: _apps,
+    );
+    final notifier = ref.read(scheduleRulesProvider.notifier);
+    if (widget.isNew) {
+      notifier.add(rule);
+    } else {
+      notifier.update(rule);
+    }
+    Navigator.of(context).pop();
+  }
+
+  // ── Time helpers ─────────────────────────────────────────────────────────
+
+  Future<void> _pickTime({required bool isStart}) async {
+    final initial = TimeOfDay(
+      hour: (isStart ? _startMinutes : _endMinutes) ~/ 60,
+      minute: (isStart ? _startMinutes : _endMinutes) % 60,
+    );
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+      builder:
+          (ctx, child) => Theme(
+            data: Theme.of(ctx).copyWith(
+              colorScheme: Theme.of(ctx).colorScheme.copyWith(
+                surface: const Color(0xFF1E1E1E),
+                onSurface: Colors.white,
+              ),
+            ),
+            child: child!,
+          ),
+    );
+    if (picked == null) return;
+    final minutes = picked.hour * 60 + picked.minute;
+    setState(() {
+      if (isStart) {
+        _startMinutes = minutes;
+      } else {
+        _endMinutes = minutes;
+      }
+    });
+  }
+
+  String _fmtMinutes(int m) => ScheduleRule.fmt(m);
+
+  // ── App picker ────────────────────────────────────────────────────────────
+
+  void _pickApp() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierColor: Colors.transparent,
+        pageBuilder:
+            (_, __, ___) => SearchOverlay(
+              pickMode: true,
+              onAppPicked: (pkg) {
+                if (!_apps.contains(pkg) && _apps.length < kScheduleMaxApps) {
+                  setState(() => _apps = [..._apps, pkg]);
+                }
+              },
+            ),
+        transitionsBuilder:
+            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+      ),
+    );
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────
+
+  @override
+  Widget build(BuildContext context) {
+    final accent = Theme.of(context).colorScheme.primary;
+    final appsAsync = ref.watch(appsProvider);
+    final pkgMap = {
+      for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
+    };
+    final allSelected = _days.length == 7;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          widget.isNew ? 'New schedule' : 'Edit schedule',
+          style: GoogleFonts.sora(
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            letterSpacing: 1.4,
+          ),
+        ),
+        centerTitle: true,
+        actions: [
+          TextButton(
+            onPressed: _save,
+            child: Text(
+              'Save',
+              style: GoogleFonts.sora(
+                fontSize: 13,
+                color: accent,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        children: [
+          // ── Name ─────────────────────────────────────────────────────────
+          _EditSection(
+            label: 'NAME',
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E1E1E),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: TextField(
+                controller: _nameCtrl,
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 15,
+                  color: Colors.white,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'e.g. Work, Commute, Weekend',
+                  hintStyle: GoogleFonts.hankenGrotesk(
+                    fontSize: 15,
+                    color: Colors.white24,
+                  ),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Active days ───────────────────────────────────────────────────
+          _EditSection(
+            label: 'ACTIVE DAYS',
+            trailing: GestureDetector(
+              onTap:
+                  () => setState(
+                    () => _days = allSelected ? {} : {1, 2, 3, 4, 5, 6, 7},
+                  ),
+              child: Text(
+                allSelected || _days.isEmpty ? 'Every day ✓' : 'Every day',
+                style: GoogleFonts.sora(
+                  fontSize: 11,
+                  color: allSelected || _days.isEmpty ? accent : Colors.white30,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children:
+                  _dayDefs.map((d) {
+                    final sel = _days.contains(d.weekday);
+                    return GestureDetector(
+                      onTap:
+                          () => setState(() {
+                            final next = Set<int>.from(_days);
+                            if (sel) {
+                              next.remove(d.weekday);
+                            } else {
+                              next.add(d.weekday);
+                            }
+                            _days = next;
+                          }),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 160),
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color:
+                              sel
+                                  ? accent.withValues(alpha: 0.18)
+                                  : Colors.white.withValues(alpha: 0.06),
+                          border: Border.all(
+                            color:
+                                sel
+                                    ? accent.withValues(alpha: 0.70)
+                                    : Colors.white.withValues(alpha: 0.10),
+                            width: sel ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            d.label,
+                            style: GoogleFonts.sora(
+                              fontSize: 11,
+                              fontWeight:
+                                  sel ? FontWeight.w600 : FontWeight.w400,
+                              color: sel ? accent : Colors.white38,
                             ),
                           ),
                         ),
@@ -1791,31 +2166,94 @@ class _DayContextSection extends ConsumerWidget {
                     );
                   }).toList(),
             ),
+          ),
 
-            const SizedBox(height: 20),
+          const SizedBox(height: 24),
 
-            // ── App slots ────────────────────────────────────────────────
-            Text(
-              'Apps  ·  max $kDayContextMaxApps',
-              style: GoogleFonts.sora(
-                fontSize: 10,
-                color: Colors.white38,
-                letterSpacing: 0.8,
+          // ── Time window ───────────────────────────────────────────────────
+          _EditSection(
+            label: 'TIME WINDOW',
+            trailing: GestureDetector(
+              onTap: () => setState(() => _allDay = !_allDay),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 160),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      _allDay
+                          ? accent.withValues(alpha: 0.15)
+                          : Colors.white.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color:
+                        _allDay
+                            ? accent.withValues(alpha: 0.50)
+                            : Colors.white12,
+                  ),
+                ),
+                child: Text(
+                  'All day',
+                  style: GoogleFonts.sora(
+                    fontSize: 11,
+                    color: _allDay ? accent : Colors.white30,
+                    fontWeight: _allDay ? FontWeight.w500 : FontWeight.w400,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
+            child:
+                _allDay
+                    ? Text(
+                      'Active the entire day whenever your chosen days match.',
+                      style: GoogleFonts.hankenGrotesk(
+                        fontSize: 12,
+                        color: Colors.white30,
+                        height: 1.5,
+                      ),
+                    )
+                    : Row(
+                      children: [
+                        Expanded(
+                          child: _TimeTile(
+                            label: 'From',
+                            time: _fmtMinutes(_startMinutes),
+                            accent: accent,
+                            onTap: () => _pickTime(isStart: true),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _TimeTile(
+                            label: 'To',
+                            time: _fmtMinutes(_endMinutes),
+                            accent: accent,
+                            onTap: () => _pickTime(isStart: false),
+                          ),
+                        ),
+                      ],
+                    ),
+          ),
+
+          const SizedBox(height: 24),
+
+          // ── Apps ──────────────────────────────────────────────────────────
+          _EditSection(
+            label: 'APPS  ·  MAX $kScheduleMaxApps',
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(kDayContextMaxApps, (i) {
-                final pkg = i < configured.length ? configured[i] : null;
+              children: List.generate(kScheduleMaxApps, (i) {
+                final pkg = i < _apps.length ? _apps[i] : null;
                 final app = pkg != null ? pkgMap[pkg] : null;
 
                 if (app != null) {
                   return GestureDetector(
                     onTap:
-                        () => ref
-                            .read(dayContextAppsProvider.notifier)
-                            .remove(pkg!),
+                        () => setState(
+                          () => _apps = _apps.where((p) => p != pkg).toList(),
+                        ),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1841,7 +2279,7 @@ class _DayContextSection extends ConsumerWidget {
                                           fit: BoxFit.cover,
                                           gaplessPlayback: true,
                                         )
-                                        : Icon(
+                                        : const Icon(
                                           Icons.apps_rounded,
                                           color: Colors.white54,
                                           size: 24,
@@ -1886,10 +2324,9 @@ class _DayContextSection extends ConsumerWidget {
                     ),
                   );
                 } else {
-                  final canAdd = configured.length < kDayContextMaxApps;
+                  final canAdd = _apps.length < kScheduleMaxApps;
                   return GestureDetector(
-                    onTap:
-                        canAdd ? () => _pickDayApp(context, ref) : null,
+                    onTap: canAdd ? _pickApp : null,
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -1899,15 +2336,13 @@ class _DayContextSection extends ConsumerWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color:
-                                  canAdd ? Colors.white24 : Colors.white10,
+                              color: canAdd ? Colors.white24 : Colors.white10,
                               width: 1.5,
                             ),
                           ),
                           child: Icon(
                             Icons.add_rounded,
-                            color:
-                                canAdd ? Colors.white38 : Colors.white12,
+                            color: canAdd ? Colors.white38 : Colors.white12,
                             size: 22,
                           ),
                         ),
@@ -1925,26 +2360,134 @@ class _DayContextSection extends ConsumerWidget {
                 }
               }),
             ),
+          ),
+
+          // ── Delete (edit mode only) ───────────────────────────────────────
+          if (!widget.isNew) ...[
+            const SizedBox(height: 40),
+            GestureDetector(
+              onTap: () {
+                ref.read(scheduleRulesProvider.notifier).remove(widget.rule.id);
+                Navigator.of(context).pop();
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.red.withValues(alpha: 0.70),
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Delete this schedule',
+                      style: GoogleFonts.sora(
+                        fontSize: 13,
+                        color: Colors.red.withValues(alpha: 0.70),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ],
       ),
     );
   }
+}
 
-  void _pickDayApp(BuildContext context, WidgetRef ref) {
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false,
-        barrierColor: Colors.transparent,
-        pageBuilder:
-            (_, __, ___) => SearchOverlay(
-              pickMode: true,
-              onAppPicked:
-                  (pkg) =>
-                      ref.read(dayContextAppsProvider.notifier).add(pkg),
+// ── Edit screen helpers ───────────────────────────────────────────────────────
+
+class _EditSection extends StatelessWidget {
+  const _EditSection({required this.label, required this.child, this.trailing});
+
+  final String label;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color: Colors.white30,
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-        transitionsBuilder:
-            (_, anim, __, child) => FadeTransition(opacity: anim, child: child),
+            if (trailing != null) ...[const Spacer(), trailing!],
+          ],
+        ),
+        const SizedBox(height: 10),
+        child,
+      ],
+    );
+  }
+}
+
+class _TimeTile extends StatelessWidget {
+  const _TimeTile({
+    required this.label,
+    required this.time,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final String label;
+  final String time;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color: Colors.white30,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              time,
+              style: GoogleFonts.hankenGrotesk(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

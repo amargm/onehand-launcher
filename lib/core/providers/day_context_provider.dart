@@ -27,11 +27,12 @@ const kDayContextMaxApps = 5;
 
 // ── Enabled toggle ────────────────────────────────────────────────────────────
 
-final dayContextEnabledProvider =
-    StateNotifierProvider<_BoolNotifier, bool>((ref) {
-      final prefs = ref.watch(sharedPreferencesProvider);
-      return _BoolNotifier(prefs);
-    });
+final dayContextEnabledProvider = StateNotifierProvider<_BoolNotifier, bool>((
+  ref,
+) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _BoolNotifier(prefs);
+});
 
 class _BoolNotifier extends StateNotifier<bool> {
   _BoolNotifier(this._prefs)
@@ -107,8 +108,7 @@ class DayContextAppsNotifier extends StateNotifier<List<String>> {
     }
   }
 
-  void _persist() =>
-      _prefs.setString(_kDayContextAppsKey, jsonEncode(state));
+  void _persist() => _prefs.setString(_kDayContextAppsKey, jsonEncode(state));
 
   void add(String packageName) {
     if (state.contains(packageName)) return;

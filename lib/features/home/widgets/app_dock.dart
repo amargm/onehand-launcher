@@ -5,9 +5,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/constants/folder_icons.dart';
 import '../../../core/models/app_folder.dart';
 import '../../../core/models/app_info.dart';
+import '../../../core/models/schedule_rule.dart';
 import '../../../core/providers/apps_provider.dart';
 import '../../../core/providers/context_apps_provider.dart';
-import '../../../core/providers/day_context_provider.dart';
+import '../../../core/providers/schedule_rules_provider.dart';
 import '../../../core/providers/folders_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
 import '../../../core/providers/recent_apps_provider.dart';
@@ -47,7 +48,7 @@ class _AppDockState extends ConsumerState<AppDock> {
     final folders = ref.watch(foldersProvider);
     final rightHanded = ref.watch(rightHandedProvider);
     final headphones = ref.watch(headphoneProvider);
-    final dayActive = ref.watch(isDayContextActiveProvider);
+    final dayActive = ref.watch(isScheduleContextActiveProvider);
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
     final showSearchLabel = ref.watch(showSearchLabelProvider);
     final accent = Theme.of(context).colorScheme.primary;
@@ -161,9 +162,7 @@ class _AppDockState extends ConsumerState<AppDock> {
               padding: shellVisible ? const EdgeInsets.all(8) : EdgeInsets.zero,
               decoration: BoxDecoration(
                 color:
-                    shellVisible
-                        ? const Color(0xFF111111)
-                        : Colors.transparent,
+                    shellVisible ? const Color(0xFF111111) : Colors.transparent,
                 borderRadius: BorderRadius.circular(40),
                 border: Border.all(
                   color:
@@ -190,8 +189,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   // Top row: day-of-week apps (when day active)
-                                  if (dayActive)
-                                    const _DayContextShellRow(),
+                                  if (dayActive) const _DayContextShellRow(),
                                   // Separator between two active rows
                                   if (dayActive && headphones)
                                     Container(
@@ -205,8 +203,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                                       ),
                                     ),
                                   // Bottom row: headphone apps (when headphones)
-                                  if (headphones)
-                                    const _ContextShellRow(),
+                                  if (headphones) const _ContextShellRow(),
                                   const SizedBox(height: 6),
                                 ],
                               ),
@@ -218,10 +215,8 @@ class _AppDockState extends ConsumerState<AppDock> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (dayActive)
-                                    const _DayContextShellRow(),
-                                  if (headphones)
-                                    const _ContextShellRow(),
+                                  if (dayActive) const _DayContextShellRow(),
+                                  if (headphones) const _ContextShellRow(),
                                   const SizedBox(height: 6),
                                 ],
                               ),
@@ -557,7 +552,7 @@ class _DayContextShellRow extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final configuredPkgs = ref.watch(dayContextAppsProvider);
+    final configuredPkgs = ref.watch(activeScheduleAppsProvider);
     final appsAsync = ref.watch(appsProvider);
     final accent = Theme.of(context).colorScheme.primary;
 
@@ -567,7 +562,7 @@ class _DayContextShellRow extends ConsumerWidget {
 
     final apps =
         configuredPkgs
-            .take(kDayContextMaxApps)
+            .take(kScheduleMaxApps)
             .map((pkg) => pkgMap[pkg])
             .whereType<AppInfo>()
             .toList();
@@ -576,7 +571,9 @@ class _DayContextShellRow extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         mainAxisAlignment:
-            apps.isEmpty ? MainAxisAlignment.center : MainAxisAlignment.spaceAround,
+            apps.isEmpty
+                ? MainAxisAlignment.center
+                : MainAxisAlignment.spaceAround,
         children:
             apps.isEmpty
                 ? List.generate(
@@ -586,9 +583,7 @@ class _DayContextShellRow extends ConsumerWidget {
                     height: 32,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: accent.withValues(alpha: 0.15),
-                      ),
+                      border: Border.all(color: accent.withValues(alpha: 0.15)),
                     ),
                   ),
                 )
