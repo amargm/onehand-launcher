@@ -66,6 +66,14 @@ class _AppDockState extends ConsumerState<AppDock> {
       });
     }
 
+    // Icon to show in the amber dot — reflects the single event's icon,
+    // or a generic calendar icon when multiple events are active.
+    final dotIcon =
+        activeSpecialEvents.length == 1
+            ? (kSpecialDateIcons[activeSpecialEvents.first.iconKey] ??
+                Icons.celebration_rounded)
+            : Icons.event_rounded;
+
     // Outer shell visible when either context source is active.
     final shellVisible = headphones || dayActive;
 
@@ -299,6 +307,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                   right: 0,
                   child: _SpecialDateDot(
                     isOpen: _messageBoxOpen,
+                    iconData: dotIcon,
                     onTap:
                         () => setState(() {
                           if (!_messageBoxOpen) {
@@ -766,9 +775,14 @@ class _DockCircle extends StatelessWidget {
 /// Fully independent of the outer shell. Pulsing scale + glow animation.
 /// Tapping toggles the message box open/closed.
 class _SpecialDateDot extends StatefulWidget {
-  const _SpecialDateDot({required this.isOpen, required this.onTap});
+  const _SpecialDateDot({
+    required this.isOpen,
+    required this.iconData,
+    required this.onTap,
+  });
 
   final bool isOpen;
+  final IconData iconData;
   final VoidCallback onTap;
 
   @override
@@ -847,11 +861,7 @@ class _SpecialDateDotState extends State<_SpecialDateDot>
                     width: 1.5,
                   ),
                 ),
-                child: const Icon(
-                  Icons.celebration_rounded,
-                  size: 14,
-                  color: Colors.white,
-                ),
+                child: Icon(widget.iconData, size: 14, color: Colors.white),
               ),
             ),
       ),
@@ -879,7 +889,10 @@ class _SpecialDateMessagePanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final maxHeight = MediaQuery.of(context).size.height * 0.50;
+    final maxHeight = (MediaQuery.of(context).size.height * 0.36).clamp(
+      220.0,
+      280.0,
+    );
     final icon =
         kSpecialDateIcons[events.first.iconKey] ?? Icons.celebration_rounded;
     return Container(

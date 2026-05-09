@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/launcher_service.dart';
-import 'context_settings_provider.dart';
+import 'context_apps_provider.dart';
 
 /// Single source of truth for wired / Bluetooth headphone connection state.
 ///
@@ -13,16 +13,16 @@ import 'context_settings_provider.dart';
 /// (one lightweight AudioManager query every 3 seconds, only while the
 ///  launcher is in the foreground and the feature is enabled).
 ///
-/// Gated on the "Headphones" toggle in Settings → Context indicators.
-/// When OFF: timer cancelled, state forced false immediately.
+/// Gated on whether the user has configured at least one headphone app in
+/// Settings → Context & Shell. If the list is empty there is nothing to show,
+/// so polling is stopped immediately and state is forced false.
+/// The poll interval (3 s) is unchanged — only the on/off gate changes.
 final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
-  final initiallyEnabled = ref
-      .read(contextItemsProvider)
-      .contains(ContextItemType.headphone);
+  final initiallyEnabled = ref.read(contextShellAppsProvider).isNotEmpty;
   final notifier = HeadphoneNotifier(enabled: initiallyEnabled);
 
-  ref.listen<Set<ContextItemType>>(contextItemsProvider, (_, next) {
-    notifier.setEnabled(next.contains(ContextItemType.headphone));
+  ref.listen<List<String>>(contextShellAppsProvider, (_, next) {
+    notifier.setEnabled(next.isNotEmpty);
   });
 
   return notifier;
