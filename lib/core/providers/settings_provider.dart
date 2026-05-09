@@ -84,3 +84,15 @@ final rightHandedProvider = StateNotifierProvider<_BoolNotifier, bool>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return _BoolNotifier(prefs, _kRightHanded, defaultValue: true);
 });
+
+// ── Clock format ───────────────────────────────────────────────────────────
+
+const _kUse24HourClock = 'use_24_hour_clock';
+
+/// `true` = 24-hour display (default). `false` = 12-hour (AM/PM).
+final use24HourClockProvider = StateNotifierProvider<_BoolNotifier, bool>((
+  ref,
+) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _BoolNotifier(prefs, _kUse24HourClock, defaultValue: true);
+});

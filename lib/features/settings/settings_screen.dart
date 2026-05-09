@@ -20,9 +20,6 @@ class SettingsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final accent = ref.watch(accentColorProvider);
-    final folders = ref.watch(foldersProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
@@ -45,153 +42,341 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         children: [
-          // ── Appearance ─────────────────────────────────────────────────
-          _SectionHeader('Appearance'),
-
-          // Theme presets
-          _ThemePresetRow(),
-
-          const SizedBox(height: 8),
-
-          _SettingsTile(
+          _NavTile(
             icon: Icons.palette_outlined,
-            label: 'Custom accent colour',
-            trailing: GestureDetector(
-              onTap: () => _pickColor(context, ref, accent),
-              child: Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: accent,
-                  shape: BoxShape.circle,
-                ),
-              ),
+            label: 'Appearance',
+            subtitle: 'Accent colour, themes, clock format',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _AppearanceScreen()),
             ),
           ),
-
           const SizedBox(height: 8),
-
-          _SettingsTile(
-            icon: Icons.lock_outline_rounded,
-            label: 'Preview lock screen',
-            trailing: const Icon(
-              Icons.chevron_right_rounded,
-              color: Colors.white24,
-              size: 20,
+          _NavTile(
+            icon: Icons.grid_view_rounded,
+            label: 'Dock',
+            subtitle: 'Labels, handedness',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _DockScreen()),
             ),
-            onTap:
-                () => Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const LockScreen())),
           ),
-
-          const SizedBox(height: 24),
-
-          // ── Dock ────────────────────────────────────────────────────────
-          _SectionHeader('Dock'),
-
-          _ToggleTile(
-            icon: Icons.label_outline_rounded,
-            label: 'Show folder labels',
-            value: ref.watch(showFolderLabelsProvider),
-            onChanged:
-                (_) => ref.read(showFolderLabelsProvider.notifier).toggle(),
-          ),
-
           const SizedBox(height: 8),
-
-          _ToggleTile(
-            icon: Icons.search_rounded,
-            label: 'Show "Search" label',
-            value: ref.watch(showSearchLabelProvider),
-            onChanged:
-                (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
+          _NavTile(
+            icon: Icons.sensors_rounded,
+            label: 'Context & Shell',
+            subtitle: 'Context indicators, quick-launch strip',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _ContextScreen()),
+            ),
           ),
-
           const SizedBox(height: 8),
-
-          _HandednessTile(),
-
-          const SizedBox(height: 24),
-
-          // ── Context indicators ──────────────────────────────────────────
-          _SectionHeader('Context indicators'),
-
-          _ContextItemsSection(),
-
-          const SizedBox(height: 24),
-          // ── Context shell apps ────────────────────────────────────────────
-          _SectionHeader('Context shell'),
-
-          _ContextShellAppsSection(),
-
-          const SizedBox(height: 24),
-          // ── Folders ─────────────────────────────────────────────────────
-          _SectionHeader('Dock Folders'),
-
-          for (final folder in folders) ...[
-            _FolderTile(folder: folder),
-            const SizedBox(height: 8),
-          ],
-
-          const SizedBox(height: 24),
-
-          // ── About ────────────────────────────────────────────────────────
-          _SectionHeader('About'),
-
-          _SettingsTile(
+          _NavTile(
+            icon: Icons.folder_outlined,
+            label: 'Folders',
+            subtitle: 'Manage dock app folders',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _FoldersScreen()),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _NavTile(
             icon: Icons.info_outline_rounded,
-            label: 'One-Handed Launcher',
+            label: 'About',
             subtitle: 'v1.0.0  ·  Obsidian Pulse',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _AboutScreen()),
+            ),
           ),
-
           const SizedBox(height: 32),
         ],
       ),
     );
   }
+}
 
-  void _pickColor(BuildContext context, WidgetRef ref, Color current) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        Color picked = current;
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A1A1A),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: Text(
-            'Accent colour',
-            style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
-          ),
-          content: HueRingPicker(
-            pickerColor: current,
-            onColorChanged: (c) => picked = c,
-            enableAlpha: false,
-            displayThumbColor: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(
-                'Cancel',
-                style: GoogleFonts.sora(color: Colors.white38),
+// ── Navigation tile ─────────────────────────────────────────────────────────
+class _NavTile extends StatelessWidget {
+  const _NavTile({
+    required this.icon,
+    required this.label,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E1E1E),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white54, size: 22),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.hankenGrotesk(
+                      fontSize: 12,
+                      color: Colors.white38,
+                    ),
+                  ),
+                ],
               ),
             ),
-            TextButton(
-              onPressed: () {
-                ref.read(accentColorProvider.notifier).setColor(picked);
-                Navigator.of(ctx).pop();
-              },
-              child: Text(
-                'Apply',
-                style: GoogleFonts.sora(color: picked, fontSize: 14),
-              ),
-            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 20),
           ],
-        );
-      },
+        ),
+      ),
+    );
+  }
+}
+
+// ── Shared sub-screen scaffold ───────────────────────────────────────────────
+class _SubScreen extends StatelessWidget {
+  const _SubScreen({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF121212),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: Text(
+          title,
+          style: GoogleFonts.sora(
+            fontSize: 16,
+            fontWeight: FontWeight.w300,
+            letterSpacing: 1.4,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        children: [...children, const SizedBox(height: 40)],
+      ),
+    );
+  }
+}
+
+// ── Appearance sub-screen ────────────────────────────────────────────────────
+class _AppearanceScreen extends ConsumerWidget {
+  const _AppearanceScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final accent = ref.watch(accentColorProvider);
+    return _SubScreen(
+      title: 'Appearance',
+      children: [
+        _SectionHeader('Theme'),
+        _ThemePresetRow(),
+        const SizedBox(height: 8),
+        _SettingsTile(
+          icon: Icons.palette_outlined,
+          label: 'Custom accent colour',
+          trailing: GestureDetector(
+            onTap: () => _pickAccentColor(context, ref, accent),
+            child: Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(color: accent, shape: BoxShape.circle),
+            ),
+          ),
+        ),
+        const SizedBox(height: 24),
+        _SectionHeader('Clock'),
+        _ToggleTile(
+          icon: Icons.schedule_rounded,
+          label: '24-hour clock',
+          value: ref.watch(use24HourClockProvider),
+          onChanged: (_) => ref.read(use24HourClockProvider.notifier).toggle(),
+        ),
+        const SizedBox(height: 24),
+        _SectionHeader('Other'),
+        _SettingsTile(
+          icon: Icons.lock_outline_rounded,
+          label: 'Preview lock screen',
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white24,
+            size: 20,
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const LockScreen()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+void _pickAccentColor(BuildContext context, WidgetRef ref, Color current) {
+  showDialog(
+    context: context,
+    builder: (ctx) {
+      Color picked = current;
+      return AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          'Accent colour',
+          style: GoogleFonts.sora(color: Colors.white, fontSize: 15),
+        ),
+        content: HueRingPicker(
+          pickerColor: current,
+          onColorChanged: (c) => picked = c,
+          enableAlpha: false,
+          displayThumbColor: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('Cancel', style: GoogleFonts.sora(color: Colors.white38)),
+          ),
+          TextButton(
+            onPressed: () {
+              ref.read(accentColorProvider.notifier).setColor(picked);
+              Navigator.of(ctx).pop();
+            },
+            child: Text(
+              'Apply',
+              style: GoogleFonts.sora(color: picked, fontSize: 14),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// ── Dock sub-screen ──────────────────────────────────────────────────────────
+class _DockScreen extends ConsumerWidget {
+  const _DockScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _SubScreen(
+      title: 'Dock',
+      children: [
+        _SectionHeader('Labels'),
+        _ToggleTile(
+          icon: Icons.label_outline_rounded,
+          label: 'Show folder labels',
+          value: ref.watch(showFolderLabelsProvider),
+          onChanged:
+              (_) => ref.read(showFolderLabelsProvider.notifier).toggle(),
+        ),
+        const SizedBox(height: 8),
+        _ToggleTile(
+          icon: Icons.search_rounded,
+          label: 'Show "Search" label',
+          value: ref.watch(showSearchLabelProvider),
+          onChanged:
+              (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
+        ),
+        const SizedBox(height: 24),
+        _SectionHeader('Layout'),
+        _HandednessTile(),
+      ],
+    );
+  }
+}
+
+// ── Context & Shell sub-screen ───────────────────────────────────────────────
+class _ContextScreen extends ConsumerWidget {
+  const _ContextScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _SubScreen(
+      title: 'Context & Shell',
+      children: [
+        _SectionHeader('Context indicators'),
+        _ContextItemsSection(),
+        const SizedBox(height: 24),
+        _SectionHeader('Context shell apps'),
+        _ContextShellAppsSection(),
+      ],
+    );
+  }
+}
+
+// ── Folders sub-screen ───────────────────────────────────────────────────────
+class _FoldersScreen extends ConsumerWidget {
+  const _FoldersScreen();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final folders = ref.watch(foldersProvider);
+    return _SubScreen(
+      title: 'Folders',
+      children: [
+        _SectionHeader('Dock folders'),
+        for (final folder in folders) ...[
+          _FolderTile(folder: folder),
+          const SizedBox(height: 8),
+        ],
+        if (folders.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'No folders yet · create one via the + button',
+                style: GoogleFonts.sora(fontSize: 12, color: Colors.white24),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ── About sub-screen ─────────────────────────────────────────────────────────
+class _AboutScreen extends StatelessWidget {
+  const _AboutScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return _SubScreen(
+      title: 'About',
+      children: [
+        _SettingsTile(
+          icon: Icons.info_outline_rounded,
+          label: 'One-Handed Launcher',
+          subtitle: 'v1.0.0  ·  Obsidian Pulse',
+        ),
+      ],
     );
   }
 }

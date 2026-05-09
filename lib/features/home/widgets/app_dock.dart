@@ -146,12 +146,12 @@ class _AppDockState extends ConsumerState<AppDock> {
               padding: headphones ? const EdgeInsets.all(8) : EdgeInsets.zero,
               decoration: BoxDecoration(
                 color:
-                    headphones ? const Color(0xFF0D0D0D) : Colors.transparent,
+                    headphones ? const Color(0xFF111111) : Colors.transparent,
                 borderRadius: BorderRadius.circular(40),
                 border: Border.all(
                   color:
                       headphones
-                          ? Colors.white.withValues(alpha: 0.06)
+                          ? Colors.white.withValues(alpha: 0.16)
                           : Colors.transparent,
                 ),
               ),
@@ -204,7 +204,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                         vertical: 14,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF1E1E1E),
+                        color: const Color(0xFF272727),
                         borderRadius: BorderRadius.circular(32),
                       ),
                       child: Row(
@@ -571,11 +571,18 @@ class _DockCircle extends StatelessWidget {
                 ? null
                 : isActive
                 ? Border.all(color: accent.withValues(alpha: 0.85), width: 2)
-                : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                : Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
       child: Icon(
         icon,
-        color: isSearch ? Colors.white : (isActive ? accent : Colors.white60),
+        // On a light/white accent background the white icon disappears.
+        // Use black for high-luminance accents, white otherwise.
+        color:
+            isSearch
+                ? (accent.computeLuminance() > 0.4
+                    ? Colors.black.withValues(alpha: 0.80)
+                    : Colors.white)
+                : (isActive ? accent : Colors.white60),
         size: 24,
       ),
     );

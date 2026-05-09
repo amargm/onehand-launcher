@@ -3,6 +3,7 @@ package com.onehand.onehand_launcher
 import android.app.role.RoleManager
 import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothHeadset
+import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -15,6 +16,8 @@ import android.graphics.drawable.Drawable
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.provider.Settings
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -32,13 +35,44 @@ class MainActivity : FlutterActivity() {
     // Off-main-thread executor for icon-loading operations.
     private val executor = Executors.newCachedThreadPool()
 
+    // Handler for posting delayed Bluetooth disconnect checks.
+    private val mainHandler = Handler(Looper.getMainLooper())
+
     // EventChannel sink — null when Flutter is not listening.
     private var headphoneEventSink: EventChannel.EventSink? = null
 
     // Fires on wired plug/unplug and BT A2DP / SCO connect/disconnect.
+    //
+    // BT events carry the new profile state in EXTRA_STATE:
+    //   STATE_CONNECTED (2)    → push true immediately (AudioManager already updated).
+    //   STATE_DISCONNECTED (0) → delay 300 ms so AudioManager finishes removing the
+    //                            device before we query it.
+    //   CONNECTING / DISCONNECTING → ignored; wait for the final state.
+    // Wired events always call isHeadphoneConnected() directly (instant).
     private val audioReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            headphoneEventSink?.success(isHeadphoneConnected())
+            when (intent.action) {
+                BluetoothA2dp.ACTION_CONNECTION_STATE_CHANGED,
+                BluetoothHeadset.ACTION_CONNECTION_STATE_CHANGED -> {
+                    val state = intent.getIntExtra(
+                        BluetoothProfile.EXTRA_STATE,
+                        BluetoothProfile.STATE_DISCONNECTED,
+                    )
+                    when (state) {
+                        BluetoothProfile.STATE_CONNECTED -> {
+                            headphoneEventSink?.success(true)
+                        }
+                        BluetoothProfile.STATE_DISCONNECTED -> {
+                            // AudioManager can lag on BT disconnect — wait briefly.
+                            mainHandler.postDelayed({
+                                headphoneEventSink?.success(isHeadphoneConnected())
+                            }, 300L)
+                        }
+                        // CONNECTING / DISCONNECTING → wait for final state.
+                    }
+                }
+                else -> headphoneEventSink?.success(isHeadphoneConnected())
+            }
         }
     }
 

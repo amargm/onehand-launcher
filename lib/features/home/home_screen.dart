@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/settings_provider.dart';
 import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
 import 'widgets/app_dock.dart';
@@ -137,24 +138,41 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
 }
 
 /// Live clock — updates every second.
-/// Displays a large time (HH:mm) and a small date row below, left-aligned.
-class _ClockWidget extends StatefulWidget {
+/// Time is large white Sora. Day + date are accent-coloured (settable).
+/// Format follows use24HourClockProvider.
+class _ClockWidget extends ConsumerStatefulWidget {
   const _ClockWidget();
 
   @override
-  State<_ClockWidget> createState() => _ClockWidgetState();
+  ConsumerState<_ClockWidget> createState() => _ClockWidgetState();
 }
 
-class _ClockWidgetState extends State<_ClockWidget> {
+class _ClockWidgetState extends ConsumerState<_ClockWidget> {
   late DateTime _now;
   Timer? _timer;
 
   static const _days = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday',
   ];
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
@@ -172,10 +190,18 @@ class _ClockWidgetState extends State<_ClockWidget> {
     super.dispose();
   }
 
-  String get _timeString {
-    final h = _now.hour.toString().padLeft(2, '0');
-    final m = _now.minute.toString().padLeft(2, '0');
-    return '$h:$m';
+  String _buildTimeString(bool use24h) {
+    if (use24h) {
+      final h = _now.hour.toString().padLeft(2, '0');
+      final m = _now.minute.toString().padLeft(2, '0');
+      return '$h:$m';
+    } else {
+      var h = _now.hour % 12;
+      if (h == 0) h = 12;
+      final m = _now.minute.toString().padLeft(2, '0');
+      final period = _now.hour < 12 ? 'AM' : 'PM';
+      return '$h:$m $period';
+    }
   }
 
   String get _dateString {
@@ -186,12 +212,14 @@ class _ClockWidgetState extends State<_ClockWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final use24h = ref.watch(use24HourClockProvider);
+    final accent = ref.watch(accentColorProvider);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _timeString,
+          _buildTimeString(use24h),
           style: GoogleFonts.sora(
             fontSize: 64,
             height: 1.0,
@@ -207,13 +235,14 @@ class _ClockWidgetState extends State<_ClockWidget> {
             fontSize: 11,
             fontWeight: FontWeight.w500,
             letterSpacing: 2.0,
-            color: Colors.white.withValues(alpha: 0.38),
+            color: accent.withValues(alpha: 0.75),
           ),
         ),
       ],
     );
   }
 }
+
 class _BottomGlow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
