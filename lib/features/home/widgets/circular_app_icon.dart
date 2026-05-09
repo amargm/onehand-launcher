@@ -63,7 +63,6 @@ class CircularAppIcon extends ConsumerWidget {
 // ── App context menu (add to folder + uninstall) ──────────────────────────────
 // Top-level so it's reachable from any widget (folder panel, search results).
 void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
-  final folders = ref.read(foldersProvider);
   final accent = Theme.of(context).colorScheme.primary;
 
   showModalBottomSheet(
@@ -73,124 +72,134 @@ void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
     builder:
-        (_) => Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
+        (_) => Consumer(
+          builder: (ctx, watchRef, __) {
+            // Watch live folder list so additions made while the sheet is open
+            // are reflected immediately (avoids the stale-snapshot bug).
+            final folders = watchRef.watch(foldersProvider);
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _AppCircle(icon: app.icon, size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      app.appName,
-                      style: GoogleFonts.sora(
-                        color: Colors.white,
-                        fontSize: 15,
+                  // Header
+                  Row(
+                    children: [
+                      _AppCircle(icon: app.icon, size: 40),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          app.appName,
+                          style: GoogleFonts.sora(
+                            color: Colors.white,
+                            fontSize: 15,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 20),
+                  const SizedBox(height: 20),
 
-              // Add to folder section
-              Text(
-                'ADD TO FOLDER',
-                style: GoogleFonts.sora(
-                  color: Colors.white24,
-                  fontSize: 10,
-                  letterSpacing: 2,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (folders.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'No folders yet · create one in Settings',
+                  // Add to folder section
+                  Text(
+                    'ADD TO FOLDER',
                     style: GoogleFonts.sora(
                       color: Colors.white24,
-                      fontSize: 12,
+                      fontSize: 10,
+                      letterSpacing: 2,
                     ),
                   ),
-                )
-              else
-                for (final folder in folders)
+                  const SizedBox(height: 12),
+                  if (folders.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        'No folders yet · create one in Settings',
+                        style: GoogleFonts.sora(
+                          color: Colors.white24,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )
+                  else
+                    for (final folder in folders)
+                      ListTile(
+                        leading: Icon(
+                          Icons.folder_rounded,
+                          color: accent,
+                          size: 20,
+                        ),
+                        title: Text(
+                          folder.name,
+                          style: GoogleFonts.sora(
+                            color: Colors.white70,
+                            fontSize: 14,
+                          ),
+                        ),
+                        onTap: () {
+                          watchRef
+                              .read(foldersProvider.notifier)
+                              .addApp(folder.id, app.packageName);
+                          Navigator.of(ctx).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${app.appName} added to ${folder.name}',
+                                style: GoogleFonts.sora(fontSize: 12),
+                              ),
+                              backgroundColor: const Color(0xFF1A1A1A),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+
+                  // App info + Uninstall section
+                  const Divider(color: Colors.white12),
                   ListTile(
-                    leading: Icon(
-                      Icons.folder_rounded,
-                      color: accent,
+                    leading: const Icon(
+                      Icons.info_outline_rounded,
+                      color: Colors.white54,
                       size: 20,
                     ),
                     title: Text(
-                      folder.name,
+                      'App info',
                       style: GoogleFonts.sora(
                         color: Colors.white70,
                         fontSize: 14,
                       ),
                     ),
                     onTap: () {
-                      ref
-                          .read(foldersProvider.notifier)
-                          .addApp(folder.id, app.packageName);
-                      Navigator.of(context).pop();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            '${app.appName} added to ${folder.name}',
-                            style: GoogleFonts.sora(fontSize: 12),
-                          ),
-                          backgroundColor: const Color(0xFF1A1A1A),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                      );
+                      Navigator.of(ctx).pop();
+                      AppsService.openAppInfo(app.packageName);
                     },
                   ),
-
-              // App info + Uninstall section
-              const Divider(color: Colors.white12),
-              ListTile(
-                leading: const Icon(
-                  Icons.info_outline_rounded,
-                  color: Colors.white54,
-                  size: 20,
-                ),
-                title: Text(
-                  'App info',
-                  style: GoogleFonts.sora(color: Colors.white70, fontSize: 14),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  AppsService.openAppInfo(app.packageName);
-                },
-              ),
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_outline_rounded,
-                  color: Colors.redAccent,
-                  size: 20,
-                ),
-                title: Text(
-                  'Uninstall',
-                  style: GoogleFonts.sora(
-                    color: Colors.redAccent,
-                    fontSize: 14,
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Uninstall',
+                      style: GoogleFonts.sora(
+                        color: Colors.redAccent,
+                        fontSize: 14,
+                      ),
+                    ),
+                    onTap: () {
+                      Navigator.of(ctx).pop();
+                      AppsService.requestUninstall(app.packageName);
+                    },
                   ),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  AppsService.requestUninstall(app.packageName);
-                },
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
   );
 }

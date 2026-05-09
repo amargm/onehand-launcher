@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/recent_apps_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/services/launcher_service.dart';
@@ -65,8 +66,15 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
     });
     // Invalidate app list immediately when any package is installed/removed,
     // rather than waiting for the next resume (which can race with PackageManager).
-    _packageSub = AppsService.packageChangeEvents.listen((_) {
-      if (mounted) ref.invalidate(appsProvider);
+    // Also prune any uninstalled packages from the recent-apps list so they
+    // don't occupy a slot in the search-recents strip.
+    _packageSub = AppsService.packageChangeEvents.listen((pkg) {
+      if (mounted) {
+        ref.invalidate(appsProvider);
+        if (pkg != null) {
+          ref.read(recentAppsProvider.notifier).prunePackage(pkg);
+        }
+      }
     });
   }
 

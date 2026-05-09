@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
 
 import '../models/app_folder.dart';
 import 'settings_provider.dart';
@@ -35,21 +34,28 @@ class FoldersNotifier extends StateNotifier<List<AppFolder>> {
     }
   }
 
+  // Fixed default IDs — deterministic so that if _load() ever falls back to
+  // _defaults() more than once (e.g. on corrupt prefs recovery) the same IDs
+  // are produced every time, preventing duplicate default folders.
+  static const _kDefaultWorkId = '00000000-0000-0000-0000-000000000001';
+  static const _kDefaultSocialId = '00000000-0000-0000-0000-000000000002';
+  static const _kDefaultMediaId = '00000000-0000-0000-0000-000000000003';
+
   static List<AppFolder> _defaults() => [
     AppFolder(
-      id: const Uuid().v4(),
+      id: _kDefaultWorkId,
       name: 'Work',
       iconKey: 'work',
       packageNames: [],
     ),
     AppFolder(
-      id: const Uuid().v4(),
+      id: _kDefaultSocialId,
       name: 'Social',
       iconKey: 'social',
       packageNames: [],
     ),
     AppFolder(
-      id: const Uuid().v4(),
+      id: _kDefaultMediaId,
       name: 'Media',
       iconKey: 'media',
       packageNames: [],

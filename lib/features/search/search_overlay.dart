@@ -66,8 +66,6 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
       if (mounted) setState(() {});
     });
     _animCtrl.forward();
-    // Mark search as active so the home clock fades out in sync.
-    ref.read(searchOverlayActiveProvider.notifier).state = true;
     // Ensure keyboard appears as soon as the overlay animates in
     WidgetsBinding.instance.addPostFrameCallback(
       (_) => _focusNode.requestFocus(),
@@ -182,6 +180,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                           // ── 2-row horizontal results ───────────────────────
                           appsAsync.when(
                             loading: () => const SizedBox(height: 160),
+                            skipLoadingOnReload: true,
                             error: (_, __) => const SizedBox(height: 160),
                             data: (all) {
                               final recentPkgs = ref.watch(recentAppsProvider);

@@ -328,6 +328,12 @@ class _AppDockState extends ConsumerState<AppDock> {
   }
 
   void _openSearch(BuildContext context) {
+    // Set provider BEFORE pushing the route so the clock starts fading
+    // immediately — avoids a 1-frame gap where the clock hasn't dimmed yet.
+    // Must NOT be set inside SearchOverlay.initState, as that fires during
+    // the widget-build phase and triggers a Riverpod "provider modified
+    // during build" exception.
+    ref.read(searchOverlayActiveProvider.notifier).state = true;
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
@@ -613,7 +619,6 @@ class _DayContextShellRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final configuredPkgs = ref.watch(activeScheduleAppsProvider);
     final appsAsync = ref.watch(appsProvider);
-    final accent = Theme.of(context).colorScheme.primary;
 
     final pkgMap = {
       for (final a in appsAsync.valueOrNull ?? <AppInfo>[]) a.packageName: a,
@@ -626,27 +631,15 @@ class _DayContextShellRow extends ConsumerWidget {
             .whereType<AppInfo>()
             .toList();
 
+    // No apps resolved — either loading or all scheduled apps were uninstalled.
+    // Return nothing rather than ghost circles (mirrors _ContextShellRow behaviour).
+    if (apps.isEmpty) return const SizedBox.shrink();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
-        mainAxisAlignment:
-            apps.isEmpty
-                ? MainAxisAlignment.center
-                : MainAxisAlignment.spaceAround,
-        children:
-            apps.isEmpty
-                ? List.generate(
-                  2,
-                  (_) => Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: accent.withValues(alpha: 0.15)),
-                    ),
-                  ),
-                )
-                : apps.map((app) => _ContextAppIcon(app: app)).toList(),
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: apps.map((app) => _ContextAppIcon(app: app)).toList(),
       ),
     );
   }
@@ -799,6 +792,7 @@ class _SpecialDateDotState extends State<_SpecialDateDot>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
     if (state == AppLifecycleState.resumed) {
       if (!_pulse.isAnimating) _pulse.repeat(reverse: true);
     } else if (state == AppLifecycleState.paused ||

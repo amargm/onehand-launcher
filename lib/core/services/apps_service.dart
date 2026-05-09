@@ -96,32 +96,6 @@ class AppsService {
     } catch (_) {}
   }
 
-  /// Returns apps that can play audio (music players, podcast apps, etc.).
-  /// Used to populate the quick-launch strip when headphones are connected.
-  static Future<List<AppInfo>> getMediaApps() async {
-    try {
-      final raw = await _channel.invokeListMethod<Map>('getMediaApps') ?? [];
-      return raw
-          .map((e) {
-            final iconRaw = e['icon'];
-            final Uint8List? icon = switch (iconRaw) {
-              Uint8List u => u,
-              List<Object?> l => Uint8List.fromList(l.cast<int>()),
-              _ => null,
-            };
-            return AppInfo(
-              packageName: e['packageName'] as String? ?? '',
-              appName: e['appName'] as String? ?? '',
-              icon: icon,
-            );
-          })
-          .where((a) => a.packageName.isNotEmpty)
-          .toList();
-    } catch (_) {
-      return [];
-    }
-  }
-
   /// Downloads [imageBytes] and passes them to Android's WallpaperManager.
   /// Throws on failure so the caller can show an error to the user.
   static Future<void> setWallpaper(Uint8List imageBytes) async {

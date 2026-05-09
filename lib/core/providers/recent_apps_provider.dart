@@ -42,4 +42,11 @@ class RecentAppsNotifier extends StateNotifier<List<String>> {
         ].take(_kMaxCount).toList();
     _prefs.setString(_kPrefKey, jsonEncode(state));
   }
+
+  /// Removes [packageName] from recents (called when the package is uninstalled).
+  void prunePackage(String packageName) {
+    if (!state.contains(packageName)) return;
+    state = state.where((p) => p != packageName).toList();
+    _prefs.setString(_kPrefKey, jsonEncode(state));
+  }
 }

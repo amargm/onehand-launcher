@@ -104,7 +104,7 @@ class ScheduleRule {
   factory ScheduleRule.fromJson(Map<String, dynamic> json) => ScheduleRule(
     id: json['id'] as String,
     name: json['name'] as String,
-    days: Set<int>.from((json['days'] as List).cast<int>()),
+    days: Set<int>.from(((json['days'] as List?) ?? []).cast<int>()),
     startMinutes: json['startMinutes'] as int,
     endMinutes: json['endMinutes'] as int,
     apps: List<String>.from(json['apps'] as List),
