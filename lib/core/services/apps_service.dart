@@ -76,4 +76,10 @@ class AppsService {
       return [];
     }
   }
+
+  /// Downloads [imageBytes] and passes them to Android's WallpaperManager.
+  /// Throws on failure so the caller can show an error to the user.
+  static Future<void> setWallpaper(Uint8List imageBytes) async {
+    await _channel.invokeMethod<void>('setWallpaper', {'bytes': imageBytes});
+  }
 }

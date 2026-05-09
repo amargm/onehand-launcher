@@ -14,6 +14,7 @@ import '../../core/providers/settings_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../lock_screen/lock_screen.dart';
 import '../search/search_overlay.dart';
+import '../wallpaper/wallpaper_picker_screen.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -46,45 +47,50 @@ class SettingsScreen extends ConsumerWidget {
             icon: Icons.palette_outlined,
             label: 'Appearance',
             subtitle: 'Accent colour, themes, clock format',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _AppearanceScreen()),
-            ),
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const _AppearanceScreen()),
+                ),
           ),
           const SizedBox(height: 8),
           _NavTile(
             icon: Icons.grid_view_rounded,
             label: 'Dock',
             subtitle: 'Labels, handedness',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _DockScreen()),
-            ),
+            onTap:
+                () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const _DockScreen())),
           ),
           const SizedBox(height: 8),
           _NavTile(
             icon: Icons.sensors_rounded,
             label: 'Context & Shell',
             subtitle: 'Context indicators, quick-launch strip',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _ContextScreen()),
-            ),
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const _ContextScreen()),
+                ),
           ),
           const SizedBox(height: 8),
           _NavTile(
             icon: Icons.folder_outlined,
             label: 'Folders',
             subtitle: 'Manage dock app folders',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _FoldersScreen()),
-            ),
+            onTap:
+                () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const _FoldersScreen()),
+                ),
           ),
           const SizedBox(height: 8),
           _NavTile(
             icon: Icons.info_outline_rounded,
             label: 'About',
             subtitle: 'v1.0.0  ·  Obsidian Pulse',
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const _AboutScreen()),
-            ),
+            onTap:
+                () => Navigator.of(
+                  context,
+                ).push(MaterialPageRoute(builder: (_) => const _AboutScreen())),
           ),
           const SizedBox(height: 32),
         ],
@@ -145,7 +151,11 @@ class _NavTile extends StatelessWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 20),
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.white24,
+              size: 20,
+            ),
           ],
         ),
       ),
@@ -225,6 +235,21 @@ class _AppearanceScreen extends ConsumerWidget {
         const SizedBox(height: 24),
         _SectionHeader('Other'),
         _SettingsTile(
+          icon: Icons.wallpaper_rounded,
+          label: 'Wallpaper',
+          trailing: const Icon(
+            Icons.chevron_right_rounded,
+            color: Colors.white24,
+            size: 20,
+          ),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const WallpaperPickerScreen(),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SettingsTile(
           icon: Icons.lock_outline_rounded,
           label: 'Preview lock screen',
           trailing: const Icon(
@@ -232,9 +257,10 @@ class _AppearanceScreen extends ConsumerWidget {
             color: Colors.white24,
             size: 20,
           ),
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const LockScreen()),
-          ),
+          onTap:
+              () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute(builder: (_) => const LockScreen())),
         ),
       ],
     );
@@ -262,7 +288,10 @@ void _pickAccentColor(BuildContext context, WidgetRef ref, Color current) {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: Text('Cancel', style: GoogleFonts.sora(color: Colors.white38)),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.sora(color: Colors.white38),
+            ),
           ),
           TextButton(
             onPressed: () {
@@ -302,8 +331,7 @@ class _DockScreen extends ConsumerWidget {
           icon: Icons.search_rounded,
           label: 'Show "Search" label',
           value: ref.watch(showSearchLabelProvider),
-          onChanged:
-              (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
+          onChanged: (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
         ),
         const SizedBox(height: 24),
         _SectionHeader('Layout'),

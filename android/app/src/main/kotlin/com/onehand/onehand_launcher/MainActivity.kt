@@ -1,5 +1,6 @@
 package com.onehand.onehand_launcher
 
+import android.app.WallpaperManager
 import android.app.role.RoleManager
 import android.bluetooth.BluetoothA2dp
 import android.bluetooth.BluetoothHeadset
@@ -129,6 +130,25 @@ class MainActivity : FlutterActivity() {
                         result.success(null)
                     } else {
                         result.error("INVALID_ARG", "packageName is null", null)
+                    }
+                }
+                "setWallpaper" -> {
+                    // Bytes come from Dart (downloaded via http package).
+                    val bytes = call.argument<ByteArray>("bytes")
+                    if (bytes != null) {
+                        executor.execute {
+                            try {
+                                val wm = WallpaperManager.getInstance(applicationContext)
+                                wm.setStream(bytes.inputStream())
+                                runOnUiThread { result.success(null) }
+                            } catch (e: Exception) {
+                                runOnUiThread {
+                                    result.error("WALLPAPER_FAILED", e.message, null)
+                                }
+                            }
+                        }
+                    } else {
+                        result.error("INVALID_ARG", "bytes is null", null)
                     }
                 }
                 else -> result.notImplemented()
