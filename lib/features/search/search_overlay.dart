@@ -252,10 +252,10 @@ class _TwoRowResults extends StatelessWidget {
         bottom: results[i],
       ));
     }
-    // Right-handed: best match (results[0]) should be rightmost so the thumb
-    // reaches it first → reverse the column list so col[0] is at the right end.
-    // Left-handed: best match stays leftmost (natural scroll-from-left reading).
-    return rightHanded ? cols.reversed.toList() : cols;
+    // Right-handed: ListView(reverse: true) starts rendering at the right edge,
+    // so col[0] (most relevant) appears rightmost — no need to reverse cols.
+    // Left-handed: reverse=false, col[0] is leftmost.
+    return cols;
   }
 
   void _handleTap(BuildContext context, String pkg) {

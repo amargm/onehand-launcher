@@ -35,6 +35,9 @@ class AppDock extends ConsumerStatefulWidget {
 
 class _AppDockState extends ConsumerState<AppDock> {
   String? _activeFolderId;
+  // Retains the last opened folder so close animation renders content
+  // while opacity fades and height shrinks — avoids instant collapse.
+  AppFolder? _lastActiveFolder;
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +54,14 @@ class _AppDockState extends ConsumerState<AppDock> {
             ? null
             : folders.where((f) => f.id == _activeFolderId).firstOrNull;
 
+    // Keep the last non-null folder so close animation has real content.
+    if (activeFolder != null) _lastActiveFolder = activeFolder;
+    final displayFolder = activeFolder ?? _lastActiveFolder;
+
     final searchCircle = _DockCircle(
       icon: Icons.search_rounded,
       isSearch: true,
+      isActive: false,
       accent: accent,
       label: 'Search',
       showLabel: showSearchLabel,
@@ -69,6 +77,7 @@ class _AppDockState extends ConsumerState<AppDock> {
               (f) => _DockCircle(
                 icon: kFolderIcons[f.iconKey] ?? Icons.folder_rounded,
                 isSearch: false,
+                isActive: _activeFolderId == f.id,
                 accent: accent,
                 label: f.name,
                 showLabel: showFolderLabels,
@@ -94,37 +103,37 @@ class _AppDockState extends ConsumerState<AppDock> {
         mainAxisSize: MainAxisSize.min,
         children: [
           // ── Folder panel ───────────────────────────────────────────────
-          // AnimatedSize handles height 0→full (same pattern as context shell).
-          // AnimatedOpacity fades content independently — no AnimatedSwitcher
-          // which would fight AnimatedSize and cause a pop on close.
+          // AnimatedSize + AnimatedOpacity (same pattern as context shell).
+          // Key fix: both open AND close branches render the actual _FolderPanel
+          // so AnimatedSize always has a real-sized child. Switching to
+          // SizedBox.shrink() on close gives a 0-size child immediately,
+          // collapsing the height before the opacity can finish fading.
           AnimatedSize(
             duration: const Duration(milliseconds: 700),
             curve: Curves.easeInOutQuart,
-            child:
-                activeFolder != null
-                    ? AnimatedOpacity(
-                      opacity: 1.0,
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeIn,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _FolderPanel(
-                            key: ValueKey(activeFolder.id),
-                            folder: activeFolder,
-                            onClose:
-                                () => setState(() => _activeFolderId = null),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    )
-                    : AnimatedOpacity(
-                      opacity: 0.0,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                      child: const SizedBox.shrink(),
+            child: displayFolder != null
+                ? AnimatedOpacity(
+                    opacity: activeFolder != null ? 1.0 : 0.0,
+                    duration: activeFolder != null
+                        ? const Duration(milliseconds: 500)
+                        : const Duration(milliseconds: 500),
+                    curve: activeFolder != null
+                        ? Curves.easeIn
+                        : Curves.easeOut,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _FolderPanel(
+                          key: ValueKey(displayFolder.id),
+                          folder: displayFolder,
+                          onClose:
+                              () => setState(() => _activeFolderId = null),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
                     ),
+                  )
+                : const SizedBox.shrink(),
           ),
 
           // ── Outer shell + inner dock ────────────────────────────────────
@@ -487,6 +496,7 @@ class _DockCircle extends StatelessWidget {
   const _DockCircle({
     required this.icon,
     required this.isSearch,
+    required this.isActive,
     required this.accent,
     required this.label,
     required this.showLabel,
@@ -495,6 +505,7 @@ class _DockCircle extends StatelessWidget {
 
   final IconData icon;
   final bool isSearch;
+  final bool isActive;
   final Color accent;
   final String label;
   final bool showLabel;
@@ -510,24 +521,37 @@ class _DockCircle extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: isSearch ? accent : const Color(0xFF121212),
-        boxShadow:
-            isSearch
+        boxShadow: isSearch
+            ? [
+                BoxShadow(
+                  color: accent.withValues(alpha: 0.30),
+                  blurRadius: 20,
+                  spreadRadius: 0,
+                ),
+              ]
+            : isActive
                 ? [
-                  BoxShadow(
-                    color: accent.withValues(alpha: 0.30),
-                    blurRadius: 20,
-                    spreadRadius: 0,
-                  ),
-                ]
+                    BoxShadow(
+                      color: accent.withValues(alpha: 0.40),
+                      blurRadius: 18,
+                      spreadRadius: 1,
+                    ),
+                  ]
                 : null,
-        border:
-            isSearch
-                ? null
-                : Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: isSearch
+            ? null
+            : isActive
+                ? Border.all(
+                    color: accent.withValues(alpha: 0.85),
+                    width: 2,
+                  )
+                : Border.all(
+                    color: Colors.white.withValues(alpha: 0.08),
+                  ),
       ),
       child: Icon(
         icon,
-        color: isSearch ? Colors.white : Colors.white60,
+        color: isSearch ? Colors.white : (isActive ? accent : Colors.white60),
         size: 24,
       ),
     );
