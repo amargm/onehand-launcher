@@ -11,6 +11,7 @@ import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.Drawable
+import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Build
@@ -71,7 +72,7 @@ class MainActivity : FlutterActivity() {
     // (BluetoothA2dp/HeadsetProfile ACTION_CONNECTION_STATE_CHANGED) is silently
     // dropped unless the app holds BLUETOOTH_CONNECT at runtime.
     // AudioDeviceCallback (API 23+) has no such restriction.
-    private var audioDeviceCallback: AudioManager.AudioDeviceCallback? = null
+    private var audioDeviceCallback: AudioDeviceCallback? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -300,7 +301,7 @@ class MainActivity : FlutterActivity() {
         // Register AudioDeviceCallback for real-time headphone/BT detection.
         // Covers wired, USB-C, Bluetooth A2DP and SCO — no permissions needed.
         val am = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-        audioDeviceCallback = object : AudioManager.AudioDeviceCallback() {
+        audioDeviceCallback = object : AudioDeviceCallback() {
             override fun onAudioDevicesAdded(addedDevices: Array<AudioDeviceInfo>) {
                 headphoneEventSink?.success(isHeadphoneConnected())
             }
