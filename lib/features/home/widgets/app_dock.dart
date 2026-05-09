@@ -42,9 +42,6 @@ class AppDock extends ConsumerStatefulWidget {
 class _AppDockState extends ConsumerState<AppDock> {
   String? _activeFolderId;
   bool _messageBoxOpen = false;
-  // Retains the last opened folder so close animation renders content
-  // while opacity fades and height shrinks — avoids instant collapse.
-  AppFolder? _lastActiveFolder;
 
   @override
   Widget build(BuildContext context) {
@@ -82,10 +79,6 @@ class _AppDockState extends ConsumerState<AppDock> {
         _activeFolderId == null
             ? null
             : folders.where((f) => f.id == _activeFolderId).firstOrNull;
-
-    // Keep the last non-null folder so close animation has real content.
-    if (activeFolder != null) _lastActiveFolder = activeFolder;
-    final displayFolder = activeFolder ?? _lastActiveFolder;
 
     final searchCircle = _DockCircle(
       icon: Icons.search_rounded,
@@ -168,35 +161,39 @@ class _AppDockState extends ConsumerState<AppDock> {
           ),
 
           // ── Folder panel ───────────────────────────────────────────────
-          ClipRRect(
-            borderRadius: BorderRadius.circular(24),
-            child: AnimatedSize(
-              duration: const Duration(milliseconds: 380),
-              curve: Curves.easeInOutQuart,
-              child:
-                  displayFolder != null
-                      ? AnimatedOpacity(
-                        opacity: activeFolder != null ? 1.0 : 0.0,
-                        duration: const Duration(milliseconds: 300),
-                        curve:
-                            activeFolder != null
-                                ? Curves.easeIn
-                                : Curves.easeOut,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _FolderPanel(
-                              key: ValueKey(displayFolder.id),
-                              folder: displayFolder,
-                              onClose:
-                                  () => setState(() => _activeFolderId = null),
-                            ),
-                            const SizedBox(height: 8),
-                          ],
-                        ),
-                      )
-                      : const SizedBox.shrink(),
+          // AnimatedSwitcher provides simultaneous height + fade transition
+          // so the panel properly collapses (no ghost tappable area) when
+          // closed, and the SnackBar / message-box layout stays correct.
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 350),
+            switchInCurve: Curves.easeInOutQuart,
+            switchOutCurve: Curves.easeInOutQuart,
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SizeTransition(
+                sizeFactor: animation,
+                axisAlignment: -1.0,
+                child: child,
+              ),
             ),
+            child:
+                activeFolder != null
+                    ? ClipRRect(
+                      key: ValueKey(activeFolder.id),
+                      borderRadius: BorderRadius.circular(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _FolderPanel(
+                            folder: activeFolder,
+                            onClose:
+                                () => setState(() => _activeFolderId = null),
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                      ),
+                    )
+                    : const SizedBox.shrink(key: ValueKey('no-folder')),
           ),
 
           // ── Outer shell + inner dock — wrapped in Stack for amber dot ──
@@ -226,50 +223,54 @@ class _AppDockState extends ConsumerState<AppDock> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      // Per-row AnimatedSize: each row expands/collapses
+                      // independently so adding the headphone row does NOT
+                      // shift the schedule row — both the shell boundary
+                      // and the row content move at exactly the same rate.
+                      ClipRect(
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeInOutQuart,
+                          child:
+                              (dayActive && shellVisible)
+                                  ? const _DayContextShellRow()
+                                  : const SizedBox.shrink(),
+                        ),
+                      ),
+                      ClipRect(
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeInOutQuart,
+                          child:
+                              (dayActive && headphones)
+                                  ? Container(
+                                    height: 1,
+                                    margin: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 4,
+                                    ),
+                                    color: Colors.white.withValues(alpha: 0.06),
+                                  )
+                                  : const SizedBox.shrink(),
+                        ),
+                      ),
+                      ClipRect(
+                        child: AnimatedSize(
+                          duration: const Duration(milliseconds: 700),
+                          curve: Curves.easeInOutQuart,
+                          child:
+                              (headphones && shellVisible)
+                                  ? const _ContextShellRow()
+                                  : const SizedBox.shrink(),
+                        ),
+                      ),
                       AnimatedSize(
                         duration: const Duration(milliseconds: 700),
                         curve: Curves.easeInOutQuart,
                         child:
                             shellVisible
-                                ? AnimatedOpacity(
-                                  opacity: 1.0,
-                                  duration: const Duration(milliseconds: 500),
-                                  curve: Curves.easeIn,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (dayActive)
-                                        const _DayContextShellRow(),
-                                      if (dayActive && headphones)
-                                        Container(
-                                          height: 1,
-                                          margin: const EdgeInsets.symmetric(
-                                            horizontal: 16,
-                                            vertical: 4,
-                                          ),
-                                          color: Colors.white.withValues(
-                                            alpha: 0.06,
-                                          ),
-                                        ),
-                                      if (headphones) const _ContextShellRow(),
-                                      const SizedBox(height: 6),
-                                    ],
-                                  ),
-                                )
-                                : AnimatedOpacity(
-                                  opacity: 0.0,
-                                  duration: const Duration(milliseconds: 200),
-                                  curve: Curves.easeOut,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (dayActive)
-                                        const _DayContextShellRow(),
-                                      if (headphones) const _ContextShellRow(),
-                                      const SizedBox(height: 6),
-                                    ],
-                                  ),
-                                ),
+                                ? const SizedBox(height: 6)
+                                : const SizedBox.shrink(),
                       ),
 
                       // ── Inner dock ──────────────────────────────────────
@@ -312,8 +313,6 @@ class _AppDockState extends ConsumerState<AppDock> {
                         () => setState(() {
                           if (!_messageBoxOpen) {
                             // Close any open folder before showing the message box.
-                            // Do NOT null _lastActiveFolder — it is kept so the
-                            // folder close animation has content to fade out.
                             _activeFolderId = null;
                           }
                           _messageBoxOpen = !_messageBoxOpen;
@@ -350,7 +349,7 @@ class _AppDockState extends ConsumerState<AppDock> {
 /// Pops up above the outer shell as a SEPARATE rounded container (not concentric).
 /// Same width as the dock. Shows folder apps: max 10, in rows of 5.
 class _FolderPanel extends ConsumerWidget {
-  const _FolderPanel({super.key, required this.folder, required this.onClose});
+  const _FolderPanel({required this.folder, required this.onClose});
 
   final AppFolder folder;
   final VoidCallback onClose;

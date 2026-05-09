@@ -282,7 +282,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                               final q = v.trim().toLowerCase();
                               setState(() => _query = q);
                               // In pick/multi-pick mode let the user select manually.
-                              if (widget.pickMode || widget.multiPickMode) return;
+                              if (widget.pickMode || widget.multiPickMode) {
+                                return;
+                              }
                               // Single result → launch it immediately and dismiss.
                               final all =
                                   ref.read(appsProvider).valueOrNull ?? [];

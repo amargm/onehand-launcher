@@ -64,36 +64,40 @@ const List<WallpaperEntry> kWallpapers = [
     credit: 'Unsplash',
     category: WallpaperCategory.nebula,
   ),
+  // Milky Way arch over mountain ridge — iconic dark sky shot (Joel Filipe)
   WallpaperEntry(
     id: 'n3',
     displayId: 3,
     url:
-        'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1419242902214-272b3f66ee7a?w=400&q=70&fm=jpg&fit=crop',
-    credit: 'Vincentiu Solomon / Unsplash',
+        'https://images.unsplash.com/photo-1444703686981-a3abbc4d4fe3?w=400&q=70&fm=jpg&fit=crop',
+    credit: 'Joel Filipe / Unsplash',
     category: WallpaperCategory.nebula,
   ),
+  // Lone figure under a violet starfield (Greg Rakozy)
   WallpaperEntry(
     id: 'n4',
     displayId: 4,
     url:
-        'https://images.unsplash.com/photo-1543722530-d2c3201371e7?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1543722530-d2c3201371e7?w=400&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
+        'https://images.unsplash.com/photo-1475274047050-1d0c0975c63e?w=400&q=70&fm=jpg&fit=crop',
+    credit: 'Greg Rakozy / Unsplash',
     category: WallpaperCategory.nebula,
   ),
+  // Starry mountain silhouette, deep blue tones
   WallpaperEntry(
     id: 'n5',
     displayId: 5,
     url:
-        'https://images.unsplash.com/photo-1520034475321-cbe63696469a?w=1440&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=1440&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1520034475321-cbe63696469a?w=400&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.nebula,
   ),
+  // Deep space galaxy cluster, near-black with vivid colour pockets
   WallpaperEntry(
     id: 'n6',
     displayId: 6,
@@ -104,32 +108,23 @@ const List<WallpaperEntry> kWallpapers = [
     credit: 'Unsplash',
     category: WallpaperCategory.nebula,
   ),
+  // Earth rising from lunar surface — NASA blue marble
+  WallpaperEntry(
+    id: 'n7',
+    displayId: 7,
+    url:
+        'https://images.unsplash.com/photo-1454789548928-9efd52dc4031?w=1440&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1454789548928-9efd52dc4031?w=400&q=70&fm=jpg&fit=crop',
+    credit: 'NASA / Unsplash',
+    category: WallpaperCategory.nebula,
+  ),
 
-  // ── Abstract / Minimal — portrait-oriented, high-downloads ────────────
+  // ── Abstract / Minimal ─────────────────────────────────────────────────
   // Dark fluid, ink, and minimal wallpapers that frame well in portrait.
   WallpaperEntry(
     id: 'a1',
     displayId: 1,
-    url:
-        'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=1080&h=1920&q=90&fm=jpg&fit=crop',
-    thumbUrl:
-        'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?w=400&h=700&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
-    category: WallpaperCategory.abstract,
-  ),
-  WallpaperEntry(
-    id: 'a2',
-    displayId: 2,
-    url:
-        'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=1080&h=1920&q=90&fm=jpg&fit=crop',
-    thumbUrl:
-        'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&h=700&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
-    category: WallpaperCategory.abstract,
-  ),
-  WallpaperEntry(
-    id: 'a3',
-    displayId: 3,
     url:
         'https://images.unsplash.com/photo-1604871000636-074fa5117945?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -138,8 +133,8 @@ const List<WallpaperEntry> kWallpapers = [
     category: WallpaperCategory.abstract,
   ),
   WallpaperEntry(
-    id: 'a4',
-    displayId: 4,
+    id: 'a2',
+    displayId: 2,
     url:
         'https://images.unsplash.com/photo-1557682224-5b8590cd9ec5?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -148,12 +143,56 @@ const List<WallpaperEntry> kWallpapers = [
     category: WallpaperCategory.abstract,
   ),
   WallpaperEntry(
-    id: 'a5',
-    displayId: 5,
+    id: 'a3',
+    displayId: 3,
     url:
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=700&q=70&fm=jpg&fit=crop',
+    credit: 'Unsplash',
+    category: WallpaperCategory.abstract,
+  ),
+  // Vivid liquid-colour gradient on near-black — very popular abstract
+  WallpaperEntry(
+    id: 'a4',
+    displayId: 4,
+    url:
+        'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=700&q=70&fm=jpg&fit=crop',
+    credit: 'Unsplash',
+    category: WallpaperCategory.abstract,
+  ),
+  // Dark ink diffusion in water — organic, deep black base
+  WallpaperEntry(
+    id: 'a5',
+    displayId: 5,
+    url:
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=700&q=70&fm=jpg&fit=crop',
+    credit: 'Unsplash',
+    category: WallpaperCategory.abstract,
+  ),
+  // Dark moody geometric / low-poly abstract
+  WallpaperEntry(
+    id: 'a6',
+    displayId: 6,
+    url:
+        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1635070041078-e363dbe005cb?w=400&h=700&q=70&fm=jpg&fit=crop',
+    credit: 'Unsplash',
+    category: WallpaperCategory.abstract,
+  ),
+  // Dark crimson / maroon smoke swirl — dramatic portrait
+  WallpaperEntry(
+    id: 'a7',
+    displayId: 7,
+    url:
+        'https://images.unsplash.com/photo-1617791160505-6f00504f3519?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1617791160505-6f00504f3519?w=400&h=700&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.abstract,
   ),
@@ -164,16 +203,6 @@ const List<WallpaperEntry> kWallpapers = [
     id: 'g1',
     displayId: 1,
     url:
-        'https://images.unsplash.com/photo-1547149617-609fafa00a6b?w=1080&h=1920&q=90&fm=jpg&fit=crop',
-    thumbUrl:
-        'https://images.unsplash.com/photo-1547149617-609fafa00a6b?w=400&h=700&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
-    category: WallpaperCategory.grid,
-  ),
-  WallpaperEntry(
-    id: 'g2',
-    displayId: 2,
-    url:
         'https://images.unsplash.com/photo-1488330890490-c291ecf62571?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
         'https://images.unsplash.com/photo-1488330890490-c291ecf62571?w=400&h=700&q=70&fm=jpg&fit=crop',
@@ -181,8 +210,8 @@ const List<WallpaperEntry> kWallpapers = [
     category: WallpaperCategory.grid,
   ),
   WallpaperEntry(
-    id: 'g3',
-    displayId: 3,
+    id: 'g2',
+    displayId: 2,
     url:
         'https://images.unsplash.com/photo-1517999144091-3d9dca6d1e43?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
@@ -190,23 +219,47 @@ const List<WallpaperEntry> kWallpapers = [
     credit: 'Unsplash',
     category: WallpaperCategory.grid,
   ),
+  // Dark textured concrete / stone — matte AMOLED look
+  WallpaperEntry(
+    id: 'g3',
+    displayId: 3,
+    url:
+        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=700&q=70&fm=jpg&fit=crop',
+    credit: 'Unsplash',
+    category: WallpaperCategory.grid,
+  ),
+  // Charcoal dark minimal — near-pure black with subtle grain
   WallpaperEntry(
     id: 'g4',
     displayId: 4,
     url:
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=700&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?w=400&h=700&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.grid,
   ),
+  // True-black foggy forest at night — ultra-dark, atmospheric
   WallpaperEntry(
     id: 'g5',
     displayId: 5,
     url:
-        'https://images.unsplash.com/photo-1567225557594-88d73e55f2cb?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1511497584788-876760111969?w=1080&h=1920&q=90&fm=jpg&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1567225557594-88d73e55f2cb?w=400&h=700&q=70&fm=jpg&fit=crop',
+        'https://images.unsplash.com/photo-1511497584788-876760111969?w=400&h=700&q=70&fm=jpg&fit=crop',
+    credit: 'Unsplash',
+    category: WallpaperCategory.grid,
+  ),
+  // Deep black ocean surface at night — mirror-calm and minimal
+  WallpaperEntry(
+    id: 'g6',
+    displayId: 6,
+    url:
+        'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+    thumbUrl:
+        'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=400&h=700&q=70&fm=jpg&fit=crop',
     credit: 'Unsplash',
     category: WallpaperCategory.grid,
   ),

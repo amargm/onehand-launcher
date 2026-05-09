@@ -75,13 +75,16 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
 
       final colon = event.indexOf(':');
       final action = colon > 0 ? event.substring(0, colon) : 'CHANGED';
-      final pkg    = colon > 0 ? event.substring(colon + 1) : event;
+      final pkg = colon > 0 ? event.substring(colon + 1) : event;
 
       if (action == 'REMOVED') {
         final prevApps = ref.read(appsProvider).valueOrNull ?? <AppInfo>[];
         String appName = pkg;
         for (final a in prevApps) {
-          if (a.packageName == pkg) { appName = a.appName; break; }
+          if (a.packageName == pkg) {
+            appName = a.appName;
+            break;
+          }
         }
 
         ref.invalidate(appsProvider);

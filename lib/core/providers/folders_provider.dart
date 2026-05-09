@@ -112,13 +112,15 @@ class FoldersNotifier extends StateNotifier<List<AppFolder>> {
 
   void removeFromAllFolders(String packageName) {
     bool changed = false;
-    final updated = state.map((f) {
-      if (!f.packageNames.contains(packageName)) return f;
-      changed = true;
-      return f.copyWith(
-        packageNames: f.packageNames.where((p) => p != packageName).toList(),
-      );
-    }).toList();
+    final updated =
+        state.map((f) {
+          if (!f.packageNames.contains(packageName)) return f;
+          changed = true;
+          return f.copyWith(
+            packageNames:
+                f.packageNames.where((p) => p != packageName).toList(),
+          );
+        }).toList();
     if (changed) {
       state = updated;
       _persist();
