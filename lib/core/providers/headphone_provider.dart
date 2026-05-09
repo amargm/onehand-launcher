@@ -7,12 +7,14 @@ import 'context_settings_provider.dart';
 
 /// Single source of truth for wired / Bluetooth headphone connection state.
 ///
-/// Backed by a native BroadcastReceiver via EventChannel — zero battery cost
-/// when nothing changes, instant response on plug/unplug/BT connect.
-/// The 2-second polling timer is removed entirely.
+/// Uses a 3-second polling timer — the EventChannel / BroadcastReceiver
+/// approach failed to reliably detect Bluetooth state changes on some devices.
+/// Polling is simple, predictable, and the battery cost is negligible
+/// (one lightweight AudioManager query every 3 seconds, only while the
+///  launcher is in the foreground and the feature is enabled).
 ///
 /// Gated on the "Headphones" toggle in Settings → Context indicators.
-/// When OFF: stream cancelled, state forced false immediately.
+/// When OFF: timer cancelled, state forced false immediately.
 final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
   final initiallyEnabled = ref
       .read(contextItemsProvider)
@@ -29,51 +31,46 @@ final headphoneProvider = StateNotifierProvider<HeadphoneNotifier, bool>((ref) {
 class HeadphoneNotifier extends StateNotifier<bool> {
   HeadphoneNotifier({required bool enabled}) : super(false) {
     _enabled = enabled;
-    if (enabled) _subscribe();
+    if (enabled) _startPolling();
   }
 
+  static const _pollInterval = Duration(seconds: 3);
+
   bool _enabled = false;
-  StreamSubscription<bool>? _sub;
+  Timer? _timer;
 
   /// Called when the Settings "Headphones" toggle changes.
   void setEnabled(bool enabled) {
     if (enabled == _enabled) return;
     _enabled = enabled;
     if (enabled) {
-      _subscribe();
+      _startPolling();
     } else {
-      _unsubscribe();
+      _stopPolling();
       if (mounted) state = false;
     }
   }
 
-  void _subscribe() {
-    _sub?.cancel();
-    _sub = LauncherService.headphoneEvents.listen(
-      (connected) {
-        if (mounted && connected != state) state = connected;
-      },
-      onError: (_) {
-        // BroadcastReceiver unavailable (emulator / restricted env) — silent.
-      },
-    );
-    // Safety-net: directly query current state via MethodChannel in case the
-    // EventChannel's initial push is dropped on first subscription.
-    // This is observed specifically for Bluetooth — USB/wired always fires
-    // instantly via ACTION_HEADSET_PLUG so the stream event arrives reliably.
-    LauncherService.isHeadphoneConnected().then((connected) {
-      if (mounted && connected != state) state = connected;
-    });
+  void _startPolling() {
+    _stopPolling();
+    // Query immediately so state is correct at once, then repeat.
+    _poll();
+    _timer = Timer.periodic(_pollInterval, (_) => _poll());
   }
 
-  void _unsubscribe() {
-    _sub?.cancel();
-    _sub = null;
+  void _stopPolling() {
+    _timer?.cancel();
+    _timer = null;
+  }
+
+  Future<void> _poll() async {
+    final connected = await LauncherService.isHeadphoneConnected();
+    if (mounted && connected != state) state = connected;
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 }

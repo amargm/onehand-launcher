@@ -48,7 +48,7 @@ final showFolderLabelsProvider = StateNotifierProvider<_BoolNotifier, bool>((
   ref,
 ) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return _BoolNotifier(prefs, _kShowFolderLabels, defaultValue: true);
+  return _BoolNotifier(prefs, _kShowFolderLabels, defaultValue: false);
 });
 
 /// Whether the "Search" label is shown beneath the search button.
@@ -56,7 +56,7 @@ final showSearchLabelProvider = StateNotifierProvider<_BoolNotifier, bool>((
   ref,
 ) {
   final prefs = ref.watch(sharedPreferencesProvider);
-  return _BoolNotifier(prefs, _kShowSearchLabel, defaultValue: true);
+  return _BoolNotifier(prefs, _kShowSearchLabel, defaultValue: false);
 });
 
 class _BoolNotifier extends StateNotifier<bool> {

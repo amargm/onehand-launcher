@@ -124,7 +124,10 @@ void _showDeveloperNote(BuildContext context) {
     builder:
         (_) => Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
+          ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
             decoration: BoxDecoration(
@@ -215,7 +218,10 @@ void _showFeedbackDialog(BuildContext context) {
     builder:
         (_) => Dialog(
           backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 40,
+          ),
           child: Container(
             padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
             decoration: BoxDecoration(
@@ -636,9 +642,8 @@ class _AboutScreen extends StatelessWidget {
             color: Colors.white24,
             size: 16,
           ),
-          onTap: () => AppsService.openUrl(
-            'https://onehandlauncher.app/privacy',
-          ),
+          onTap:
+              () => AppsService.openUrl('https://onehandlauncher.app/privacy'),
         ),
         const SizedBox(height: 8),
         _SettingsTile(
@@ -650,9 +655,7 @@ class _AboutScreen extends StatelessWidget {
             color: Colors.white24,
             size: 16,
           ),
-          onTap: () => AppsService.openUrl(
-            'https://onehandlauncher.app/terms',
-          ),
+          onTap: () => AppsService.openUrl('https://onehandlauncher.app/terms'),
         ),
         const SizedBox(height: 8),
         _SettingsTile(
@@ -664,12 +667,13 @@ class _AboutScreen extends StatelessWidget {
             color: Colors.white24,
             size: 20,
           ),
-          onTap: () => showLicensePage(
-            context: context,
-            applicationName: 'One-Handed Launcher',
-            applicationVersion: 'v1.0.0',
-            applicationLegalese: '© 2025 One-Handed Launcher',
-          ),
+          onTap:
+              () => showLicensePage(
+                context: context,
+                applicationName: 'One-Handed Launcher',
+                applicationVersion: 'v1.0.0',
+                applicationLegalese: '© 2025 One-Handed Launcher',
+              ),
         ),
         const SizedBox(height: 8),
 
@@ -683,10 +687,11 @@ class _AboutScreen extends StatelessWidget {
             color: Colors.white24,
             size: 16,
           ),
-          onTap: () => AppsService.openUrl(
-            'mailto:support@onehandlauncher.app'
-            '?subject=Support%20%E2%80%94%20One-Handed%20Launcher',
-          ),
+          onTap:
+              () => AppsService.openUrl(
+                'mailto:support@onehandlauncher.app'
+                '?subject=Support%20%E2%80%94%20One-Handed%20Launcher',
+              ),
         ),
         const SizedBox(height: 8),
 

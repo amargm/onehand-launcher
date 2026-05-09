@@ -62,7 +62,7 @@ class _WallpaperPickerScreenState extends State<WallpaperPickerScreen> {
         children: [
           // ── Category filter chips ─────────────────────────────────────
           SizedBox(
-            height: 44,
+            height: 32,
             child: ListView(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -144,13 +144,13 @@ class _FilterChip extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
         decoration: BoxDecoration(
           color:
               selected
                   ? accent.withValues(alpha: 0.18)
                   : Colors.white.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color:
                 selected
@@ -161,7 +161,7 @@ class _FilterChip extends StatelessWidget {
         child: Text(
           label,
           style: GoogleFonts.sora(
-            fontSize: 12,
+            fontSize: 11,
             color: selected ? accent : Colors.white54,
             fontWeight: selected ? FontWeight.w500 : FontWeight.w400,
           ),

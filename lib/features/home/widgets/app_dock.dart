@@ -121,26 +121,28 @@ class _AppDockState extends ConsumerState<AppDock> {
               duration: const Duration(milliseconds: 380),
               curve: Curves.easeInOutQuart,
               child:
-                displayFolder != null
-                    ? AnimatedOpacity(
-                      opacity: activeFolder != null ? 1.0 : 0.0,
-                      duration: const Duration(milliseconds: 300),
-                      curve:
-                          activeFolder != null ? Curves.easeIn : Curves.easeOut,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _FolderPanel(
-                            key: ValueKey(displayFolder.id),
-                            folder: displayFolder,
-                            onClose:
-                                () => setState(() => _activeFolderId = null),
-                          ),
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    )
-                    : const SizedBox.shrink(),
+                  displayFolder != null
+                      ? AnimatedOpacity(
+                        opacity: activeFolder != null ? 1.0 : 0.0,
+                        duration: const Duration(milliseconds: 300),
+                        curve:
+                            activeFolder != null
+                                ? Curves.easeIn
+                                : Curves.easeOut,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            _FolderPanel(
+                              key: ValueKey(displayFolder.id),
+                              folder: displayFolder,
+                              onClose:
+                                  () => setState(() => _activeFolderId = null),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      )
+                      : const SizedBox.shrink(),
             ),
           ),
 
