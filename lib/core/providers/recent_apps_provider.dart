@@ -19,10 +19,7 @@ final recentAppsProvider =
     });
 
 class RecentAppsNotifier extends StateNotifier<List<String>> {
-  RecentAppsNotifier(this._prefs)
-    : super(
-        _load(_prefs),
-      );
+  RecentAppsNotifier(this._prefs) : super(_load(_prefs));
 
   final SharedPreferences _prefs;
 
