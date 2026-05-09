@@ -675,10 +675,12 @@ class _FolderTile extends ConsumerWidget {
         barrierColor: Colors.transparent,
         pageBuilder:
             (_, __, ___) => SearchOverlay(
-              pickMode: true,
-              onAppPicked:
-                  (pkg) =>
-                      ref.read(foldersProvider.notifier).addApp(folder.id, pkg),
+              multiPickMode: true,
+              onMultiPicked: (pkgs) {
+                for (final pkg in pkgs) {
+                  ref.read(foldersProvider.notifier).addApp(folder.id, pkg);
+                }
+              },
             ),
         transitionsBuilder:
             (_, anim, __, child) => FadeTransition(opacity: anim, child: child),

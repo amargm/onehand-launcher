@@ -21,10 +21,21 @@ import '../home/widgets/circular_app_icon.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class SearchOverlay extends ConsumerStatefulWidget {
-  const SearchOverlay({super.key, this.pickMode = false, this.onAppPicked});
+  const SearchOverlay({
+    super.key,
+    this.pickMode = false,
+    this.onAppPicked,
+    this.multiPickMode = false,
+    this.onMultiPicked,
+  });
 
+  /// Single-select: immediately adds one app and dismisses.
   final bool pickMode;
   final void Function(String packageName)? onAppPicked;
+
+  /// Multi-select: tap multiple apps, back gesture commits all at once.
+  final bool multiPickMode;
+  final void Function(List<String> packages)? onMultiPicked;
 
   @override
   ConsumerState<SearchOverlay> createState() => _SearchOverlayState();
@@ -38,6 +49,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   Timer? _debounce;
   late final AnimationController _animCtrl;
   late final Animation<double> _fade;
+
+  // Multi-pick selection set
+  final Set<String> _selected = {};
 
   @override
   void initState() {
@@ -64,6 +78,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   }
 
   void _dismiss() {
+    // In multi-pick mode commit whatever was selected before animating out.
+    if (widget.multiPickMode) {
+      widget.onMultiPicked?.call(_selected.toList());
+    }
     _focusNode.unfocus();
     _animCtrl.reverse().then((_) {
       if (mounted) Navigator.of(context).pop();
@@ -99,7 +117,12 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
     // inside this overlay can find a Material ancestor. PageRouteBuilder does
     // NOT inject Material the way MaterialPageRoute does, so we must add it
     // ourselves. type: transparency keeps the visual appearance unchanged.
-    return Material(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _dismiss();
+      },
+      child: Material(
       type: MaterialType.transparency,
       child: FadeTransition(
         opacity: _fade,
@@ -195,6 +218,16 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                                   (pkg) => ref
                                       .read(recentAppsProvider.notifier)
                                       .recordLaunch(pkg),
+                              multiPickMode: widget.multiPickMode,
+                              selectedPkgs: _selected,
+                              onToggle:
+                                  (pkg) => setState(() {
+                                    if (_selected.contains(pkg)) {
+                                      _selected.remove(pkg);
+                                    } else {
+                                      _selected.add(pkg);
+                                    }
+                                  }),
                             );
                           },
                         ),
@@ -237,6 +270,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
           ),
         ),
       ),
+    ),
     );
   }
 }
@@ -263,6 +297,9 @@ class _TwoRowResults extends StatelessWidget {
     required this.onAppPicked,
     required this.onDismiss,
     required this.onLaunched,
+    this.multiPickMode = false,
+    this.selectedPkgs = const {},
+    this.onToggle,
   });
 
   final List<AppInfo> results;
@@ -273,6 +310,9 @@ class _TwoRowResults extends StatelessWidget {
   final void Function(String)? onAppPicked;
   final VoidCallback onDismiss;
   final void Function(String packageName) onLaunched;
+  final bool multiPickMode;
+  final Set<String> selectedPkgs;
+  final void Function(String pkg)? onToggle;
 
   static const double _iconSize = 50.0;
   static const double _rowH = _iconSize + 20.0; // icon + label
@@ -294,6 +334,11 @@ class _TwoRowResults extends StatelessWidget {
   }
 
   void _handleTap(BuildContext context, String pkg) {
+    if (multiPickMode) {
+      // Toggle selection; do NOT dismiss — user commits via back gesture.
+      onToggle?.call(pkg);
+      return;
+    }
     // Execute the action FIRST, then dismiss.
     // In pick mode this ensures the app is added before the overlay animates out.
     if (pickMode && onAppPicked != null) {
@@ -312,6 +357,24 @@ class _TwoRowResults extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // Multi-pick header: shows live selected count
+        if (multiPickMode)
+          Padding(
+            padding: const EdgeInsets.only(left: 16, bottom: 8),
+            child: Text(
+              selectedPkgs.isEmpty
+                  ? 'TAP APPS TO SELECT · GO BACK TO ADD'
+                  : '${selectedPkgs.length} SELECTED · GO BACK TO ADD',
+              style: GoogleFonts.sora(
+                fontSize: 10,
+                color:
+                    selectedPkgs.isEmpty
+                        ? Colors.white38
+                        : accent,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
         // Pick mode label
         if (pickMode)
           Padding(
@@ -361,11 +424,20 @@ class _TwoRowResults extends StatelessWidget {
                       height: _rowH,
                       child:
                           col.top != null
-                              ? CircularAppIcon(
+                              ? _AppCell(
                                 app: col.top!,
                                 size: _iconSize,
+                                isSelected:
+                                    multiPickMode &&
+                                    selectedPkgs.contains(
+                                      col.top!.packageName,
+                                    ),
+                                accent: accent,
                                 onTap:
-                                    () => _handleTap(ctx, col.top!.packageName),
+                                    () => _handleTap(
+                                      ctx,
+                                      col.top!.packageName,
+                                    ),
                               )
                               : const SizedBox(),
                     ),
@@ -375,9 +447,15 @@ class _TwoRowResults extends StatelessWidget {
                       height: _rowH,
                       child:
                           col.bottom != null
-                              ? CircularAppIcon(
+                              ? _AppCell(
                                 app: col.bottom!,
                                 size: _iconSize,
+                                isSelected:
+                                    multiPickMode &&
+                                    selectedPkgs.contains(
+                                      col.bottom!.packageName,
+                                    ),
+                                accent: accent,
                                 onTap:
                                     () => _handleTap(
                                       ctx,
@@ -394,6 +472,52 @@ class _TwoRowResults extends StatelessWidget {
         ),
 
         const SizedBox(height: 10),
+      ],
+    );
+  }
+}
+
+// ── App cell with optional selection checkmark ────────────────────────────────
+class _AppCell extends StatelessWidget {
+  const _AppCell({
+    required this.app,
+    required this.size,
+    required this.isSelected,
+    required this.accent,
+    required this.onTap,
+  });
+
+  final AppInfo app;
+  final double size;
+  final bool isSelected;
+  final Color accent;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        CircularAppIcon(app: app, size: size, onTap: onTap),
+        if (isSelected)
+          Positioned(
+            right: 2,
+            bottom: 18, // above the label
+            child: Container(
+              width: 16,
+              height: 16,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: accent,
+                border: Border.all(color: Colors.black, width: 1.5),
+              ),
+              child: const Icon(
+                Icons.check_rounded,
+                color: Colors.white,
+                size: 10,
+              ),
+            ),
+          ),
       ],
     );
   }

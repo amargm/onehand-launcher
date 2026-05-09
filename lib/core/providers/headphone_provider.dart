@@ -57,6 +57,13 @@ class HeadphoneNotifier extends StateNotifier<bool> {
         // BroadcastReceiver unavailable (emulator / restricted env) — silent.
       },
     );
+    // Safety-net: directly query current state via MethodChannel in case the
+    // EventChannel's initial push is dropped on first subscription.
+    // This is observed specifically for Bluetooth — USB/wired always fires
+    // instantly via ACTION_HEADSET_PLUG so the stream event arrives reliably.
+    LauncherService.isHeadphoneConnected().then((connected) {
+      if (mounted && connected != state) state = connected;
+    });
   }
 
   void _unsubscribe() {

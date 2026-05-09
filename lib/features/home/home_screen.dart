@@ -209,18 +209,20 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
   }
 
   String _buildTimeString(bool use24h) {
-    if (use24h) {
-      final h = _now.hour.toString().padLeft(2, '0');
-      final m = _now.minute.toString().padLeft(2, '0');
-      return '$h:$m';
-    } else {
-      var h = _now.hour % 12;
-      if (h == 0) h = 12;
-      final m = _now.minute.toString().padLeft(2, '0');
-      final period = _now.hour < 12 ? 'AM' : 'PM';
-      return '$h:$m $period';
-    }
+    final h = _now.hour.toString().padLeft(2, '0');
+    final m = _now.minute.toString().padLeft(2, '0');
+    return '$h:$m';
   }
+
+  /// Returns only the H:MM digits for 12-hour mode (no AM/PM).
+  String _timeDigits12h() {
+    final hour12 = _now.hour % 12 == 0 ? 12 : _now.hour % 12;
+    final h12 = hour12.toString().padLeft(2, '0');
+    final m = _now.minute.toString().padLeft(2, '0');
+    return '$h12:$m';
+  }
+
+  String get _period => _now.hour < 12 ? 'AM' : 'PM';
 
   String get _dateString {
     final day = _days[_now.weekday - 1];
@@ -236,6 +238,10 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+      // 24h: single plain Text.
+      // 12h: RichText so AM/PM is noticeably smaller than the digits
+      //      but still larger than the date line below.
+      if (use24h)
         Text(
           _buildTimeString(use24h),
           style: GoogleFonts.sora(
@@ -244,6 +250,31 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
             fontWeight: FontWeight.w700,
             letterSpacing: -1.5,
             color: Colors.white.withValues(alpha: 0.82),
+          ),
+        )
+      else
+        Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: _timeDigits12h(),
+                style: GoogleFonts.sora(
+                  fontSize: 64,
+                  height: 1.0,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -1.5,
+                  color: Colors.white.withValues(alpha: 0.82),
+                ),
+              ),
+              TextSpan(
+                text: ' $_period',
+                style: GoogleFonts.sora(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w300,
+                  color: Colors.white.withValues(alpha: 0.55),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 4),
