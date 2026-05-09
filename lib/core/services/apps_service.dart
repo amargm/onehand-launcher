@@ -67,6 +67,15 @@ class AppsService {
     } catch (_) {}
   }
 
+  /// Triggers a light haptic impulse that bypasses the device's silent /
+  /// DND / vibrate-only setting. Uses Android's FLAG_IGNORE_GLOBAL_SETTING
+  /// so it fires in every ringer mode.
+  static Future<void> forceHaptic() async {
+    try {
+      await _channel.invokeMethod<void>('forceHaptic');
+    } catch (_) {}
+  }
+
   /// Returns apps that can play audio (music players, podcast apps, etc.).
   /// Used to populate the quick-launch strip when headphones are connected.
   static Future<List<AppInfo>> getMediaApps() async {

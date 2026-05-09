@@ -20,6 +20,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.view.HapticFeedbackConstants
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -188,6 +189,20 @@ class MainActivity : FlutterActivity() {
                         }
                     } else {
                         result.error("INVALID_ARG", "url is null", null)
+                    }
+                }
+                "forceHaptic" -> {
+                    // Bypass silent / DND / vibrate-only system settings.
+                    // FLAG_IGNORE_GLOBAL_SETTING forces the feedback regardless
+                    // of the device's current sound/vibration profile.
+                    try {
+                        window.decorView.performHapticFeedback(
+                            HapticFeedbackConstants.VIRTUAL_KEY,
+                            HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING,
+                        )
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("HAPTIC_FAILED", e.message, null)
                     }
                 }
                 else -> result.notImplemented()
