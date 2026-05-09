@@ -44,20 +44,20 @@ class FoldersNotifier extends StateNotifier<List<AppFolder>> {
   static List<AppFolder> _defaults() => [
     AppFolder(
       id: _kDefaultWorkId,
-      name: 'Work',
-      iconKey: 'work',
-      packageNames: [],
-    ),
-    AppFolder(
-      id: _kDefaultSocialId,
       name: 'Social',
       iconKey: 'social',
       packageNames: [],
     ),
     AppFolder(
+      id: _kDefaultSocialId,
+      name: 'Tools',
+      iconKey: 'tools',
+      packageNames: [],
+    ),
+    AppFolder(
       id: _kDefaultMediaId,
-      name: 'Media',
-      iconKey: 'media',
+      name: 'Favourites',
+      iconKey: 'star',
       packageNames: [],
     ),
   ];

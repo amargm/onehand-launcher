@@ -262,6 +262,7 @@ class _WallpaperPreviewScreen extends ConsumerStatefulWidget {
 class _WallpaperPreviewScreenState
     extends ConsumerState<_WallpaperPreviewScreen> {
   _SetState _state = _SetState.idle;
+  bool _imageError = false;
 
   /// Downloads the full-res image, saves it to the app documents directory,
   /// and updates wallpaperPathProvider so the home screen redraws immediately.
@@ -271,8 +272,10 @@ class _WallpaperPreviewScreenState
     try {
       final response = await http
           .get(Uri.parse(widget.entry.url))
-          .timeout(const Duration(seconds: 20));
-      if (response.statusCode != 200) throw Exception('Download failed');
+          .timeout(const Duration(seconds: 30));
+      if (response.statusCode != 200) {
+        throw Exception('Server returned ${response.statusCode}');
+      }
 
       // Persist to a fixed filename so old wallpapers are automatically
       // replaced and no orphan files accumulate.
@@ -339,25 +342,30 @@ class _WallpaperPreviewScreenState
         children: [
           // ── Full-screen image ─────────────────────────────────────────
           Positioned.fill(
-            child: CachedNetworkImage(
-              imageUrl: widget.entry.url,
-              fit: BoxFit.cover,
-              placeholder:
-                  (_, __) => const Center(
-                    child: CircularProgressIndicator(
-                      color: Colors.white24,
-                      strokeWidth: 1.5,
-                    ),
+            child: _imageError
+                ? _ImageErrorRetry(
+                    onRetry: () => setState(() => _imageError = false),
+                  )
+                : CachedNetworkImage(
+                    imageUrl: widget.entry.url,
+                    fit: BoxFit.cover,
+                    placeholder:
+                        (_, __) => const Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white24,
+                            strokeWidth: 1.5,
+                          ),
+                        ),
+                    errorWidget:
+                        (_, __, ___) {
+                          WidgetsBinding.instance.addPostFrameCallback(
+                            (_) {
+                              if (mounted) setState(() => _imageError = true);
+                            },
+                          );
+                          return const SizedBox.shrink();
+                        },
                   ),
-              errorWidget:
-                  (_, __, ___) => const Center(
-                    child: Icon(
-                      Icons.broken_image_outlined,
-                      color: Colors.white24,
-                      size: 48,
-                    ),
-                  ),
-            ),
           ),
 
           // ── Bottom gradient + Set button ──────────────────────────────
@@ -443,3 +451,61 @@ class _WallpaperPreviewScreenState
 }
 
 enum _SetState { idle, loading, done }
+
+// ── Image error / retry widget ────────────────────────────────────────────────
+/// Shown in the preview when the full-res image fails to load.
+/// Lets the user tap to retry without leaving the screen.
+class _ImageErrorRetry extends StatelessWidget {
+  const _ImageErrorRetry({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0A0A0A),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.signal_wifi_off_rounded,
+              color: Colors.white24,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Image failed to load',
+              style: GoogleFonts.sora(fontSize: 13, color: Colors.white38),
+            ),
+            const SizedBox(height: 20),
+            GestureDetector(
+              onTap: onRetry,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
+                ),
+                child: Text(
+                  'Retry',
+                  style: GoogleFonts.sora(
+                    fontSize: 13,
+                    color: Colors.white60,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

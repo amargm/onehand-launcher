@@ -23,7 +23,7 @@ class WallpaperEntry {
   final WallpaperCategory category;
 }
 
-enum WallpaperCategory { nebula, abstract, grid }
+enum WallpaperCategory { nebula, abstract, grid, city }
 
 extension WallpaperCategoryLabel on WallpaperCategory {
   String get label {
@@ -34,6 +34,8 @@ extension WallpaperCategoryLabel on WallpaperCategory {
         return 'Abstract';
       case WallpaperCategory.grid:
         return 'Dark';
+      case WallpaperCategory.city:
+        return 'City';
     }
   }
 }
@@ -257,10 +259,84 @@ const List<WallpaperEntry> kWallpapers = [
     id: 'g6',
     displayId: 6,
     url:
-        'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1080&h=1920&q=90&fm=jpg&fit=crop',
+        'https://images.pexels.com/photos/1933239/pexels-photo-1933239.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
     thumbUrl:
-        'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=400&h=700&q=70&fm=jpg&fit=crop',
-    credit: 'Unsplash',
+        'https://images.pexels.com/photos/1933239/pexels-photo-1933239.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
     category: WallpaperCategory.grid,
+  ),
+
+  // ── City / Urban Night ─────────────────────────────────────────────────
+  // Dark cityscapes, neon streets and night architecture — portrait-optimised.
+  // Served from Pexels CDN (free under the Pexels License).
+  WallpaperEntry(
+    id: 'c1',
+    displayId: 1,
+    url:
+        'https://images.pexels.com/photos/325185/pexels-photo-325185.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/325185/pexels-photo-325185.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
+  ),
+  WallpaperEntry(
+    id: 'c2',
+    displayId: 2,
+    url:
+        'https://images.pexels.com/photos/1519088/pexels-photo-1519088.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/1519088/pexels-photo-1519088.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
+  ),
+  WallpaperEntry(
+    id: 'c3',
+    displayId: 3,
+    url:
+        'https://images.pexels.com/photos/2043556/pexels-photo-2043556.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/2043556/pexels-photo-2043556.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
+  ),
+  WallpaperEntry(
+    id: 'c4',
+    displayId: 4,
+    url:
+        'https://images.pexels.com/photos/1486222/pexels-photo-1486222.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/1486222/pexels-photo-1486222.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
+  ),
+  WallpaperEntry(
+    id: 'c5',
+    displayId: 5,
+    url:
+        'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/3617500/pexels-photo-3617500.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
+  ),
+  WallpaperEntry(
+    id: 'c6',
+    displayId: 6,
+    url:
+        'https://images.pexels.com/photos/2116721/pexels-photo-2116721.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/2116721/pexels-photo-2116721.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
+  ),
+  WallpaperEntry(
+    id: 'c7',
+    displayId: 7,
+    url:
+        'https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=1080&h=1920&fit=crop',
+    thumbUrl:
+        'https://images.pexels.com/photos/466685/pexels-photo-466685.jpeg?auto=compress&cs=tinysrgb&w=400&h=700&fit=crop',
+    credit: 'Pexels',
+    category: WallpaperCategory.city,
   ),
 ];

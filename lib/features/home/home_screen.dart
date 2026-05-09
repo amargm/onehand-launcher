@@ -301,7 +301,9 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
   @override
   Widget build(BuildContext context) {
     final use24h = ref.watch(use24HourClockProvider);
+    final fontKey = ref.watch(clockFontProvider);
     final accent = ref.watch(accentColorProvider);
+    final digitColor = Colors.white.withValues(alpha: 0.82);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,12 +314,13 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
         if (use24h)
           Text(
             _buildTimeString(use24h),
-            style: GoogleFonts.sora(
+            style: _clockTimeStyle(
+              fontKey,
               fontSize: 64,
-              height: 1.0,
               fontWeight: FontWeight.w700,
+              color: digitColor,
               letterSpacing: -1.5,
-              color: Colors.white.withValues(alpha: 0.82),
+              height: 1.0,
             ),
           )
         else
@@ -326,17 +329,19 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
               children: [
                 TextSpan(
                   text: _timeDigits12h(),
-                  style: GoogleFonts.sora(
+                  style: _clockTimeStyle(
+                    fontKey,
                     fontSize: 64,
-                    height: 1.0,
                     fontWeight: FontWeight.w700,
+                    color: digitColor,
                     letterSpacing: -1.5,
-                    color: Colors.white.withValues(alpha: 0.82),
+                    height: 1.0,
                   ),
                 ),
                 TextSpan(
                   text: ' $_period',
-                  style: GoogleFonts.sora(
+                  style: _clockTimeStyle(
+                    fontKey,
                     fontSize: 20,
                     fontWeight: FontWeight.w300,
                     color: Colors.white.withValues(alpha: 0.55),
@@ -357,6 +362,59 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
         ),
       ],
     );
+  }
+}
+
+/// Returns a TextStyle for the home-screen clock digits in [fontKey].
+TextStyle _clockTimeStyle(
+  String fontKey, {
+  required double fontSize,
+  required FontWeight fontWeight,
+  required Color color,
+  double? letterSpacing,
+  double? height,
+}) {
+  switch (fontKey) {
+    case 'space_mono':
+      return GoogleFonts.spaceMono(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      );
+    case 'rajdhani':
+      return GoogleFonts.rajdhani(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      );
+    case 'nunito':
+      return GoogleFonts.nunito(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      );
+    case 'oxanium':
+      return GoogleFonts.oxanium(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      );
+    default: // 'sora'
+      return GoogleFonts.sora(
+        fontSize: fontSize,
+        fontWeight: fontWeight,
+        color: color,
+        letterSpacing: letterSpacing,
+        height: height,
+      );
   }
 }
 

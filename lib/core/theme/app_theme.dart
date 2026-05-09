@@ -35,6 +35,9 @@ class AppTheme {
   /// Midnight / Slate
   static const Color presetMidnight = Color(0xFF5C7AEA);
 
+  /// Rose — vivid warm pink for AMOLED contrast
+  static const Color presetRose = Color(0xFFFF4081);
+
   static const Color defaultAccent = presetAmber;
 
   static ThemeData dark(Color accent) {

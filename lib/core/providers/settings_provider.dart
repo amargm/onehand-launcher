@@ -162,3 +162,27 @@ class _IntNotifier extends StateNotifier<int> {
     _prefs.setInt(_key, value);
   }
 }
+
+// ── Clock font ─────────────────────────────────────────────────────────────
+
+const _kClockFontKey = 'clock_font';
+
+/// Which font family to use for the home-screen clock.
+/// Keys: 'sora' (default), 'space_mono', 'rajdhani', 'nunito', 'oxanium'.
+final clockFontProvider = StateNotifierProvider<_StringNotifier, String>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _StringNotifier(prefs, _kClockFontKey, defaultValue: 'sora');
+});
+
+class _StringNotifier extends StateNotifier<String> {
+  _StringNotifier(this._prefs, this._key, {required String defaultValue})
+    : super(_prefs.getString(_key) ?? defaultValue);
+
+  final SharedPreferences _prefs;
+  final String _key;
+
+  void set(String value) {
+    state = value;
+    _prefs.setString(_key, value);
+  }
+}

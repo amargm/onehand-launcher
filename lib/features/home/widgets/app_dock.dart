@@ -168,14 +168,15 @@ class _AppDockState extends ConsumerState<AppDock> {
             duration: const Duration(milliseconds: 350),
             switchInCurve: Curves.easeInOutQuart,
             switchOutCurve: Curves.easeInOutQuart,
-            transitionBuilder: (child, animation) => FadeTransition(
-              opacity: animation,
-              child: SizeTransition(
-                sizeFactor: animation,
-                axisAlignment: -1.0,
-                child: child,
-              ),
-            ),
+            transitionBuilder:
+                (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SizeTransition(
+                    sizeFactor: animation,
+                    axisAlignment: -1.0,
+                    child: child,
+                  ),
+                ),
             child:
                 activeFolder != null
                     ? ClipRRect(
@@ -442,11 +443,14 @@ class _FolderPanel extends ConsumerWidget {
             const SizedBox(height: 12),
             for (var r = 0; r < rows.length; r++) ...[
               if (r > 0) const SizedBox(height: 8),
+              // Each slot gets exactly 1/_kCols of the row width via Expanded
+              // so partially-filled last rows align with full rows.
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: List.generate(_kCols, (c) {
                   final app = c < rows[r].length ? rows[r][c] : null;
-                  return _FolderPanelIcon(app: app);
+                  return Expanded(
+                    child: Center(child: _FolderPanelIcon(app: app)),
+                  );
                 }),
               ),
             ],
@@ -468,8 +472,8 @@ class _FolderPanelIcon extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (app == null) {
-      // Invisible spacer — keeps grid columns aligned.
-      return const SizedBox(width: 44);
+      // Empty — Expanded parent gives it equal slot width.
+      return const SizedBox.shrink();
     }
     return GestureDetector(
       onTap: () {
@@ -648,7 +652,9 @@ class _DayContextShellRow extends ConsumerWidget {
 /// Search: accent-filled with glow shadow.
 /// Folders: dark #121212 surface circle.
 /// Shows a text label below the circle when [showLabel] is true.
-class _DockCircle extends StatelessWidget {
+/// Plays a brief press-scale animation (1.0 → 0.88 → 1.0) scoped only to
+/// this circle — neighbours are unaffected.
+class _DockCircle extends StatefulWidget {
   const _DockCircle({
     required this.icon,
     required this.isSearch,
@@ -672,80 +678,116 @@ class _DockCircle extends StatelessWidget {
   static const double _size = 56;
 
   @override
+  State<_DockCircle> createState() => _DockCircleState();
+}
+
+class _DockCircleState extends State<_DockCircle>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressCtrl;
+  late final Animation<double> _pressScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _pressScale = Tween<double>(begin: 1.0, end: 0.88).animate(
+      CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final circle = Container(
-      width: _size,
-      height: _size,
+      width: _DockCircle._size,
+      height: _DockCircle._size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isSearch ? accent : const Color(0xFF121212),
+        color: widget.isSearch ? widget.accent : const Color(0xFF121212),
         boxShadow:
-            isSearch
+            widget.isSearch
                 ? [
                   BoxShadow(
-                    color: accent.withValues(alpha: 0.30),
+                    color: widget.accent.withValues(alpha: 0.30),
                     blurRadius: 20,
                     spreadRadius: 0,
                   ),
                 ]
-                : isActive
+                : widget.isActive
                 ? [
                   BoxShadow(
-                    color: accent.withValues(alpha: 0.40),
+                    color: widget.accent.withValues(alpha: 0.40),
                     blurRadius: 18,
                     spreadRadius: 1,
                   ),
                 ]
                 : null,
         border:
-            isSearch
+            widget.isSearch
                 ? null
-                : isActive
-                ? Border.all(color: accent.withValues(alpha: 0.85), width: 2)
+                : widget.isActive
+                ? Border.all(
+                  color: widget.accent.withValues(alpha: 0.85),
+                  width: 2,
+                )
                 : Border.all(color: Colors.white.withValues(alpha: 0.16)),
       ),
       child: Icon(
-        icon,
+        widget.icon,
         // On a light/white accent background the white icon disappears.
         // Use black for high-luminance accents, white otherwise.
         color:
-            isSearch
-                ? (accent.computeLuminance() > 0.4
+            widget.isSearch
+                ? (widget.accent.computeLuminance() > 0.4
                     ? Colors.black.withValues(alpha: 0.80)
                     : Colors.white)
-                : (isActive ? accent : Colors.white60),
+                : (widget.isActive ? widget.accent : Colors.white60),
         size: 24,
       ),
     );
 
     return GestureDetector(
-      onTap: onTap,
-      onLongPress: onLongPress,
+      onTap: widget.onTap,
+      onLongPress: widget.onLongPress,
+      onTapDown: (_) => _pressCtrl.forward(),
+      onTapUp: (_) => _pressCtrl.reverse(),
+      onTapCancel: () => _pressCtrl.reverse(),
       behavior: HitTestBehavior.opaque,
-      child:
-          showLabel
-              ? Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  circle,
-                  const SizedBox(height: 4),
-                  SizedBox(
-                    width: _size + 8,
-                    child: Text(
-                      label,
-                      style: GoogleFonts.sora(
-                        fontSize: 9,
-                        color: Colors.white38,
-                        letterSpacing: 0.3,
+      child: ScaleTransition(
+        scale: _pressScale,
+        child:
+            widget.showLabel
+                ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    circle,
+                    const SizedBox(height: 4),
+                    SizedBox(
+                      width: _DockCircle._size + 8,
+                      child: Text(
+                        widget.label,
+                        style: GoogleFonts.sora(
+                          fontSize: 9,
+                          color: Colors.white38,
+                          letterSpacing: 0.3,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
                     ),
-                  ),
-                ],
-              )
-              : circle,
+                  ],
+                )
+                : circle,
+      ),
     );
   }
 }

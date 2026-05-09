@@ -475,6 +475,8 @@ class _AppearanceScreen extends ConsumerWidget {
           value: ref.watch(use24HourClockProvider),
           onChanged: (_) => ref.read(use24HourClockProvider.notifier).toggle(),
         ),
+        const SizedBox(height: 8),
+        _ClockFontSection(),
         const SizedBox(height: 24),
         _SectionHeader('Other'),
         _SettingsTile(
@@ -733,6 +735,7 @@ class _ThemePresetRow extends ConsumerWidget {
       (label: 'Amber', color: AppTheme.presetAmber),
       (label: 'Stealth', color: AppTheme.presetStealth),
       (label: 'Midnight', color: AppTheme.presetMidnight),
+      (label: 'Rose', color: AppTheme.presetRose),
     ];
 
     return Container(
@@ -839,6 +842,119 @@ class _PresetSwatch extends StatelessWidget {
               fontSize: 9.5,
               color: isSelected ? color : Colors.white38,
               letterSpacing: 0.3,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Clock font section ─────────────────────────────────────────────────────
+
+/// Maps a font key to a preview TextStyle.
+TextStyle _clockFontPreview(String key, double size) {
+  const c = Colors.white;
+  const w = FontWeight.w600;
+  switch (key) {
+    case 'space_mono':
+      return GoogleFonts.spaceMono(fontSize: size, fontWeight: w, color: c);
+    case 'rajdhani':
+      return GoogleFonts.rajdhani(fontSize: size, fontWeight: w, color: c);
+    case 'nunito':
+      return GoogleFonts.nunito(fontSize: size, fontWeight: w, color: c);
+    case 'oxanium':
+      return GoogleFonts.oxanium(fontSize: size, fontWeight: w, color: c);
+    default:
+      return GoogleFonts.sora(fontSize: size, fontWeight: w, color: c);
+  }
+}
+
+class _ClockFontSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final current = ref.watch(clockFontProvider);
+    final accent = Theme.of(context).colorScheme.primary;
+
+    const fonts = [
+      (key: 'sora', label: 'Sora'),
+      (key: 'space_mono', label: 'Mono'),
+      (key: 'rajdhani', label: 'Rajdhani'),
+      (key: 'nunito', label: 'Nunito'),
+      (key: 'oxanium', label: 'Oxanium'),
+    ];
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.font_download_outlined,
+                color: Colors.white54,
+                size: 20,
+              ),
+              const SizedBox(width: 14),
+              Text(
+                'Clock font',
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              for (final f in fonts)
+                GestureDetector(
+                  onTap:
+                      () => ref.read(clockFontProvider.notifier).set(f.key),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          current == f.key
+                              ? accent.withValues(alpha: 0.15)
+                              : Colors.white.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color:
+                            current == f.key
+                                ? accent.withValues(alpha: 0.60)
+                                : Colors.white.withValues(alpha: 0.08),
+                      ),
+                    ),
+                    child: Text('12:34', style: _clockFontPreview(f.key, 12)),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            fonts
+                .firstWhere(
+                  (f) => f.key == current,
+                  orElse: () => fonts.first,
+                )
+                .label,
+            style: GoogleFonts.sora(
+              fontSize: 10,
+              color: Colors.white38,
+              letterSpacing: 0.4,
             ),
           ),
         ],
