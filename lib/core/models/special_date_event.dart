@@ -63,6 +63,7 @@ class SpecialDateEvent {
     required this.isRecurring,
     required this.message,
     this.snoozeMinutes = 30,
+    this.iconKey = 'celebration',
   });
 
   final String id;
@@ -72,6 +73,7 @@ class SpecialDateEvent {
   final bool isRecurring; // true = shows every year
   final List<RichParagraph> message;
   final int snoozeMinutes; // per-event override; 0 = use global default
+  final String iconKey;
 
   /// Whether this event falls on [date]'s month/day.
   bool isToday(DateTime date) => date.month == month && date.day == day;
@@ -84,6 +86,7 @@ class SpecialDateEvent {
     'isRecurring': isRecurring,
     'message': message.map((p) => p.toJson()).toList(),
     'snoozeMinutes': snoozeMinutes,
+    'iconKey': iconKey,
   };
 
   factory SpecialDateEvent.fromJson(Map<String, dynamic> j) => SpecialDateEvent(
@@ -100,6 +103,7 @@ class SpecialDateEvent {
             )
             .toList(),
     snoozeMinutes: j['snoozeMinutes'] as int? ?? 30,
+    iconKey: j['iconKey'] as String? ?? 'celebration',
   );
 
   factory SpecialDateEvent.blank() => SpecialDateEvent(
@@ -110,6 +114,7 @@ class SpecialDateEvent {
     isRecurring: true,
     message: [const RichParagraph(text: '')],
     snoozeMinutes: 0,
+    iconKey: 'celebration',
   );
 
   SpecialDateEvent copyWith({
@@ -120,6 +125,7 @@ class SpecialDateEvent {
     bool? isRecurring,
     List<RichParagraph>? message,
     int? snoozeMinutes,
+    String? iconKey,
   }) => SpecialDateEvent(
     id: id ?? this.id,
     name: name ?? this.name,
@@ -128,6 +134,7 @@ class SpecialDateEvent {
     isRecurring: isRecurring ?? this.isRecurring,
     message: message ?? this.message,
     snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,
+    iconKey: iconKey ?? this.iconKey,
   );
 
   static List<SpecialDateEvent> listFromJsonString(String s) {
@@ -143,3 +150,19 @@ class SpecialDateEvent {
   static String listToJsonString(List<SpecialDateEvent> events) =>
       json.encode(events.map((e) => e.toJson()).toList());
 }
+
+/// Pre-set icons available when creating or editing a special date event.
+const Map<String, IconData> kSpecialDateIcons = {
+  'celebration': Icons.celebration_rounded,
+  'cake': Icons.cake_outlined,
+  'favorite': Icons.favorite_border_rounded,
+  'star': Icons.star_border_rounded,
+  'emoji_events': Icons.emoji_events_outlined,
+  'card_giftcard': Icons.card_giftcard_outlined,
+  'local_florist': Icons.local_florist_outlined,
+  'beach': Icons.beach_access_outlined,
+  'flight': Icons.flight_outlined,
+  'school': Icons.school_outlined,
+  'work': Icons.work_outline_rounded,
+  'church': Icons.church_outlined,
+};

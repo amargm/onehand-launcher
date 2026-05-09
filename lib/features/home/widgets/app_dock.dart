@@ -292,9 +292,14 @@ class _AppDockState extends ConsumerState<AppDock> {
                   right: 0,
                   child: _SpecialDateDot(
                     isOpen: _messageBoxOpen,
-                    onTap:
-                        () =>
-                            setState(() => _messageBoxOpen = !_messageBoxOpen),
+                    onTap: () => setState(() {
+                      if (!_messageBoxOpen) {
+                        // Close any open folder before showing the message box
+                        _activeFolderId = null;
+                        _lastActiveFolder = null;
+                      }
+                      _messageBoxOpen = !_messageBoxOpen;
+                    }),
                   ),
                 ),
             ],
@@ -800,8 +805,8 @@ class _SpecialDateDotState extends State<_SpecialDateDot>
             (_, __) => Transform.scale(
               scale: widget.isOpen ? 1.0 : _scale.value,
               child: Container(
-                width: 18,
-                height: 18,
+                width: 26,
+                height: 26,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color:
@@ -823,7 +828,7 @@ class _SpecialDateDotState extends State<_SpecialDateDot>
                 ),
                 child: const Icon(
                   Icons.celebration_rounded,
-                  size: 10,
+                  size: 14,
                   color: Colors.white,
                 ),
               ),
@@ -853,12 +858,16 @@ class _SpecialDateMessagePanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final maxHeight = MediaQuery.of(context).size.height * 0.50;
+    final icon =
+        kSpecialDateIcons[events.first.iconKey] ?? Icons.celebration_rounded;
     return Container(
       width: double.infinity,
+      constraints: BoxConstraints(maxHeight: maxHeight),
       decoration: BoxDecoration(
         color: const Color(0xFF141414),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        border: Border.all(color: _amber.withValues(alpha: 0.45), width: 1.5),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -874,55 +883,55 @@ class _SpecialDateMessagePanel extends ConsumerWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 14),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            child: Row(
               children: [
-                // Header row
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.celebration_rounded,
-                      color: _amber,
-                      size: 14,
+                Icon(icon, color: _amber, size: 14),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    events.length == 1 ? events.first.name : 'Special day',
+                    style: GoogleFonts.sora(
+                      fontSize: 11,
+                      color: _amber.withValues(alpha: 0.90),
+                      letterSpacing: 0.8,
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        events.length == 1 ? events.first.name : 'Special day',
-                        style: GoogleFonts.sora(
-                          fontSize: 11,
-                          color: _amber.withValues(alpha: 0.90),
-                          letterSpacing: 0.8,
-                        ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: onClose,
+                  child: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Colors.white24,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Scrollable event cards
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(14, 2, 14, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (var i = 0; i < events.length; i++) ...[
+                    if (i > 0)
+                      Divider(
+                        color: Colors.white.withValues(alpha: 0.06),
+                        height: 20,
                       ),
-                    ),
-                    GestureDetector(
-                      onTap: onClose,
-                      child: const Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        color: Colors.white24,
-                        size: 20,
-                      ),
+                    _EventCard(
+                      event: events[i],
+                      globalSnoozeMins: globalSnoozeMins,
+                      onAction: onClose,
                     ),
                   ],
-                ),
-                const SizedBox(height: 12),
-                // One card per event
-                for (var i = 0; i < events.length; i++) ...[
-                  if (i > 0)
-                    Divider(
-                      color: Colors.white.withValues(alpha: 0.06),
-                      height: 20,
-                    ),
-                  _EventCard(
-                    event: events[i],
-                    globalSnoozeMins: globalSnoozeMins,
-                    onAction: onClose,
-                  ),
                 ],
-              ],
+              ),
             ),
           ),
         ],

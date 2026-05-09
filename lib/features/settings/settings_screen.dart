@@ -10,7 +10,6 @@ import '../../core/models/schedule_rule.dart';
 import '../../core/models/special_date_event.dart';
 import '../../core/providers/apps_provider.dart';
 import '../../core/providers/context_apps_provider.dart';
-import '../../core/providers/context_settings_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/schedule_rules_provider.dart';
 import '../../core/providers/settings_provider.dart';
@@ -591,9 +590,6 @@ class _ContextScreen extends ConsumerWidget {
     return _SubScreen(
       title: 'Context & Shell',
       children: [
-        _SectionHeader('Context indicators'),
-        _ContextItemsSection(),
-        const SizedBox(height: 24),
         _SectionHeader('Headphone apps'),
         _ContextShellAppsSection(),
         const SizedBox(height: 24),
@@ -1220,41 +1216,6 @@ class _FolderAppChip extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── Context items section ──────────────────────────────────────────────────
-
-class _ContextItemsSection extends ConsumerWidget {
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final enabled = ref.watch(contextItemsProvider);
-    final accent = Theme.of(context).colorScheme.primary;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141414),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          for (final item in ContextItemType.values)
-            SwitchListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(
-                item.displayLabel,
-                style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
-              ),
-              activeColor: accent,
-              value: enabled.contains(item),
-              onChanged:
-                  (_) => ref.read(contextItemsProvider.notifier).toggle(item),
-            ),
         ],
       ),
     );
@@ -2804,6 +2765,7 @@ class _SpecialDateEditScreenState
   late bool _recurring;
   late int _snoozeMins;
   late List<RichParagraph> _paragraphs;
+  late String _iconKey;
   bool _previewMode = false;
 
   static const _months = [
@@ -2830,6 +2792,7 @@ class _SpecialDateEditScreenState
     _day = widget.event.day;
     _recurring = widget.event.isRecurring;
     _snoozeMins = widget.event.snoozeMinutes;
+    _iconKey = widget.event.iconKey;
     _paragraphs = List.from(widget.event.message);
     if (_paragraphs.isEmpty) _paragraphs.add(const RichParagraph(text: ''));
   }
@@ -2848,6 +2811,7 @@ class _SpecialDateEditScreenState
       isRecurring: _recurring,
       message: _paragraphs,
       snoozeMinutes: _snoozeMins,
+      iconKey: _iconKey,
     );
     if (widget.isNew) {
       ref.read(specialDateEventsProvider.notifier).add(updated);
@@ -2878,6 +2842,7 @@ class _SpecialDateEditScreenState
   @override
   Widget build(BuildContext context) {
     final accent = Theme.of(context).colorScheme.primary;
+    final globalSnooze = ref.watch(snoozeDurationProvider);
     return Scaffold(
       backgroundColor: const Color(0xFF121212),
       appBar: AppBar(
@@ -3063,6 +3028,44 @@ class _SpecialDateEditScreenState
           ),
           const SizedBox(height: 16),
 
+          // -- Icon picker -----------------------------------------------
+          _EditSection(
+            label: 'ICON',
+            child: SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: kSpecialDateIcons.entries.map((entry) {
+                  final selected = _iconKey == entry.key;
+                  return GestureDetector(
+                    onTap: () => setState(() => _iconKey = entry.key),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 160),
+                      width: 44,
+                      height: 44,
+                      margin: const EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: selected
+                            ? _amber.withValues(alpha: 0.18)
+                            : Colors.white.withValues(alpha: 0.06),
+                        border: Border.all(
+                          color: selected
+                              ? _amber.withValues(alpha: 0.70)
+                              : Colors.white.withValues(alpha: 0.10),
+                        ),
+                      ),
+                      child: Icon(entry.value,
+                          size: 20,
+                          color: selected ? _amber : Colors.white38),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+
           // -- Per-event snooze override ---------------------------------
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -3086,8 +3089,8 @@ class _SpecialDateEditScreenState
                       ),
                       Text(
                         _snoozeMins == 0
-                            ? 'Using global default'
-                            : '$_snoozeMins min',
+                            ? 'Auto — global default ($globalSnooze min)'
+                            : '$_snoozeMins min for this date only',
                         style: GoogleFonts.sora(
                           fontSize: 10.5,
                           color: Colors.white30,
