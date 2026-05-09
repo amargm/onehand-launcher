@@ -203,21 +203,8 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
   void initState() {
     super.initState();
     _now = DateTime.now();
-    // Tick once per minute — display only shows HH:MM, so per-second
-    // rebuilds are wasteful. Align the first tick to the next minute
-    // boundary so the display switches over exactly on time.
-    _scheduleNextTick();
-  }
-
-  void _scheduleNextTick() {
-    final now = DateTime.now();
-    final msUntilNextMinute = (60 - now.second) * 1000 - now.millisecond;
-    _timer = Timer(Duration(milliseconds: msUntilNextMinute), () {
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _now = DateTime.now());
-      // After the first aligned tick, fire every full minute.
-      _timer = Timer.periodic(const Duration(minutes: 1), (_) {
-        if (mounted) setState(() => _now = DateTime.now());
-      });
     });
   }
 
