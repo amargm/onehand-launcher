@@ -111,16 +111,13 @@ class _AppDockState extends ConsumerState<AppDock> {
           // SizedBox.shrink() on close gives a 0-size child immediately,
           // collapsing the height before the opacity can finish fading.
           AnimatedSize(
-            duration: const Duration(milliseconds: 700),
+            duration: const Duration(milliseconds: 380),
             curve: Curves.easeInOutQuart,
             child:
                 displayFolder != null
                     ? AnimatedOpacity(
                       opacity: activeFolder != null ? 1.0 : 0.0,
-                      duration:
-                          activeFolder != null
-                              ? const Duration(milliseconds: 500)
-                              : const Duration(milliseconds: 500),
+                      duration: const Duration(milliseconds: 300),
                       curve:
                           activeFolder != null ? Curves.easeIn : Curves.easeOut,
                       child: Column(
