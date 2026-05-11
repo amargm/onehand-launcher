@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/models/calendar_event.dart';
+import '../../core/models/counter_widget_model.dart';
 import '../../core/providers/app_widgets_provider.dart';
 import '../../core/providers/calendar_events_provider.dart';
+import '../../core/providers/counter_widgets_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/app_widget_service.dart';
 import '../../core/services/holidays_service.dart';
@@ -235,6 +237,19 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     }
   }
 
+  Future<void> _showAddCounterDialog() async {
+    if (!mounted) return;
+    final accent = ref.read(accentColorProvider);
+    final isLight = ref.read(widgetLightModeProvider);
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => _AddCounterDialog(accent: accent, isLight: isLight),
+    );
+    if (saved == true && mounted) {
+      // The dialog directly calls the provider, nothing else needed.
+    }
+  }
+
   // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
@@ -251,6 +266,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
 
     final bgColor = isLight ? const Color(0xFFF2F2F2) : Colors.black;
     final placedWidgets = ref.watch(placedAndroidWidgetsProvider);
+    final counterWidgets = ref.watch(counterWidgetsProvider);
 
     final holidayDays = _buildDayMap(
       _holidays.where((e) => e.date.year == _displayYear),
@@ -301,6 +317,51 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                           ),
                         ),
                       ),
+
+                      // ── Counter widgets ────────────────────────────────
+                      if (counterWidgets.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 14),
+                          child: Column(
+                            children:
+                                counterWidgets.map((cw) {
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 10),
+                                    child: _CounterCard(
+                                      model: cw,
+                                      accent: accent,
+                                      isLight: isLight,
+                                      onIncrement:
+                                          () => ref
+                                              .read(
+                                                counterWidgetsProvider.notifier,
+                                              )
+                                              .increment(cw.id),
+                                      onDecrement:
+                                          () => ref
+                                              .read(
+                                                counterWidgetsProvider.notifier,
+                                              )
+                                              .decrement(cw.id),
+                                      onReset:
+                                          () => ref
+                                              .read(
+                                                counterWidgetsProvider.notifier,
+                                              )
+                                              .reset(cw.id),
+                                      onDelete:
+                                          () => ref
+                                              .read(
+                                                counterWidgetsProvider.notifier,
+                                              )
+                                              .remove(cw.id),
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                        ),
+                      ],
 
                       // ── Placed Android widgets ─────────────────────────
                       if (placedWidgets.isNotEmpty) ...[
@@ -797,30 +858,17 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     },
                   ),
                   const SizedBox(height: 12),
-                  // ── Custom widget option ───────────────────────────────────
+                  // ── Counter widget option ──────────────────────────────────
                   _ChoiceTile(
-                    icon: Icons.add_box_rounded,
-                    label: 'Custom Widget',
-                    subtitle: 'More custom widgets coming soon',
+                    icon: Icons.pin_rounded,
+                    label: 'Counter Widget',
+                    subtitle: 'A tappable counter with a note or goal',
                     accent: accent,
                     textColor: textColor,
                     subColor: subColor,
                     onTap: () {
                       Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Custom widgets coming soon',
-                            style: GoogleFonts.sora(fontSize: 13),
-                          ),
-                          backgroundColor: const Color(0xFF1A1A1A),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          duration: const Duration(seconds: 2),
-                        ),
-                      );
+                      _showAddCounterDialog();
                     },
                   ),
                 ],
@@ -1854,6 +1902,381 @@ class _EventSpanPainter extends CustomPainter {
       old.cellW != cellW ||
       old.rowH != rowH ||
       old.accent != accent;
+}
+
+// ── Counter card ──────────────────────────────────────────────────────────────
+
+class _CounterCard extends StatelessWidget {
+  const _CounterCard({
+    required this.model,
+    required this.accent,
+    required this.isLight,
+    required this.onIncrement,
+    required this.onDecrement,
+    required this.onReset,
+    required this.onDelete,
+  });
+
+  final CounterWidgetModel model;
+  final Color accent;
+  final bool isLight;
+  final VoidCallback onIncrement;
+  final VoidCallback onDecrement;
+  final VoidCallback onReset;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final cardBg = isLight ? Colors.white : const Color(0xFF141414);
+    final dividerColor = _fg(isLight, 0.10);
+    final noteColor = _fg(isLight, 0.60);
+    final borderColor = _fg(isLight, 0.08);
+
+    return GestureDetector(
+      onTap: onIncrement,
+      onLongPress: () => _showOptions(context),
+      child: Container(
+        height: 88,
+        decoration: BoxDecoration(
+          color: cardBg,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: borderColor),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(13),
+          child: Row(
+            children: [
+              // ── Left 40%: counter number ────────────────────────────
+              Flexible(
+                flex: 40,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '${model.count}',
+                        style: GoogleFonts.sora(
+                          fontSize: 52,
+                          fontWeight: FontWeight.w700,
+                          color: accent,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // ── Divider ─────────────────────────────────────────────
+              Container(width: 1, color: dividerColor),
+
+              // ── Right 60%: note + controls ──────────────────────────
+              Flexible(
+                flex: 60,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Note text — takes up most of the space
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            model.note.isEmpty ? 'No note' : model.note,
+                            style: GoogleFonts.sora(
+                              fontSize: 11.5,
+                              color:
+                                  model.note.isEmpty
+                                      ? _fg(isLight, 0.25)
+                                      : noteColor,
+                              fontStyle:
+                                  model.note.isEmpty
+                                      ? FontStyle.italic
+                                      : FontStyle.normal,
+                              height: 1.4,
+                            ),
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+
+                      // − / + controls row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          _CounterBtn(
+                            label: '−',
+                            accent: accent,
+                            isLight: isLight,
+                            onTap: onDecrement,
+                          ),
+                          const SizedBox(width: 8),
+                          _CounterBtn(
+                            label: '+',
+                            accent: accent,
+                            isLight: isLight,
+                            onTap: onIncrement,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showOptions(BuildContext context) {
+    final bg = isLight ? Colors.white : const Color(0xFF1E1E1E);
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: bg,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder:
+          (_) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ListTile(
+                    leading: Icon(
+                      Icons.restart_alt_rounded,
+                      color: accent,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Reset counter',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        color: _fg(isLight, 0.87),
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onReset();
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(
+                      Icons.delete_outline_rounded,
+                      color: Colors.red.shade400,
+                      size: 20,
+                    ),
+                    title: Text(
+                      'Delete widget',
+                      style: GoogleFonts.sora(
+                        fontSize: 14,
+                        color: Colors.red.shade400,
+                      ),
+                    ),
+                    contentPadding: EdgeInsets.zero,
+                    onTap: () {
+                      Navigator.pop(context);
+                      onDelete();
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+    );
+  }
+}
+
+// ── Counter button ────────────────────────────────────────────────────────────
+
+class _CounterBtn extends StatelessWidget {
+  const _CounterBtn({
+    required this.label,
+    required this.accent,
+    required this.isLight,
+    required this.onTap,
+  });
+
+  final String label;
+  final Color accent;
+  final bool isLight;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 26,
+        height: 22,
+        decoration: BoxDecoration(
+          color: accent.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.sora(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: accent,
+              height: 1.0,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Add counter dialog ────────────────────────────────────────────────────────
+
+class _AddCounterDialog extends ConsumerStatefulWidget {
+  const _AddCounterDialog({required this.accent, required this.isLight});
+
+  final Color accent;
+  final bool isLight;
+
+  @override
+  ConsumerState<_AddCounterDialog> createState() => _AddCounterDialogState();
+}
+
+class _AddCounterDialogState extends ConsumerState<_AddCounterDialog> {
+  final _noteCtrl = TextEditingController();
+  bool _noteError = false;
+
+  @override
+  void dispose() {
+    _noteCtrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final note = _noteCtrl.text.trim();
+    if (note.isEmpty) {
+      setState(() => _noteError = true);
+      return;
+    }
+    ref
+        .read(counterWidgetsProvider.notifier)
+        .add(
+          CounterWidgetModel(
+            note: note.length > 75 ? note.substring(0, 75) : note,
+          ),
+        );
+    Navigator.pop(context, true);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isLight ? Colors.white : const Color(0xFF1E1E1E);
+    final textColor = _fg(widget.isLight, 0.87);
+    final hintColor = _fg(widget.isLight, 0.35);
+    final remaining = 75 - _noteCtrl.text.length;
+
+    return AlertDialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'New Counter',
+        style: GoogleFonts.sora(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          TextField(
+            controller: _noteCtrl,
+            autofocus: true,
+            maxLength: 75,
+            maxLines: 2,
+            style: GoogleFonts.sora(fontSize: 13, color: textColor),
+            onChanged: (_) {
+              if (_noteError) setState(() => _noteError = false);
+              setState(() {}); // update char count
+            },
+            decoration: InputDecoration(
+              hintText: 'Goal or note for this counter…',
+              hintStyle: GoogleFonts.sora(fontSize: 13, color: hintColor),
+              counterText: '',
+              errorText: _noteError ? 'Enter a note or goal' : null,
+              errorStyle: GoogleFonts.sora(
+                fontSize: 11,
+                color: Colors.red.shade400,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color:
+                      _noteError
+                          ? Colors.red.shade400
+                          : _fg(widget.isLight, 0.18),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: _noteError ? Colors.red.shade400 : widget.accent,
+                ),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$remaining',
+            style: GoogleFonts.sora(
+              fontSize: 10,
+              color:
+                  remaining < 10
+                      ? Colors.orange.shade400
+                      : _fg(widget.isLight, 0.30),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.sora(color: _fg(widget.isLight, 0.40)),
+          ),
+        ),
+        TextButton(
+          onPressed: _save,
+          child: Text(
+            'Add',
+            style: GoogleFonts.sora(
+              color: widget.accent,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 // ── Country picker dialog ─────────────────────────────────────────────────────
