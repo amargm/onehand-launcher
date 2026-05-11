@@ -86,9 +86,10 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     });
     try {
       final prefs = ref.read(sharedPreferencesProvider);
-      final events = force
-          ? await HolidaysService.refreshHolidays(_displayYear, cc, prefs)
-          : await HolidaysService.fetchHolidays(_displayYear, cc, prefs);
+      final events =
+          force
+              ? await HolidaysService.refreshHolidays(_displayYear, cc, prefs)
+              : await HolidaysService.fetchHolidays(_displayYear, cc, prefs);
       if (mounted) {
         setState(() {
           _holidays = events;
@@ -164,133 +165,139 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
 
     await showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setS) {
-          final bg = isLight ? Colors.white : const Color(0xFF1E1E1E);
-          final textColor = _fg(isLight, 0.87);
-          final hintColor = _fg(isLight, 0.35);
-          return AlertDialog(
-            backgroundColor: bg,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            title: Text(
-              'Add Event',
-              style: GoogleFonts.sora(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: textColor,
-              ),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                GestureDetector(
-                  onTap: () async {
-                    final picked = await showDatePicker(
-                      context: ctx,
-                      initialDate: selectedDate,
-                      firstDate: DateTime(_displayYear),
-                      lastDate: DateTime(_displayYear, 12, 31),
-                      builder: (ctx, child) => Theme(
-                        data: Theme.of(ctx).copyWith(
-                          colorScheme: ColorScheme.dark(primary: accent),
+      builder:
+          (ctx) => StatefulBuilder(
+            builder: (ctx, setS) {
+              final bg = isLight ? Colors.white : const Color(0xFF1E1E1E);
+              final textColor = _fg(isLight, 0.87);
+              final hintColor = _fg(isLight, 0.35);
+              return AlertDialog(
+                backgroundColor: bg,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                title: Text(
+                  'Add Event',
+                  style: GoogleFonts.sora(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: textColor,
+                  ),
+                ),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: ctx,
+                          initialDate: selectedDate,
+                          firstDate: DateTime(_displayYear),
+                          lastDate: DateTime(_displayYear, 12, 31),
+                          builder:
+                              (ctx, child) => Theme(
+                                data: Theme.of(ctx).copyWith(
+                                  colorScheme: ColorScheme.dark(
+                                    primary: accent,
+                                  ),
+                                ),
+                                child: child!,
+                              ),
+                        );
+                        if (picked != null) setS(() => selectedDate = picked);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
                         ),
-                        child: child!,
-                      ),
-                    );
-                    if (picked != null) setS(() => selectedDate = picked);
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: accent.withValues(alpha: 0.4),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.calendar_today_rounded,
-                          size: 14,
-                          color: accent,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          _fmtDate(selectedDate),
-                          style: GoogleFonts.sora(
-                            fontSize: 13,
-                            color: textColor,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: accent.withValues(alpha: 0.4),
                           ),
                         ),
-                      ],
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 14,
+                              color: accent,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _fmtDate(selectedDate),
+                              style: GoogleFonts.sora(
+                                fontSize: 13,
+                                color: textColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: nameCtrl,
+                      style: GoogleFonts.sora(fontSize: 13, color: textColor),
+                      decoration: InputDecoration(
+                        hintText: 'Event name',
+                        hintStyle: GoogleFonts.sora(
+                          fontSize: 13,
+                          color: hintColor,
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: _fg(isLight, 0.18)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: accent),
+                        ),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(
+                      'Cancel',
+                      style: GoogleFonts.sora(color: _fg(isLight, 0.40)),
                     ),
                   ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nameCtrl,
-                  style: GoogleFonts.sora(fontSize: 13, color: textColor),
-                  decoration: InputDecoration(
-                    hintText: 'Event name',
-                    hintStyle: GoogleFonts.sora(
-                      fontSize: 13,
-                      color: hintColor,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: _fg(isLight, 0.18)),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: accent),
-                    ),
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
+                  TextButton(
+                    onPressed: () {
+                      final name = nameCtrl.text.trim();
+                      if (name.isEmpty) return;
+                      ref
+                          .read(userEventsProvider.notifier)
+                          .add(
+                            CalendarEvent(
+                              date: selectedDate,
+                              name: name,
+                              isPublicHoliday: false,
+                            ),
+                          );
+                      Navigator.pop(ctx);
+                    },
+                    child: Text(
+                      'Save',
+                      style: GoogleFonts.sora(
+                        color: accent,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.sora(color: _fg(isLight, 0.40)),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  final name = nameCtrl.text.trim();
-                  if (name.isEmpty) return;
-                  ref.read(userEventsProvider.notifier).add(
-                    CalendarEvent(
-                      date: selectedDate,
-                      name: name,
-                      isPublicHoliday: false,
-                    ),
-                  );
-                  Navigator.pop(ctx);
-                },
-                child: Text(
-                  'Save',
-                  style: GoogleFonts.sora(
-                    color: accent,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                ],
+              );
+            },
+          ),
     );
     nameCtrl.dispose();
   }
@@ -384,8 +391,8 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     }
                   }
                 },
-                onTorchToggle: () =>
-                    ref.read(widgetLightModeProvider.notifier).toggle(),
+                onTorchToggle:
+                    () => ref.read(widgetLightModeProvider.notifier).toggle(),
               ),
 
               const SizedBox(height: 16),
@@ -434,16 +441,18 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                 border: Border.all(color: _fg(isLight, 0.10)),
                 boxShadow: [
                   BoxShadow(
-                    color:
-                        Colors.black.withValues(alpha: isLight ? 0.12 : 0.40),
+                    color: Colors.black.withValues(
+                      alpha: isLight ? 0.12 : 0.40,
+                    ),
                     blurRadius: 20,
                     offset: const Offset(0, -4),
                   ),
                 ],
               ),
-              child: _panelOpen
-                  ? _buildPanelContent(accent, isLight, cc, userEvents)
-                  : const SizedBox.shrink(),
+              child:
+                  _panelOpen
+                      ? _buildPanelContent(accent, isLight, cc, userEvents)
+                      : const SizedBox.shrink(),
             ),
           ),
         ],
@@ -459,14 +468,12 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     String? cc,
     List<CalendarEvent> userEvents,
   ) {
-    final allHolidays = _holidays
-        .where((e) => e.date.year == _displayYear)
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-    final allUserEvents = userEvents
-        .where((e) => e.date.year == _displayYear)
-        .toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
+    final allHolidays =
+        _holidays.where((e) => e.date.year == _displayYear).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
+    final allUserEvents =
+        userEvents.where((e) => e.date.year == _displayYear).toList()
+          ..sort((a, b) => a.date.compareTo(b.date));
 
     final textColor = _fg(isLight, 0.87);
     final subColor = _fg(isLight, 0.45);
@@ -522,11 +529,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                 onTap: _showCountryPicker,
                 child: Padding(
                   padding: const EdgeInsets.all(6),
-                  child: Icon(
-                    Icons.public_rounded,
-                    size: 16,
-                    color: subColor,
-                  ),
+                  child: Icon(Icons.public_rounded, size: 16, color: subColor),
                 ),
               ),
             ],
@@ -543,16 +546,11 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             decoration: BoxDecoration(
               color: Colors.red.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(8),
-              border:
-                  Border.all(color: Colors.red.withValues(alpha: 0.25)),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.25)),
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.wifi_off_rounded,
-                  size: 14,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.wifi_off_rounded, size: 14, color: Colors.red),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -592,17 +590,12 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                 ),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: accent.withValues(alpha: 0.4)),
+                  border: Border.all(color: accent.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.location_on_rounded,
-                      size: 14,
-                      color: accent,
-                    ),
+                    Icon(Icons.location_on_rounded, size: 14, color: accent),
                     const SizedBox(width: 8),
                     Text(
                       'Detect country (one-time)',
@@ -641,8 +634,9 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     event: e,
                     accent: accent,
                     isLight: isLight,
-                    onDelete: () =>
-                        ref.read(userEventsProvider.notifier).remove(e.id),
+                    onDelete:
+                        () =>
+                            ref.read(userEventsProvider.notifier).remove(e.id),
                   ),
                 ),
               ],
@@ -717,8 +711,18 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
   }
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   static String _fmtDate(DateTime d) =>
@@ -741,14 +745,23 @@ class _EventTile extends StatelessWidget {
   final VoidCallback? onDelete;
 
   static const _months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
 
   @override
   Widget build(BuildContext context) {
-    final dotColor =
-        event.isPublicHoliday ? accent : _fg(isLight, 0.70);
+    final dotColor = event.isPublicHoliday ? accent : _fg(isLight, 0.70);
     final dateStr = '${_months[event.date.month - 1]} ${event.date.day}';
 
     return Padding(
@@ -758,10 +771,7 @@ class _EventTile extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: dotColor,
-            ),
+            decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
           ),
           const SizedBox(width: 10),
           SizedBox(
@@ -779,10 +789,7 @@ class _EventTile extends StatelessWidget {
           Expanded(
             child: Text(
               event.name,
-              style: GoogleFonts.sora(
-                fontSize: 11,
-                color: _fg(isLight, 0.82),
-              ),
+              style: GoogleFonts.sora(fontSize: 11, color: _fg(isLight, 0.82)),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -925,8 +932,7 @@ class _MiniMonth extends StatelessWidget {
         final dowH = h * dowRatio;
         final rowH = (h * daysRatio) / 6;
 
-        final headerColor =
-            isCurrentMonth ? accent : _fg(isLight, 0.55);
+        final headerColor = isCurrentMonth ? accent : _fg(isLight, 0.55);
 
         final nameFontSize = (nameH * 0.62).clamp(7.0, 11.0);
 
@@ -943,9 +949,8 @@ class _MiniMonth extends StatelessWidget {
                     _fullNames[month - 1],
                     style: GoogleFonts.sora(
                       fontSize: nameFontSize,
-                      fontWeight: isCurrentMonth
-                          ? FontWeight.w700
-                          : FontWeight.w400,
+                      fontWeight:
+                          isCurrentMonth ? FontWeight.w700 : FontWeight.w400,
                       color: headerColor,
                       letterSpacing: 0.4,
                     ),
@@ -958,23 +963,24 @@ class _MiniMonth extends StatelessWidget {
             SizedBox(
               height: dowH,
               child: Row(
-                children: _dow
-                    .map(
-                      (d) => SizedBox(
-                        width: cellW,
-                        child: Center(
-                          child: Text(
-                            d,
-                            style: GoogleFonts.sora(
-                              fontSize: (dowH * 0.52).clamp(5.5, 8.5),
-                              fontWeight: FontWeight.w500,
-                              color: _fg(isLight, 0.55),
+                children:
+                    _dow
+                        .map(
+                          (d) => SizedBox(
+                            width: cellW,
+                            child: Center(
+                              child: Text(
+                                d,
+                                style: GoogleFonts.sora(
+                                  fontSize: (dowH * 0.52).clamp(5.5, 8.5),
+                                  fontWeight: FontWeight.w500,
+                                  color: _fg(isLight, 0.55),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    )
-                    .toList(),
+                        )
+                        .toList(),
               ),
             ),
 
@@ -996,47 +1002,48 @@ class _MiniMonth extends StatelessWidget {
                     return SizedBox(
                       width: cellW,
                       child: Center(
-                        child: !valid
-                            ? null
-                            : Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  if (isToday)
-                                    _TodayBadge(
-                                      day: dayNum,
-                                      size: rowH * 0.72,
-                                      accent: accent,
-                                    )
-                                  else
-                                    Text(
-                                      '$dayNum',
-                                      style: GoogleFonts.sora(
-                                        fontSize: (rowH * 0.42).clamp(
-                                          6.5,
-                                          11.0,
-                                        ),
-                                        fontWeight: FontWeight.w300,
-                                        color: _fg(
-                                          isLight,
-                                          isCurrentMonth ? 0.72 : 0.55,
+                        child:
+                            !valid
+                                ? null
+                                : Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isToday)
+                                      _TodayBadge(
+                                        day: dayNum,
+                                        size: rowH * 0.72,
+                                        accent: accent,
+                                      )
+                                    else
+                                      Text(
+                                        '$dayNum',
+                                        style: GoogleFonts.sora(
+                                          fontSize: (rowH * 0.42).clamp(
+                                            6.5,
+                                            11.0,
+                                          ),
+                                          fontWeight: FontWeight.w300,
+                                          color: _fg(
+                                            isLight,
+                                            isCurrentMonth ? 0.72 : 0.55,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  if (showDot)
-                                    Container(
-                                      margin:
-                                          const EdgeInsets.only(top: 1.0),
-                                      width: 2.5,
-                                      height: 2.5,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: isHoliday
-                                            ? accent
-                                            : _fg(isLight, 0.65),
+                                    if (showDot)
+                                      Container(
+                                        margin: const EdgeInsets.only(top: 1.0),
+                                        width: 2.5,
+                                        height: 2.5,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color:
+                                              isHoliday
+                                                  ? accent
+                                                  : _fg(isLight, 0.65),
+                                        ),
                                       ),
-                                    ),
-                                ],
-                              ),
+                                  ],
+                                ),
                       ),
                     );
                   }),
@@ -1116,26 +1123,24 @@ class _YearNavBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isNow = year == currentYear;
-    final yearColor = isNow
-        ? accent.withValues(alpha: 0.85)
-        : _fg(isLight, 0.55);
+    final yearColor =
+        isNow ? accent.withValues(alpha: 0.85) : _fg(isLight, 0.55);
 
     final actionButtons = Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         _SmallButton(
-          icon: isLight
-              ? Icons.dark_mode_rounded
-              : Icons.light_mode_rounded,
+          icon: isLight ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
           onTap: onTorchToggle,
           isLight: isLight,
           accent: accent,
         ),
         const SizedBox(width: 6),
         _SmallButton(
-          icon: isPanelOpen
-              ? Icons.keyboard_arrow_down_rounded
-              : Icons.keyboard_arrow_up_rounded,
+          icon:
+              isPanelOpen
+                  ? Icons.keyboard_arrow_down_rounded
+                  : Icons.keyboard_arrow_up_rounded,
           onTap: onHolidayToggle,
           isLight: isLight,
           accent: accent,
@@ -1245,15 +1250,14 @@ class _SmallButton extends StatelessWidget {
         height: 30,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: active
-              ? accent.withValues(alpha: 0.15)
-              : _fg(isLight, 0.07),
-          border: active
-              ? Border.all(
-                  color: accent.withValues(alpha: 0.35),
-                  width: 0.8,
-                )
-              : null,
+          color: active ? accent.withValues(alpha: 0.15) : _fg(isLight, 0.07),
+          border:
+              active
+                  ? Border.all(
+                    color: accent.withValues(alpha: 0.35),
+                    width: 0.8,
+                  )
+                  : null,
         ),
         child: Icon(
           icon,
@@ -1324,51 +1328,115 @@ class _CountryPickerDialog extends StatefulWidget {
 
 class _CountryPickerDialogState extends State<_CountryPickerDialog> {
   static const _allCountries = [
-    ('AD', 'Andorra'), ('AO', 'Angola'), ('AR', 'Argentina'),
-    ('AT', 'Austria'), ('AU', 'Australia'),
-    ('BB', 'Barbados'), ('BE', 'Belgium'), ('BG', 'Bulgaria'),
-    ('BO', 'Bolivia'), ('BR', 'Brazil'), ('BS', 'Bahamas'),
-    ('BW', 'Botswana'), ('BY', 'Belarus'), ('BZ', 'Belize'),
-    ('CA', 'Canada'), ('CH', 'Switzerland'), ('CL', 'Chile'),
-    ('CN', 'China'), ('CO', 'Colombia'), ('CR', 'Costa Rica'),
-    ('CU', 'Cuba'), ('CY', 'Cyprus'), ('CZ', 'Czech Republic'),
-    ('DE', 'Germany'), ('DK', 'Denmark'), ('DO', 'Dominican Republic'),
-    ('EC', 'Ecuador'), ('EE', 'Estonia'), ('EG', 'Egypt'),
-    ('ES', 'Spain'), ('FI', 'Finland'), ('FR', 'France'),
-    ('GA', 'Gabon'), ('GB', 'United Kingdom'), ('GE', 'Georgia'),
-    ('GH', 'Ghana'), ('GL', 'Greenland'), ('GR', 'Greece'),
-    ('GT', 'Guatemala'), ('HN', 'Honduras'), ('HR', 'Croatia'),
-    ('HU', 'Hungary'), ('ID', 'Indonesia'), ('IE', 'Ireland'),
-    ('IL', 'Israel'), ('IN', 'India'), ('IS', 'Iceland'),
-    ('IT', 'Italy'), ('JM', 'Jamaica'), ('JP', 'Japan'),
-    ('KE', 'Kenya'), ('KR', 'South Korea'), ('LI', 'Liechtenstein'),
-    ('LS', 'Lesotho'), ('LT', 'Lithuania'), ('LU', 'Luxembourg'),
-    ('LV', 'Latvia'), ('MA', 'Morocco'), ('MC', 'Monaco'),
-    ('MD', 'Moldova'), ('ME', 'Montenegro'), ('MK', 'North Macedonia'),
-    ('MT', 'Malta'), ('MX', 'Mexico'), ('MZ', 'Mozambique'),
-    ('NA', 'Namibia'), ('NG', 'Nigeria'), ('NI', 'Nicaragua'),
-    ('NL', 'Netherlands'), ('NO', 'Norway'), ('NZ', 'New Zealand'),
-    ('PA', 'Panama'), ('PE', 'Peru'), ('PH', 'Philippines'),
-    ('PL', 'Poland'), ('PT', 'Portugal'), ('PY', 'Paraguay'),
-    ('RO', 'Romania'), ('RS', 'Serbia'), ('RU', 'Russia'),
-    ('SE', 'Sweden'), ('SI', 'Slovenia'), ('SK', 'Slovakia'),
-    ('SM', 'San Marino'), ('SN', 'Senegal'), ('SV', 'El Salvador'),
-    ('TN', 'Tunisia'), ('TR', 'Turkey'), ('UA', 'Ukraine'),
-    ('US', 'United States'), ('UY', 'Uruguay'), ('VA', 'Vatican City'),
-    ('VE', 'Venezuela'), ('ZA', 'South Africa'), ('ZW', 'Zimbabwe'),
+    ('AD', 'Andorra'),
+    ('AO', 'Angola'),
+    ('AR', 'Argentina'),
+    ('AT', 'Austria'),
+    ('AU', 'Australia'),
+    ('BB', 'Barbados'),
+    ('BE', 'Belgium'),
+    ('BG', 'Bulgaria'),
+    ('BO', 'Bolivia'),
+    ('BR', 'Brazil'),
+    ('BS', 'Bahamas'),
+    ('BW', 'Botswana'),
+    ('BY', 'Belarus'),
+    ('BZ', 'Belize'),
+    ('CA', 'Canada'),
+    ('CH', 'Switzerland'),
+    ('CL', 'Chile'),
+    ('CN', 'China'),
+    ('CO', 'Colombia'),
+    ('CR', 'Costa Rica'),
+    ('CU', 'Cuba'),
+    ('CY', 'Cyprus'),
+    ('CZ', 'Czech Republic'),
+    ('DE', 'Germany'),
+    ('DK', 'Denmark'),
+    ('DO', 'Dominican Republic'),
+    ('EC', 'Ecuador'),
+    ('EE', 'Estonia'),
+    ('EG', 'Egypt'),
+    ('ES', 'Spain'),
+    ('FI', 'Finland'),
+    ('FR', 'France'),
+    ('GA', 'Gabon'),
+    ('GB', 'United Kingdom'),
+    ('GE', 'Georgia'),
+    ('GH', 'Ghana'),
+    ('GL', 'Greenland'),
+    ('GR', 'Greece'),
+    ('GT', 'Guatemala'),
+    ('HN', 'Honduras'),
+    ('HR', 'Croatia'),
+    ('HU', 'Hungary'),
+    ('ID', 'Indonesia'),
+    ('IE', 'Ireland'),
+    ('IL', 'Israel'),
+    ('IN', 'India'),
+    ('IS', 'Iceland'),
+    ('IT', 'Italy'),
+    ('JM', 'Jamaica'),
+    ('JP', 'Japan'),
+    ('KE', 'Kenya'),
+    ('KR', 'South Korea'),
+    ('LI', 'Liechtenstein'),
+    ('LS', 'Lesotho'),
+    ('LT', 'Lithuania'),
+    ('LU', 'Luxembourg'),
+    ('LV', 'Latvia'),
+    ('MA', 'Morocco'),
+    ('MC', 'Monaco'),
+    ('MD', 'Moldova'),
+    ('ME', 'Montenegro'),
+    ('MK', 'North Macedonia'),
+    ('MT', 'Malta'),
+    ('MX', 'Mexico'),
+    ('MZ', 'Mozambique'),
+    ('NA', 'Namibia'),
+    ('NG', 'Nigeria'),
+    ('NI', 'Nicaragua'),
+    ('NL', 'Netherlands'),
+    ('NO', 'Norway'),
+    ('NZ', 'New Zealand'),
+    ('PA', 'Panama'),
+    ('PE', 'Peru'),
+    ('PH', 'Philippines'),
+    ('PL', 'Poland'),
+    ('PT', 'Portugal'),
+    ('PY', 'Paraguay'),
+    ('RO', 'Romania'),
+    ('RS', 'Serbia'),
+    ('RU', 'Russia'),
+    ('SE', 'Sweden'),
+    ('SI', 'Slovenia'),
+    ('SK', 'Slovakia'),
+    ('SM', 'San Marino'),
+    ('SN', 'Senegal'),
+    ('SV', 'El Salvador'),
+    ('TN', 'Tunisia'),
+    ('TR', 'Turkey'),
+    ('UA', 'Ukraine'),
+    ('US', 'United States'),
+    ('UY', 'Uruguay'),
+    ('VA', 'Vatican City'),
+    ('VE', 'Venezuela'),
+    ('ZA', 'South Africa'),
+    ('ZW', 'Zimbabwe'),
   ];
 
   String _filter = '';
 
-  List<(String, String)> get _filtered => _filter.isEmpty
-      ? _allCountries
-      : _allCountries
-            .where(
-              (c) =>
-                  c.$2.toLowerCase().contains(_filter.toLowerCase()) ||
-                  c.$1.toLowerCase().contains(_filter.toLowerCase()),
-            )
-            .toList();
+  List<(String, String)> get _filtered =>
+      _filter.isEmpty
+          ? _allCountries
+          : _allCountries
+              .where(
+                (c) =>
+                    c.$2.toLowerCase().contains(_filter.toLowerCase()) ||
+                    c.$1.toLowerCase().contains(_filter.toLowerCase()),
+              )
+              .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -1398,14 +1466,15 @@ class _CountryPickerDialogState extends State<_CountryPickerDialog> {
               decoration: InputDecoration(
                 hintText: 'Search\u2026',
                 hintStyle: GoogleFonts.sora(fontSize: 13, color: subColor),
-                prefixIcon:
-                    Icon(Icons.search_rounded, size: 18, color: subColor),
+                prefixIcon: Icon(
+                  Icons.search_rounded,
+                  size: 18,
+                  color: subColor,
+                ),
                 isDense: true,
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(
-                    color: _fg(widget.isLight, 0.15),
-                  ),
+                  borderSide: BorderSide(color: _fg(widget.isLight, 0.15)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),

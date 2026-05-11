@@ -62,16 +62,18 @@ class HolidaysService {
         '&zoom=3',
       );
       final response = await http
-          .get(uri, headers: {
-            'User-Agent': 'OneHandLauncher/1.0',
-            'Accept-Language': 'en',
-          })
+          .get(
+            uri,
+            headers: {
+              'User-Agent': 'OneHandLauncher/1.0',
+              'Accept-Language': 'en',
+            },
+          )
           .timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        final cc =
-            (data['address']?['country_code'] as String?)?.toUpperCase();
+        final cc = (data['address']?['country_code'] as String?)?.toUpperCase();
         if (cc != null && cc.length == 2) {
           await prefs.setString(_kCountryCode, cc);
           return cc;
@@ -84,10 +86,7 @@ class HolidaysService {
   }
 
   /// Persist a manually selected country code (from the picker dialog).
-  static Future<void> setCountryCode(
-    SharedPreferences prefs,
-    String cc,
-  ) async {
+  static Future<void> setCountryCode(SharedPreferences prefs, String cc) async {
     await prefs.setString(_kCountryCode, cc.toUpperCase());
   }
 
@@ -131,9 +130,7 @@ class HolidaysService {
     final uri = Uri.parse(
       'https://date.nager.at/api/v3/PublicHolidays/$year/$countryCode',
     );
-    final response = await http
-        .get(uri)
-        .timeout(const Duration(seconds: 15));
+    final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
       throw Exception(
@@ -142,17 +139,19 @@ class HolidaysService {
     }
 
     final raw = jsonDecode(response.body) as List;
-    final events = raw.map((e) {
-      final m = e as Map<String, dynamic>;
-      return CalendarEvent(
-        id: 'holiday_${countryCode}_${m['date']}',
-        date: DateTime.parse(m['date'] as String),
-        name: (m['localName'] as String?)?.isNotEmpty == true
-            ? m['localName'] as String
-            : (m['name'] as String? ?? ''),
-        isPublicHoliday: true,
-      );
-    }).toList();
+    final events =
+        raw.map((e) {
+          final m = e as Map<String, dynamic>;
+          return CalendarEvent(
+            id: 'holiday_${countryCode}_${m['date']}',
+            date: DateTime.parse(m['date'] as String),
+            name:
+                (m['localName'] as String?)?.isNotEmpty == true
+                    ? m['localName'] as String
+                    : (m['name'] as String? ?? ''),
+            isPublicHoliday: true,
+          );
+        }).toList();
 
     // Save serialised CalendarEvent list (not raw API) so fromJson is consistent
     await prefs.setString(

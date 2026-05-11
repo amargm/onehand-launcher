@@ -8,15 +8,15 @@ import 'settings_provider.dart';
 
 // ── Persisted country code ────────────────────────────────────────────────────
 
-final calCountryCodeProvider =
-    StateNotifierProvider<_CountryNotifier, String?>((ref) {
-      final prefs = ref.watch(sharedPreferencesProvider);
-      return _CountryNotifier(prefs);
-    });
+final calCountryCodeProvider = StateNotifierProvider<_CountryNotifier, String?>(
+  (ref) {
+    final prefs = ref.watch(sharedPreferencesProvider);
+    return _CountryNotifier(prefs);
+  },
+);
 
 class _CountryNotifier extends StateNotifier<String?> {
-  _CountryNotifier(this._prefs)
-    : super(_prefs.getString('cal_country_code'));
+  _CountryNotifier(this._prefs) : super(_prefs.getString('cal_country_code'));
 
   final SharedPreferences _prefs;
 
@@ -71,9 +71,6 @@ class UserEventsNotifier extends StateNotifier<List<CalendarEvent>> {
   }
 
   void _save(List<CalendarEvent> events) {
-    _prefs.setString(
-      _kKey,
-      jsonEncode(events.map((e) => e.toJson()).toList()),
-    );
+    _prefs.setString(_kKey, jsonEncode(events.map((e) => e.toJson()).toList()));
   }
 }
