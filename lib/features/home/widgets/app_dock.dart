@@ -111,11 +111,14 @@ class _AppDockState extends ConsumerState<AppDock> {
                 onTap:
                     _messageBoxOpen
                         ? () {}
-                        : () => setState(
-                          () =>
-                              _activeFolderId =
-                                  _activeFolderId == f.id ? null : f.id,
-                        ),
+                        : () {
+                          AppsService.forceHaptic();
+                          setState(
+                            () =>
+                                _activeFolderId =
+                                    _activeFolderId == f.id ? null : f.id,
+                          );
+                        },
               ),
             )
             .toList();
@@ -165,18 +168,22 @@ class _AppDockState extends ConsumerState<AppDock> {
           // so the panel properly collapses (no ghost tappable area) when
           // closed, and the SnackBar / message-box layout stays correct.
           AnimatedSwitcher(
-            duration: const Duration(milliseconds: 350),
-            switchInCurve: Curves.easeInOutQuart,
-            switchOutCurve: Curves.easeInOutQuart,
-            transitionBuilder:
-                (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SizeTransition(
-                    sizeFactor: animation,
-                    axisAlignment: -1.0,
-                    child: child,
-                  ),
+            duration: const Duration(milliseconds: 360),
+            transitionBuilder: (child, animation) {
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutBack,
+                reverseCurve: Curves.easeInQuart,
+              );
+              return FadeTransition(
+                opacity: animation,
+                child: ScaleTransition(
+                  alignment: Alignment.bottomCenter,
+                  scale: curved,
+                  child: child,
                 ),
+              );
+            },
             child:
                 activeFolder != null
                     ? ClipRRect(
@@ -462,73 +469,105 @@ class _FolderPanel extends ConsumerWidget {
 }
 
 // ── Folder panel app icon (44 px + 8 px label) ───────────────────────────────
-// ConsumerWidget so it can access foldersProvider (long-press menu) and
-// recentAppsProvider (records launches for the search recents list).
-class _FolderPanelIcon extends ConsumerWidget {
+// StatefulConsumerWidget so it owns the press-scale AnimationController.
+class _FolderPanelIcon extends ConsumerStatefulWidget {
   const _FolderPanelIcon({this.app});
 
   final AppInfo? app;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (app == null) {
-      // Empty — Expanded parent gives it equal slot width.
-      return const SizedBox.shrink();
-    }
+  ConsumerState<_FolderPanelIcon> createState() => _FolderPanelIconState();
+}
+
+class _FolderPanelIconState extends ConsumerState<_FolderPanelIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressCtrl;
+  late final Animation<double> _pressScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _pressScale = Tween<double>(
+      begin: 1.0,
+      end: 0.88,
+    ).animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.app == null) return const SizedBox.shrink();
+    final app = widget.app!;
     return GestureDetector(
       onTap: () {
-        ref.read(recentAppsProvider.notifier).recordLaunch(app!.packageName);
-        AppsService.openApp(app!.packageName);
+        AppsService.forceHaptic();
+        ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
+        AppsService.openApp(app.packageName);
       },
-      onLongPress: () => showAppContextMenu(context, ref, app!),
+      onLongPress: () => showAppContextMenu(context, ref, app),
+      onTapDown: (_) => _pressCtrl.forward(),
+      onTapUp: (_) => _pressCtrl.reverse(),
+      onTapCancel: () => _pressCtrl.reverse(),
       behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Color(0xFF1E1E1E),
-            ),
-            child: ClipOval(
-              child:
-                  app!.icon != null
-                      ? Image.memory(
-                        app!.icon!,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        errorBuilder:
-                            (_, __, ___) => const Icon(
-                              Icons.apps_rounded,
-                              size: 20,
-                              color: Colors.white54,
-                            ),
-                      )
-                      : const Icon(
-                        Icons.apps_rounded,
-                        size: 20,
-                        color: Colors.white54,
-                      ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          SizedBox(
-            width: 52,
-            child: Text(
-              app!.appName,
-              style: GoogleFonts.sora(
-                fontSize: 8,
-                color: Colors.white54,
-                letterSpacing: 0.1,
+      child: ScaleTransition(
+        scale: _pressScale,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF1E1E1E),
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
+              child: ClipOval(
+                child:
+                    app.icon != null
+                        ? Image.memory(
+                          app.icon!,
+                          fit: BoxFit.cover,
+                          gaplessPlayback: true,
+                          errorBuilder:
+                              (_, __, ___) => const Icon(
+                                Icons.apps_rounded,
+                                size: 20,
+                                color: Colors.white54,
+                              ),
+                        )
+                        : const Icon(
+                          Icons.apps_rounded,
+                          size: 20,
+                          color: Colors.white54,
+                        ),
+              ),
             ),
-          ),
-        ],
+            const SizedBox(height: 4),
+            SizedBox(
+              width: 52,
+              child: Text(
+                app.appName,
+                style: GoogleFonts.sora(
+                  fontSize: 8,
+                  color: Colors.white54,
+                  letterSpacing: 0.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -571,41 +610,79 @@ class _ContextShellRow extends ConsumerWidget {
 }
 
 // ── Context app icon (32 px) ──────────────────────────────────────────────────
-class _ContextAppIcon extends StatelessWidget {
+class _ContextAppIcon extends StatefulWidget {
   const _ContextAppIcon({required this.app});
 
   final AppInfo app;
 
   @override
+  State<_ContextAppIcon> createState() => _ContextAppIconState();
+}
+
+class _ContextAppIconState extends State<_ContextAppIcon>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressCtrl;
+  late final Animation<double> _pressScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 80),
+    );
+    _pressScale = Tween<double>(
+      begin: 1.0,
+      end: 0.88,
+    ).animate(CurvedAnimation(parent: _pressCtrl, curve: Curves.easeOut));
+  }
+
+  @override
+  void dispose() {
+    _pressCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => AppsService.openApp(app.packageName),
-      child: Container(
-        width: 32,
-        height: 32,
-        decoration: const BoxDecoration(
-          shape: BoxShape.circle,
-          color: Color(0xFF1E1E1E),
-        ),
-        child: ClipOval(
-          child:
-              app.icon != null
-                  ? Image.memory(
-                    app.icon!,
-                    fit: BoxFit.cover,
-                    gaplessPlayback: true,
-                    errorBuilder:
-                        (_, __, ___) => const Icon(
-                          Icons.apps_rounded,
-                          size: 16,
-                          color: Colors.white54,
-                        ),
-                  )
-                  : const Icon(
-                    Icons.apps_rounded,
-                    size: 16,
-                    color: Colors.white54,
-                  ),
+      onTap: () {
+        AppsService.forceHaptic();
+        AppsService.openApp(widget.app.packageName);
+      },
+      onTapDown: (_) => _pressCtrl.forward(),
+      onTapUp: (_) => _pressCtrl.reverse(),
+      onTapCancel: () => _pressCtrl.reverse(),
+      behavior: HitTestBehavior.opaque,
+      child: ScaleTransition(
+        scale: _pressScale,
+        child: Container(
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: Color(0xFF1E1E1E),
+          ),
+          child: ClipOval(
+            child:
+                widget.app.icon != null
+                    ? Image.memory(
+                      widget.app.icon!,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
+                      errorBuilder:
+                          (_, __, ___) => const Icon(
+                            Icons.apps_rounded,
+                            size: 16,
+                            color: Colors.white54,
+                          ),
+                    )
+                    : const Icon(
+                      Icons.apps_rounded,
+                      size: 16,
+                      color: Colors.white54,
+                    ),
+          ),
         ),
       ),
     );

@@ -456,9 +456,28 @@ class _TwoRowResults extends StatelessWidget {
             itemCount: cols.length,
             itemBuilder: (ctx, i) {
               final col = cols[i];
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 5),
-                child: Column(
+              // Stagger: each column fades + slides up from 10 px, with a
+              // per-column delay (col 0 = most relevant, animates first).
+              // Key includes the top result’s package so the animation
+              // replays when the result set changes.
+              final topKey =
+                  results.isNotEmpty ? results[0].packageName : 'empty';
+              return TweenAnimationBuilder<double>(
+                key: ValueKey('col_${i}_$topKey'),
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: Duration(milliseconds: 200 + i * 35),
+                curve: Curves.easeOutCubic,
+                builder:
+                    (_, v, child) => Opacity(
+                      opacity: v,
+                      child: Transform.translate(
+                        offset: Offset(0, 10 * (1 - v)),
+                        child: child,
+                      ),
+                    ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 5),
+                  child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Top row (less relevant of the pair)
@@ -503,7 +522,8 @@ class _TwoRowResults extends StatelessWidget {
                     ),
                   ],
                 ),
-              );
+              ),    // closes Padding (child of TweenAnimationBuilder)
+            );      // closes TweenAnimationBuilder
             },
           ),
         ),

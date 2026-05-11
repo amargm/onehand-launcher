@@ -160,7 +160,8 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     if (!mounted) return;
     final accent = ref.read(accentColorProvider);
     final isLight = ref.read(widgetLightModeProvider);
-    await showDialog<void>(
+    final messenger = ScaffoldMessenger.of(context);
+    final saved = await showDialog<bool>(
       context: context,
       builder:
           (_) => _AddEventDialog(
@@ -180,6 +181,28 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             },
           ),
     );
+    if (saved == true && mounted) {
+      messenger.showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: accent, size: 16),
+              const SizedBox(width: 8),
+              Text(
+                'Event added',
+                style: GoogleFonts.sora(fontSize: 13, color: Colors.white),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFF1A1A1A),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -210,7 +233,9 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     final panelBottom = mq.padding.bottom + 124.0;
     final panelH = mq.size.height * 0.46;
 
-    return ColoredBox(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
       color: bgColor,
       child: Stack(
         fit: StackFit.expand,
@@ -419,8 +444,8 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             right: 14,
             bottom: panelBottom,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 280),
-              curve: Curves.easeOut,
+              duration: const Duration(milliseconds: 460),
+              curve: _panelOpen ? Curves.easeOutBack : Curves.easeInQuart,
               height: _panelOpen ? panelH : 0,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
@@ -1446,7 +1471,7 @@ class _AddEventDialogState extends State<_AddEventDialog> {
       return;
     }
     widget.onSave(_selectedDate, name);
-    Navigator.pop(context);
+    Navigator.pop(context, true); // true = saved, triggers snackbar in parent
   }
 
   static const _months = [
