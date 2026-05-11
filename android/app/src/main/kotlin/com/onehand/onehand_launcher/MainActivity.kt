@@ -2,7 +2,9 @@ package com.onehand.onehand_launcher
 
 import android.app.WallpaperManager
 import android.app.role.RoleManager
+import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -28,10 +30,17 @@ import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
 
-    private val appsChannel      = "com.onehand.onehand_launcher/apps"
-    private val launcherChannel  = "com.onehand.onehand_launcher/launcher"
-    private val headphoneChannel = "com.onehand.onehand_launcher/headphone_events"
-    private val packageChannel   = "com.onehand.onehand_launcher/package_events"
+    private val appsChannel        = "com.onehand.onehand_launcher/apps"
+    private val launcherChannel    = "com.onehand.onehand_launcher/launcher"
+    private val headphoneChannel   = "com.onehand.onehand_launcher/headphone_events"
+    private val packageChannel     = "com.onehand.onehand_launcher/package_events"
+    private val appWidgetsChannel  = "com.onehand.onehand_launcher/appwidgets"
+
+    // AppWidget host — lazily initialised in configureFlutterEngine
+    private lateinit var appWidgetHostManager: AppWidgetHostManager
+
+    // Request code for the BIND_APPWIDGET permission intent
+    private val REQUEST_BIND_APPWIDGET = 1027
 
     // Off-main-thread executor for icon-loading operations.
     private val executor = Executors.newCachedThreadPool()
@@ -257,9 +266,6 @@ class MainActivity : FlutterActivity() {
         })
 
         // ── Package change event channel ─────────────────────────────────────
-        // Pushes the affected package name whenever an app is installed,
-        // uninstalled, or updated so Flutter can immediately refresh its
-        // app list without waiting for the next resume.
         EventChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             packageChannel,
@@ -271,6 +277,82 @@ class MainActivity : FlutterActivity() {
                 packageEventSink = null
             }
         })
+
+        // ── AppWidget channel ─────────────────────────────────────────────────
+        appWidgetHostManager = AppWidgetHostManager(applicationContext)
+
+        // Register the PlatformView factory so Flutter can embed host views
+        flutterEngine.platformViewsController.registry
+            .registerViewFactory(
+                "appwidget_view",
+                AppWidgetViewFactory(appWidgetHostManager),
+            )
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            appWidgetsChannel,
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+
+                "getAvailableWidgets" -> {
+                    executor.execute {
+                        try {
+                            val widgets = appWidgetHostManager.getAvailableWidgets()
+                            runOnUiThread { result.success(widgets) }
+                        } catch (e: Exception) {
+                            runOnUiThread { result.error("ERROR", e.message, null) }
+                        }
+                    }
+                }
+
+                "bindWidget" -> {
+                    val pkg = call.argument<String>("pkg") ?: run {
+                        result.error("INVALID_ARG", "pkg is null", null); return@setMethodCallHandler
+                    }
+                    val cls = call.argument<String>("cls") ?: run {
+                        result.error("INVALID_ARG", "cls is null", null); return@setMethodCallHandler
+                    }
+                    val rawId = appWidgetHostManager.allocateAndBind(pkg, cls)
+                    if (rawId >= 0) {
+                        // Bound successfully — check if widget needs configuration
+                        val info = AppWidgetManager.getInstance(applicationContext)
+                            .getAppWidgetInfo(rawId)
+                        if (info?.configure != null) {
+                            // Launch configure activity; Flutter will get id via
+                            // onActivityResult forwarded through the channel
+                            val configIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                                component = info.configure
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, rawId)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+                            startActivityForResult(configIntent, rawId)
+                        }
+                        result.success(rawId)
+                    } else {
+                        // Need permission — fire the bind intent
+                        val needsPermId = -rawId
+                        val bindIntent = Intent(AppWidgetManager.ACTION_APPWIDGET_BIND).apply {
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, needsPermId)
+                            putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER,
+                                ComponentName(pkg, cls))
+                        }
+                        startActivityForResult(bindIntent, REQUEST_BIND_APPWIDGET)
+                        // Return the pending id so Flutter can track it
+                        result.success(-needsPermId - 100000) // sentinel: negative large
+                    }
+                }
+
+                "deleteWidget" -> {
+                    val id = call.argument<Int>("appWidgetId") ?: run {
+                        result.error("INVALID_ARG", "appWidgetId is null", null); return@setMethodCallHandler
+                    }
+                    appWidgetHostManager.deleteWidget(id)
+                    result.success(null)
+                }
+
+                else -> result.notImplemented()
+            }
+        }
     }
 
     // ── Receiver / callback lifecycle ────────────────────────────────────────
@@ -282,6 +364,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onStart() {
         super.onStart()
+        if (::appWidgetHostManager.isInitialized) appWidgetHostManager.startListening()
         val pkgFilter = IntentFilter().apply {
             addAction(Intent.ACTION_PACKAGE_ADDED)
             addAction(Intent.ACTION_PACKAGE_REMOVED)
@@ -293,6 +376,7 @@ class MainActivity : FlutterActivity() {
 
     override fun onStop() {
         super.onStop()
+        if (::appWidgetHostManager.isInitialized) appWidgetHostManager.stopListening()
         try { unregisterReceiver(packageReceiver) } catch (_: Exception) {}
     }
 
@@ -496,4 +580,5 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val REQUEST_CODE_SET_DEFAULT_HOME = 1001
     }
+}
 }

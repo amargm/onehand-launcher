@@ -14,6 +14,9 @@
     <!-- Coarse location for one-time country detection (holiday calendar) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <!-- Host Android app widgets (requires user approval per-widget) -->
+    <uses-permission android:name="android.permission.BIND_APPWIDGET" />
+
     <!-- ── Explicit package queries (Android 11+ visibility) ─────────────
          Without this block, PackageManager won't return launcher-intent apps
          even with QUERY_ALL_PACKAGES declared on some OEM builds. -->
