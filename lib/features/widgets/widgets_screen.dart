@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -921,6 +922,8 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             (e.endDate.year == year && e.endDate.month == m)
                 ? e.endDate.day
                 : dim;
+        // Guard: skip degenerate spans (corrupted data where endDay < startDay)
+        if (endDay < startDay) continue;
         final contL = !(e.date.year == year && e.date.month == m);
         final contR = !(e.endDate.year == year && e.endDate.month == m);
         map.putIfAbsent(m, () => []).add((
@@ -989,9 +992,11 @@ class _EventTile extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 60,
+            width: 80,
             child: Text(
               dateStr,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: GoogleFonts.sora(
                 fontSize: 10,
                 color: _fg(isLight, 0.45),
@@ -1898,7 +1903,7 @@ class _EventSpanPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_EventSpanPainter old) =>
-      old.rowSpans != rowSpans ||
+      !listEquals(old.rowSpans, rowSpans) ||
       old.cellW != cellW ||
       old.rowH != rowH ||
       old.accent != accent;
@@ -1933,7 +1938,6 @@ class _CounterCard extends StatelessWidget {
     final borderColor = _fg(isLight, 0.08);
 
     return GestureDetector(
-      onTap: onIncrement,
       onLongPress: () => _showOptions(context),
       child: Container(
         height: 88,
@@ -1947,23 +1951,27 @@ class _CounterCard extends StatelessWidget {
           child: Row(
             children: [
               // ── Left 40%: counter number ────────────────────────────
-              Flexible(
+              Expanded(
                 flex: 40,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  child: Center(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '${model.count}',
-                        style: GoogleFonts.sora(
-                          fontSize: 52,
-                          fontWeight: FontWeight.w700,
-                          color: accent,
-                          height: 1.0,
+                child: GestureDetector(
+                  onTap: onIncrement,
+                  behavior: HitTestBehavior.opaque,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          '${model.count}',
+                          style: GoogleFonts.sora(
+                            fontSize: 52,
+                            fontWeight: FontWeight.w700,
+                            color: accent,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
@@ -1975,7 +1983,7 @@ class _CounterCard extends StatelessWidget {
               Container(width: 1, color: dividerColor),
 
               // ── Right 60%: note + controls ──────────────────────────
-              Flexible(
+              Expanded(
                 flex: 60,
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
@@ -2026,6 +2034,7 @@ class _CounterCard extends StatelessWidget {
                             isLight: isLight,
                             onTap: onIncrement,
                           ),
+                          const SizedBox(width: 2),
                         ],
                       ),
                     ],
@@ -2040,6 +2049,7 @@ class _CounterCard extends StatelessWidget {
   }
 
   void _showOptions(BuildContext context) {
+    if (!context.mounted) return;
     final bg = isLight ? Colors.white : const Color(0xFF1E1E1E);
     showModalBottomSheet<void>(
       context: context,
@@ -2185,7 +2195,7 @@ class _AddCounterDialogState extends ConsumerState<_AddCounterDialog> {
     final bg = widget.isLight ? Colors.white : const Color(0xFF1E1E1E);
     final textColor = _fg(widget.isLight, 0.87);
     final hintColor = _fg(widget.isLight, 0.35);
-    final remaining = 75 - _noteCtrl.text.length;
+    final remaining = 75 - _noteCtrl.text.trim().length;
 
     return AlertDialog(
       backgroundColor: bg,

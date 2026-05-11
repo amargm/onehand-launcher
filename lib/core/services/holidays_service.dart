@@ -209,12 +209,14 @@ class HolidaysService {
                   ? m['localName'] as String
                   : (m['name'] as String? ?? '');
           if (name.isEmpty) continue;
-          events.add(CalendarEvent(
-            id: 'holiday_${countryCode}_$dateStr',
-            date: DateTime.parse(dateStr),
-            name: name,
-            isPublicHoliday: true,
-          ));
+          events.add(
+            CalendarEvent(
+              id: 'holiday_${countryCode}_$dateStr',
+              date: DateTime.parse(dateStr),
+              name: name,
+              isPublicHoliday: true,
+            ),
+          );
         } catch (_) {
           continue; // skip malformed entries
         }
@@ -274,9 +276,7 @@ class HolidaysService {
           // Use whereType<Map> to avoid cast exceptions on different Map types
           final nameList = m['name'];
           final names =
-              nameList is List
-                  ? nameList.whereType<Map>().toList()
-                  : <Map>[];
+              nameList is List ? nameList.whereType<Map>().toList() : <Map>[];
 
           String name = '';
           if (names.isNotEmpty) {
@@ -288,12 +288,14 @@ class HolidaysService {
           }
           if (name.isEmpty) continue;
 
-          events.add(CalendarEvent(
-            id: 'holiday_${countryCode}_$dateStr',
-            date: DateTime.parse(dateStr),
-            name: name,
-            isPublicHoliday: true,
-          ));
+          events.add(
+            CalendarEvent(
+              id: 'holiday_${countryCode}_$dateStr',
+              date: DateTime.parse(dateStr),
+              name: name,
+              isPublicHoliday: true,
+            ),
+          );
         } catch (_) {
           continue; // skip malformed entries
         }
@@ -326,7 +328,9 @@ class HolidaysService {
   static Exception _networkException(Object e) {
     final msg = e.toString().toLowerCase();
     if (msg.contains('timeout') || msg.contains('timed out')) {
-      return Exception('Connection timed out. Check your internet and try again.');
+      return Exception(
+        'Connection timed out. Check your internet and try again.',
+      );
     }
     if (msg.contains('socket') ||
         msg.contains('connection') ||

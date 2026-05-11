@@ -478,52 +478,55 @@ class _TwoRowResults extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 5),
                   child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Top row (less relevant of the pair)
-                    SizedBox(
-                      height: _rowH,
-                      child:
-                          col.top != null
-                              ? _AppCell(
-                                app: col.top!,
-                                size: _iconSize,
-                                isSelected:
-                                    multiPickMode &&
-                                    selectedPkgs.contains(col.top!.packageName),
-                                accent: accent,
-                                onTap:
-                                    () => _handleTap(ctx, col.top!.packageName),
-                              )
-                              : const SizedBox(),
-                    ),
-                    SizedBox(height: _gap),
-                    // Bottom row (more relevant of the pair)
-                    SizedBox(
-                      height: _rowH,
-                      child:
-                          col.bottom != null
-                              ? _AppCell(
-                                app: col.bottom!,
-                                size: _iconSize,
-                                isSelected:
-                                    multiPickMode &&
-                                    selectedPkgs.contains(
-                                      col.bottom!.packageName,
-                                    ),
-                                accent: accent,
-                                onTap:
-                                    () => _handleTap(
-                                      ctx,
-                                      col.bottom!.packageName,
-                                    ),
-                              )
-                              : const SizedBox(),
-                    ),
-                  ],
-                ),
-              ),    // closes Padding (child of TweenAnimationBuilder)
-            );      // closes TweenAnimationBuilder
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Top row (less relevant of the pair)
+                      SizedBox(
+                        height: _rowH,
+                        child:
+                            col.top != null
+                                ? _AppCell(
+                                  app: col.top!,
+                                  size: _iconSize,
+                                  isSelected:
+                                      multiPickMode &&
+                                      selectedPkgs.contains(
+                                        col.top!.packageName,
+                                      ),
+                                  accent: accent,
+                                  onTap:
+                                      () =>
+                                          _handleTap(ctx, col.top!.packageName),
+                                )
+                                : const SizedBox(),
+                      ),
+                      SizedBox(height: _gap),
+                      // Bottom row (more relevant of the pair)
+                      SizedBox(
+                        height: _rowH,
+                        child:
+                            col.bottom != null
+                                ? _AppCell(
+                                  app: col.bottom!,
+                                  size: _iconSize,
+                                  isSelected:
+                                      multiPickMode &&
+                                      selectedPkgs.contains(
+                                        col.bottom!.packageName,
+                                      ),
+                                  accent: accent,
+                                  onTap:
+                                      () => _handleTap(
+                                        ctx,
+                                        col.bottom!.packageName,
+                                      ),
+                                )
+                                : const SizedBox(),
+                      ),
+                    ],
+                  ),
+                ), // closes Padding (child of TweenAnimationBuilder)
+              ); // closes TweenAnimationBuilder
             },
           ),
         ),
