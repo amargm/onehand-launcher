@@ -157,174 +157,27 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
   }
 
   Future<void> _showAddEventDialog() async {
+    if (!mounted) return;
     final accent = ref.read(accentColorProvider);
     final isLight = ref.read(widgetLightModeProvider);
-    final now = DateTime.now();
-    DateTime selectedDate = DateTime(
-      _displayYear,
-      now.year == _displayYear ? now.month : 1,
-      now.year == _displayYear ? now.day : 1,
-    );
-    var nameError = false;
-    final nameCtrl = TextEditingController();
-
-    await showDialog(
+    await showDialog<void>(
       context: context,
       builder:
-          (ctx) => StatefulBuilder(
-            builder: (ctx, setS) {
-              final bg = isLight ? Colors.white : const Color(0xFF1E1E1E);
-              final textColor = _fg(isLight, 0.87);
-              final hintColor = _fg(isLight, 0.35);
-              return AlertDialog(
-                backgroundColor: bg,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+          (_) => _AddEventDialog(
+            displayYear: _displayYear,
+            accent: accent,
+            isLight: isLight,
+            onSave: (date, name) {
+              ref.read(userEventsProvider.notifier).add(
+                CalendarEvent(
+                  date: date,
+                  name: name,
+                  isPublicHoliday: false,
                 ),
-                title: Text(
-                  'Add Event',
-                  style: GoogleFonts.sora(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    color: textColor,
-                  ),
-                ),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: ctx,
-                          initialDate: selectedDate,
-                          firstDate: DateTime(_displayYear),
-                          lastDate: DateTime(_displayYear, 12, 31),
-                          builder:
-                              (ctx, child) => Theme(
-                                data: Theme.of(ctx).copyWith(
-                                  colorScheme: ColorScheme.dark(
-                                    primary: accent,
-                                  ),
-                                ),
-                                child: child!,
-                              ),
-                        );
-                        if (picked != null) setS(() => selectedDate = picked);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: accent.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today_rounded,
-                              size: 14,
-                              color: accent,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _fmtDate(selectedDate),
-                              style: GoogleFonts.sora(
-                                fontSize: 13,
-                                color: textColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: nameCtrl,
-                      autofocus: true,
-                      style: GoogleFonts.sora(fontSize: 13, color: textColor),
-                      onChanged: (_) {
-                        if (nameError) setS(() => nameError = false);
-                      },
-                      decoration: InputDecoration(
-                        hintText: 'Event name',
-                        hintStyle: GoogleFonts.sora(
-                          fontSize: 13,
-                          color: hintColor,
-                        ),
-                        errorText:
-                            nameError ? 'Enter a name for the event' : null,
-                        errorStyle: GoogleFonts.sora(
-                          fontSize: 11,
-                          color: Colors.red.shade400,
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color:
-                                nameError
-                                    ? Colors.red.shade400
-                                    : _fg(isLight, 0.18),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(
-                            color: nameError ? Colors.red.shade400 : accent,
-                          ),
-                        ),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 10,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(
-                      'Cancel',
-                      style: GoogleFonts.sora(color: _fg(isLight, 0.40)),
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      final name = nameCtrl.text.trim();
-                      if (name.isEmpty) {
-                        setS(() => nameError = true);
-                        return;
-                      }
-                      ref
-                          .read(userEventsProvider.notifier)
-                          .add(
-                            CalendarEvent(
-                              date: selectedDate,
-                              name: name,
-                              isPublicHoliday: false,
-                            ),
-                          );
-                      Navigator.pop(ctx);
-                    },
-                    child: Text(
-                      'Save',
-                      style: GoogleFonts.sora(
-                        color: accent,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
               );
             },
           ),
     );
-    nameCtrl.dispose();
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
@@ -812,6 +665,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
         // Add event row
         GestureDetector(
           onTap: _showAddEventDialog,
+          behavior: HitTestBehavior.opaque,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
@@ -938,24 +792,6 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     }
     return map;
   }
-
-  static const _months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
-
-  static String _fmtDate(DateTime d) =>
-      '${_months[d.month - 1]} ${d.day}, ${d.year}';
 }
 
 // ── Event tile ────────────────────────────────────────────────────────────────
@@ -1539,6 +1375,201 @@ class _AddWidgetButton extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+// ── Add event dialog ──────────────────────────────────────────────────────────
+
+class _AddEventDialog extends StatefulWidget {
+  const _AddEventDialog({
+    required this.displayYear,
+    required this.accent,
+    required this.isLight,
+    required this.onSave,
+  });
+
+  final int displayYear;
+  final Color accent;
+  final bool isLight;
+  final void Function(DateTime date, String name) onSave;
+
+  @override
+  State<_AddEventDialog> createState() => _AddEventDialogState();
+}
+
+class _AddEventDialogState extends State<_AddEventDialog> {
+  late DateTime _selectedDate;
+  final _nameCtrl = TextEditingController();
+  bool _nameError = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _selectedDate = DateTime(
+      widget.displayYear,
+      now.year == widget.displayYear ? now.month : 1,
+      now.year == widget.displayYear ? now.day : 1,
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime(widget.displayYear),
+      lastDate: DateTime(widget.displayYear, 12, 31),
+      builder:
+          (ctx, child) => Theme(
+            data: Theme.of(ctx).copyWith(
+              colorScheme: ColorScheme.dark(primary: widget.accent),
+            ),
+            child: child!,
+          ),
+    );
+    if (picked != null && mounted) setState(() => _selectedDate = picked);
+  }
+
+  void _save() {
+    final name = _nameCtrl.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = true);
+      return;
+    }
+    widget.onSave(_selectedDate, name);
+    Navigator.pop(context);
+  }
+
+  static const _months = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+
+  static String _fmtDate(DateTime d) =>
+      '${_months[d.month - 1]} ${d.day}, ${d.year}';
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = widget.isLight ? Colors.white : const Color(0xFF1E1E1E);
+    final textColor = _fg(widget.isLight, 0.87);
+    final hintColor = _fg(widget.isLight, 0.35);
+
+    return AlertDialog(
+      backgroundColor: bg,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Text(
+        'Add Event',
+        style: GoogleFonts.sora(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: _pickDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: widget.accent.withValues(alpha: 0.4),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    size: 14,
+                    color: widget.accent,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _fmtDate(_selectedDate),
+                    style: GoogleFonts.sora(fontSize: 13, color: textColor),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _nameCtrl,
+            autofocus: true,
+            style: GoogleFonts.sora(fontSize: 13, color: textColor),
+            onChanged: (_) {
+              if (_nameError) setState(() => _nameError = false);
+            },
+            decoration: InputDecoration(
+              hintText: 'Event name',
+              hintStyle: GoogleFonts.sora(fontSize: 13, color: hintColor),
+              errorText: _nameError ? 'Enter a name for the event' : null,
+              errorStyle: GoogleFonts.sora(
+                fontSize: 11,
+                color: Colors.red.shade400,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color:
+                      _nameError
+                          ? Colors.red.shade400
+                          : _fg(widget.isLight, 0.18),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: _nameError ? Colors.red.shade400 : widget.accent,
+                ),
+              ),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 12,
+                vertical: 10,
+              ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Cancel',
+            style: GoogleFonts.sora(color: _fg(widget.isLight, 0.40)),
+          ),
+        ),
+        TextButton(
+          onPressed: _save,
+          child: Text(
+            'Save',
+            style: GoogleFonts.sora(
+              color: widget.accent,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
