@@ -165,6 +165,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
       now.year == _displayYear ? now.month : 1,
       now.year == _displayYear ? now.day : 1,
     );
+    var nameError = false;
     final nameCtrl = TextEditingController();
 
     await showDialog(
@@ -243,20 +244,37 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     const SizedBox(height: 12),
                     TextField(
                       controller: nameCtrl,
+                      autofocus: true,
                       style: GoogleFonts.sora(fontSize: 13, color: textColor),
+                      onChanged: (_) {
+                        if (nameError) setS(() => nameError = false);
+                      },
                       decoration: InputDecoration(
                         hintText: 'Event name',
                         hintStyle: GoogleFonts.sora(
                           fontSize: 13,
                           color: hintColor,
                         ),
+                        errorText:
+                            nameError ? 'Enter a name for the event' : null,
+                        errorStyle: GoogleFonts.sora(
+                          fontSize: 11,
+                          color: Colors.red.shade400,
+                        ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: _fg(isLight, 0.18)),
+                          borderSide: BorderSide(
+                            color:
+                                nameError
+                                    ? Colors.red.shade400
+                                    : _fg(isLight, 0.18),
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide(color: accent),
+                          borderSide: BorderSide(
+                            color: nameError ? Colors.red.shade400 : accent,
+                          ),
                         ),
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
@@ -278,7 +296,10 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                   TextButton(
                     onPressed: () {
                       final name = nameCtrl.text.trim();
-                      if (name.isEmpty) return;
+                      if (name.isEmpty) {
+                        setS(() => nameError = true);
+                        return;
+                      }
                       ref
                           .read(userEventsProvider.notifier)
                           .add(
@@ -374,31 +395,37 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           child: Column(
-                            children: placedWidgets.map((w) {
-                              final displayWidth =
-                                  mq.size.width - 28; // full width - padding
-                              final displayHeight =
-                                  w.minHeight.toDouble().clamp(80.0, 400.0);
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: AndroidWidgetView(
-                                        appWidgetId: w.appWidgetId,
-                                        width: displayWidth,
-                                        height: displayHeight,
-                                      ),
-                                    ),
-                                    // Long-press to remove
-                                    Positioned(
-                                      top: 4,
-                                      right: 4,
-                                      child: GestureDetector(
-                                        onTap: () async {
-                                          final confirm =
-                                              await showDialog<bool>(
+                            children:
+                                placedWidgets.map((w) {
+                                  final displayWidth =
+                                      mq.size.width -
+                                      28; // full width - padding
+                                  final displayHeight = w.minHeight
+                                      .toDouble()
+                                      .clamp(80.0, 400.0);
+                                  return Padding(
+                                    padding: const EdgeInsets.only(bottom: 12),
+                                    child: Stack(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          child: AndroidWidgetView(
+                                            appWidgetId: w.appWidgetId,
+                                            width: displayWidth,
+                                            height: displayHeight,
+                                          ),
+                                        ),
+                                        // Long-press to remove
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              final confirm = await showDialog<
+                                                bool
+                                              >(
                                                 context: context,
                                                 builder:
                                                     (_) => AlertDialog(
@@ -413,20 +440,22 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                                                       actions: [
                                                         TextButton(
                                                           onPressed:
-                                                              () => Navigator.pop(
-                                                                context,
-                                                                false,
-                                                              ),
+                                                              () =>
+                                                                  Navigator.pop(
+                                                                    context,
+                                                                    false,
+                                                                  ),
                                                           child: const Text(
                                                             'Cancel',
                                                           ),
                                                         ),
                                                         TextButton(
                                                           onPressed:
-                                                              () => Navigator.pop(
-                                                                context,
-                                                                true,
-                                                              ),
+                                                              () =>
+                                                                  Navigator.pop(
+                                                                    context,
+                                                                    true,
+                                                                  ),
                                                           child: const Text(
                                                             'Remove',
                                                           ),
@@ -434,35 +463,38 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                                                       ],
                                                     ),
                                               );
-                                          if (confirm == true) {
-                                            await deleteWidget(w.appWidgetId);
-                                            ref
-                                                .read(
-                                                  placedAndroidWidgetsProvider
-                                                      .notifier,
-                                                )
-                                                .remove(w.appWidgetId);
-                                          }
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.all(4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.black
-                                                .withValues(alpha: 0.55),
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.close_rounded,
-                                            size: 14,
-                                            color: Colors.white,
+                                              if (confirm == true) {
+                                                await deleteWidget(
+                                                  w.appWidgetId,
+                                                );
+                                                ref
+                                                    .read(
+                                                      placedAndroidWidgetsProvider
+                                                          .notifier,
+                                                    )
+                                                    .remove(w.appWidgetId);
+                                              }
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.55,
+                                                ),
+                                                shape: BoxShape.circle,
+                                              ),
+                                              child: const Icon(
+                                                Icons.close_rounded,
+                                                size: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
                                           ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
+                                  );
+                                }).toList(),
                           ),
                         ),
                       ],
@@ -517,7 +549,8 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                 child: _AddWidgetButton(
                   isLight: isLight,
                   accent: accent,
-                  onTap: () => _showAddWidgetChoice(context, ref, isLight, accent),
+                  onTap:
+                      () => _showAddWidgetChoice(context, ref, isLight, accent),
                 ),
               ),
 
@@ -804,66 +837,67 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Add Widget',
-                style: GoogleFonts.sora(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: textColor,
-                ),
-              ),
-              const SizedBox(height: 20),
-              // ── App Widget option ──────────────────────────────────────
-              _ChoiceTile(
-                icon: Icons.widgets_rounded,
-                label: 'App Widget',
-                subtitle: 'Embed a live widget from another app',
-                accent: accent,
-                textColor: textColor,
-                subColor: subColor,
-                onTap: () {
-                  Navigator.pop(context);
-                  showAndroidWidgetPicker(context, ref);
-                },
-              ),
-              const SizedBox(height: 12),
-              // ── Custom widget option ───────────────────────────────────
-              _ChoiceTile(
-                icon: Icons.add_box_rounded,
-                label: 'Custom Widget',
-                subtitle: 'More custom widgets coming soon',
-                accent: accent,
-                textColor: textColor,
-                subColor: subColor,
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Custom widgets coming soon',
-                        style: GoogleFonts.sora(fontSize: 13),
-                      ),
-                      backgroundColor: const Color(0xFF1A1A1A),
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      duration: const Duration(seconds: 2),
+      builder:
+          (_) => SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Add Widget',
+                    style: GoogleFonts.sora(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: textColor,
                     ),
-                  );
-                },
+                  ),
+                  const SizedBox(height: 20),
+                  // ── App Widget option ──────────────────────────────────────
+                  _ChoiceTile(
+                    icon: Icons.widgets_rounded,
+                    label: 'App Widget',
+                    subtitle: 'Embed a live widget from another app',
+                    accent: accent,
+                    textColor: textColor,
+                    subColor: subColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      showAndroidWidgetPicker(context, ref);
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  // ── Custom widget option ───────────────────────────────────
+                  _ChoiceTile(
+                    icon: Icons.add_box_rounded,
+                    label: 'Custom Widget',
+                    subtitle: 'More custom widgets coming soon',
+                    accent: accent,
+                    textColor: textColor,
+                    subColor: subColor,
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Custom widgets coming soon',
+                            style: GoogleFonts.sora(fontSize: 13),
+                          ),
+                          backgroundColor: const Color(0xFF1A1A1A),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 

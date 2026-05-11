@@ -44,9 +44,19 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
   Future<void> _load() async {
     try {
       final list = await getAvailableWidgets();
-      if (mounted) setState(() { _widgets = list; _loading = false; });
+      if (mounted) {
+        setState(() {
+          _widgets = list;
+          _loading = false;
+        });
+      }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     }
   }
 
@@ -57,7 +67,9 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
       final id = await bindWidget(aw.pkg, aw.cls);
       if (!mounted) return;
       if (id >= 0) {
-        ref.read(placedAndroidWidgetsProvider.notifier).add(
+        ref
+            .read(placedAndroidWidgetsProvider.notifier)
+            .add(
               PlacedAndroidWidget(
                 appWidgetId: id,
                 pkg: aw.pkg,
@@ -69,10 +81,10 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
             );
         Navigator.of(context).pop();
       } else {
-        // Bind permission dialog was shown by native side; close picker and
-        // tell the user to retry.
+        // Capture messenger BEFORE popping — context is invalid after pop.
+        final messenger = ScaffoldMessenger.of(context);
         Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
+        messenger.showSnackBar(
           const SnackBar(
             content: Text(
               'Grant the widget permission, then add the widget again.',
@@ -83,9 +95,9 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
     } catch (e) {
       if (mounted) {
         setState(() => _binding = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to add widget: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to add widget: $e')));
       }
     }
   }
@@ -97,37 +109,39 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
       initialChildSize: 0.65,
       maxChildSize: 0.92,
       minChildSize: 0.35,
-      builder: (_, controller) => Container(
-        decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: cs.onSurface.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+      builder:
+          (_, controller) => Container(
+            decoration: BoxDecoration(
+              color: cs.surface,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Text(
-                'Add App Widget',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.bold),
-              ),
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: cs.onSurface.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+                  child: Text(
+                    'Add App Widget',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const Divider(height: 1),
+                Expanded(child: _buildBody(controller)),
+              ],
             ),
-            const Divider(height: 1),
-            Expanded(child: _buildBody(controller)),
-          ],
-        ),
-      ),
+          ),
     );
   }
 
@@ -139,8 +153,10 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Text('Could not load widgets:\n$_error',
-              textAlign: TextAlign.center),
+          child: Text(
+            'Could not load widgets:\n$_error',
+            textAlign: TextAlign.center,
+          ),
         ),
       );
     }
@@ -153,11 +169,12 @@ class _WidgetPickerSheetState extends ConsumerState<_WidgetPickerSheet> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: widgets.length,
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
-      itemBuilder: (_, i) => _WidgetTile(
-        widget: widgets[i],
-        busy: _binding != null,
-        onTap: () => _pick(widgets[i]),
-      ),
+      itemBuilder:
+          (_, i) => _WidgetTile(
+            widget: widgets[i],
+            busy: _binding != null,
+            onTap: () => _pick(widgets[i]),
+          ),
     );
   }
 }

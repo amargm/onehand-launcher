@@ -19,13 +19,13 @@ class PlacedAndroidWidget {
   });
 
   Map<String, dynamic> toJson() => {
-        'appWidgetId': appWidgetId,
-        'pkg': pkg,
-        'cls': cls,
-        'label': label,
-        'minWidth': minWidth,
-        'minHeight': minHeight,
-      };
+    'appWidgetId': appWidgetId,
+    'pkg': pkg,
+    'cls': cls,
+    'label': label,
+    'minWidth': minWidth,
+    'minHeight': minHeight,
+  };
 
   factory PlacedAndroidWidget.fromJson(Map<String, dynamic> j) =>
       PlacedAndroidWidget(

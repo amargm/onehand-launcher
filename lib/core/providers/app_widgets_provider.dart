@@ -9,20 +9,20 @@ const _kPlacedWidgets = 'placed_android_widgets';
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 final placedAndroidWidgetsProvider = StateNotifierProvider<
-    PlacedAndroidWidgetsNotifier, List<PlacedAndroidWidget>>(
-  (ref) {
-    final prefs = ref.watch(sharedPreferencesProvider);
-    return PlacedAndroidWidgetsNotifier(prefs);
-  },
-);
+  PlacedAndroidWidgetsNotifier,
+  List<PlacedAndroidWidget>
+>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return PlacedAndroidWidgetsNotifier(prefs);
+});
 
 // ── Notifier ──────────────────────────────────────────────────────────────────
 
 class PlacedAndroidWidgetsNotifier
     extends StateNotifier<List<PlacedAndroidWidget>> {
   PlacedAndroidWidgetsNotifier(SharedPreferences prefs)
-      : _prefs = prefs,
-        super(_load(prefs));
+    : _prefs = prefs,
+      super(_load(prefs));
 
   final SharedPreferences _prefs;
 

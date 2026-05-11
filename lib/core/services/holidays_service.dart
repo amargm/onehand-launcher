@@ -122,10 +122,49 @@ class HolidaysService {
     SharedPreferences prefs,
   ) => _download(year, countryCode, prefs);
 
+  // ── Download with fallback ────────────────────────────────────────────────
+
   static Future<List<CalendarEvent>> _download(
     int year,
     String countryCode,
     SharedPreferences prefs,
+  ) async {
+    List<CalendarEvent>? events;
+    String? lastError;
+
+    // Primary: Nager.Date — fast, well-known, supports ~100 countries
+    try {
+      events = await _downloadNager(year, countryCode);
+    } catch (e) {
+      lastError = e.toString();
+    }
+
+    // Backup: OpenHolidays API — broader country coverage, different format
+    if (events == null) {
+      try {
+        events = await _downloadOpenHolidays(year, countryCode);
+      } catch (e) {
+        lastError = e.toString();
+      }
+    }
+
+    if (events == null) {
+      throw Exception(lastError ?? 'Could not download holidays');
+    }
+
+    // Cache the successful result (CalendarEvent list, not raw API bytes)
+    await prefs.setString(
+      _cacheKey(year, countryCode),
+      jsonEncode(events.map((e) => e.toJson()).toList()),
+    );
+    return events;
+  }
+
+  // ── Nager.Date ────────────────────────────────────────────────────────────
+
+  static Future<List<CalendarEvent>> _downloadNager(
+    int year,
+    String countryCode,
   ) async {
     final uri = Uri.parse(
       'https://date.nager.at/api/v3/PublicHolidays/$year/$countryCode',
@@ -133,31 +172,78 @@ class HolidaysService {
     final response = await http.get(uri).timeout(const Duration(seconds: 15));
 
     if (response.statusCode != 200) {
-      throw Exception(
-        'Could not download holidays (HTTP ${response.statusCode})',
-      );
+      throw Exception('Nager.Date HTTP ${response.statusCode}');
     }
 
     final raw = jsonDecode(response.body) as List;
-    final events =
-        raw.map((e) {
-          final m = e as Map<String, dynamic>;
-          return CalendarEvent(
-            id: 'holiday_${countryCode}_${m['date']}',
-            date: DateTime.parse(m['date'] as String),
-            name:
-                (m['localName'] as String?)?.isNotEmpty == true
-                    ? m['localName'] as String
-                    : (m['name'] as String? ?? ''),
-            isPublicHoliday: true,
-          );
-        }).toList();
+    if (raw.isEmpty) throw Exception('Nager.Date returned empty list');
 
-    // Save serialised CalendarEvent list (not raw API) so fromJson is consistent
-    await prefs.setString(
-      _cacheKey(year, countryCode),
-      jsonEncode(events.map((e) => e.toJson()).toList()),
+    return raw.map((e) {
+      final m = e as Map<String, dynamic>;
+      return CalendarEvent(
+        id: 'holiday_${countryCode}_${m['date']}',
+        date: DateTime.parse(m['date'] as String),
+        name:
+            (m['localName'] as String?)?.isNotEmpty == true
+                ? m['localName'] as String
+                : (m['name'] as String? ?? ''),
+        isPublicHoliday: true,
+      );
+    }).toList();
+  }
+
+  // ── OpenHolidays API (backup) ─────────────────────────────────────────────
+  // Endpoint: GET https://openholidaysapi.org/PublicHolidays
+  //   ?countryIsoCode=XX&languageIsoCode=EN&validFrom=YYYY-01-01&validTo=YYYY-12-31
+  // Response: [{id, startDate, endDate, type, name:[{language, text}]}]
+
+  static Future<List<CalendarEvent>> _downloadOpenHolidays(
+    int year,
+    String countryCode,
+  ) async {
+    final uri = Uri.parse(
+      'https://openholidaysapi.org/PublicHolidays'
+      '?countryIsoCode=$countryCode'
+      '&languageIsoCode=EN'
+      '&validFrom=$year-01-01'
+      '&validTo=$year-12-31',
     );
+    final response = await http
+        .get(uri, headers: {'Accept': 'application/json'})
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode != 200) {
+      throw Exception('OpenHolidays HTTP ${response.statusCode}');
+    }
+
+    final raw = jsonDecode(response.body) as List;
+    if (raw.isEmpty) throw Exception('OpenHolidays returned empty list');
+
+    final events = <CalendarEvent>[];
+    for (final e in raw) {
+      final m = e as Map<String, dynamic>;
+      // Prefer English name; fall back to first available
+      final names = (m['name'] as List?)?.cast<Map<String, dynamic>>() ?? [];
+      final enEntry = names.firstWhere(
+        (n) => (n['language'] as String? ?? '').toUpperCase() == 'EN',
+        orElse: () => names.isNotEmpty ? names.first : <String, dynamic>{},
+      );
+      final name = (enEntry['text'] as String?) ?? '';
+      if (name.isEmpty) continue;
+
+      final dateStr = (m['startDate'] as String?) ?? '';
+      if (dateStr.isEmpty) continue;
+
+      events.add(
+        CalendarEvent(
+          id: 'holiday_${countryCode}_$dateStr',
+          date: DateTime.parse(dateStr),
+          name: name,
+          isPublicHoliday: true,
+        ),
+      );
+    }
+    if (events.isEmpty) throw Exception('OpenHolidays: no usable entries');
     return events;
   }
 }

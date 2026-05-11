@@ -33,8 +33,9 @@ class AvailableAppWidget {
 
 /// Returns all widget providers installed on the device.
 Future<List<AvailableAppWidget>> getAvailableWidgets() async {
-  final raw =
-      await _channel.invokeListMethod<Map<Object?, Object?>>('getAvailableWidgets');
+  final raw = await _channel.invokeListMethod<Map<Object?, Object?>>(
+    'getAvailableWidgets',
+  );
   return (raw ?? []).map(AvailableAppWidget.fromMap).toList();
 }
 
