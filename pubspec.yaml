@@ -38,6 +38,9 @@ dependencies:
   # Resolve app documents directory to store wallpaper files
   path_provider: ^2.1.4
 
+  # Location for country detection (holiday calendar)
+  geolocator: ^13.0.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

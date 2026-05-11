@@ -89,10 +89,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           controller: _pageController,
           children: [
             // Page 0 — main home (wallpaper + dock)
-            Stack(
-              fit: StackFit.expand,
-              children: [background, _HomeBody()],
-            ),
+            Stack(fit: StackFit.expand, children: [background, _HomeBody()]),
             // Page 1 — widgets screen (always pure black, no wallpaper)
             WidgetsScreen(key: _widgetKey),
           ],

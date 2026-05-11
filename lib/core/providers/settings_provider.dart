@@ -163,6 +163,18 @@ class _IntNotifier extends StateNotifier<int> {
   }
 }
 
+// ── Widget screen theme ────────────────────────────────────────────────────
+
+const _kWidgetLightMode = 'widget_light_mode';
+
+/// `true` = light background for the widget screen; `false` = dark (default).
+final widgetLightModeProvider = StateNotifierProvider<_BoolNotifier, bool>((
+  ref,
+) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _BoolNotifier(prefs, _kWidgetLightMode, defaultValue: false);
+});
+
 // ── Clock font ─────────────────────────────────────────────────────────────
 
 const _kClockFontKey = 'clock_font';
