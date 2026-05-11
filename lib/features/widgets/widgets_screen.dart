@@ -16,6 +16,35 @@ import 'android_widget_view.dart';
 Color _fg(bool isLight, double alpha) =>
     (isLight ? Colors.black : Colors.white).withValues(alpha: alpha);
 
+// ── Event span types & helpers ────────────────────────────────────────────────
+
+typedef _MonthEventSpan =
+    ({int startDay, int endDay, bool continuesLeft, bool continuesRight});
+typedef _RowSpan = ({int colStart, int colEnd, bool openLeft, bool openRight});
+
+/// Clips [monthSpans] to the cells visible in [row] (0-based) of a mini-month.
+List<_RowSpan> _computeRowSpans(
+  List<_MonthEventSpan> monthSpans,
+  int row,
+  int offset,
+  int daysInMonth,
+) {
+  final result = <_RowSpan>[];
+  for (final ms in monthSpans) {
+    final sg = (ms.startDay - 1) + offset;
+    final eg = (ms.endDay - 1) + offset;
+    final sr = sg ~/ 7;
+    final er = eg ~/ 7;
+    if (row < sr || row > er) continue;
+    final cs = row == sr ? sg % 7 : 0;
+    final ce = row == er ? eg % 7 : 6;
+    final openL = row > sr || ms.continuesLeft;
+    final openR = row < er || ms.continuesRight;
+    result.add((colStart: cs, colEnd: ce, openLeft: openL, openRight: openR));
+  }
+  return result;
+}
+
 // ── Widget Screen ─────────────────────────────────────────────────────────────
 
 class WidgetsScreen extends ConsumerStatefulWidget {
@@ -168,12 +197,13 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             displayYear: _displayYear,
             accent: accent,
             isLight: isLight,
-            onSave: (date, name) {
+            onSave: (startDate, endDate, name) {
               ref
                   .read(userEventsProvider.notifier)
                   .add(
                     CalendarEvent(
-                      date: date,
+                      date: startDate,
+                      endDate: endDate,
                       name: name,
                       isPublicHoliday: false,
                     ),
@@ -225,8 +255,11 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     final holidayDays = _buildDayMap(
       _holidays.where((e) => e.date.year == _displayYear),
     );
-    final userEventDays = _buildDayMap(
-      userEvents.where((e) => e.date.year == _displayYear),
+    final userEventSpans = _buildEventSpanMap(
+      userEvents.where(
+        (e) => e.date.year <= _displayYear && e.endDate.year >= _displayYear,
+      ),
+      _displayYear,
     );
 
     // Panel bottom offset: above navBar row + add-widget button + bottom padding
@@ -263,7 +296,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                               accent: accent,
                               isLight: isLight,
                               holidayDays: holidayDays,
-                              userEventDays: userEventDays,
+                              userEventSpans: userEventSpans,
                             ),
                           ),
                         ),
@@ -819,6 +852,39 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     }
     return map;
   }
+
+  static Map<int, List<_MonthEventSpan>> _buildEventSpanMap(
+    Iterable<CalendarEvent> events,
+    int year,
+  ) {
+    final map = <int, List<_MonthEventSpan>>{};
+    for (final e in events) {
+      final firstMonth =
+          e.date.year == year ? e.date.month : (e.date.year < year ? 1 : 13);
+      final lastMonth =
+          e.endDate.year == year
+              ? e.endDate.month
+              : (e.endDate.year > year ? 12 : 0);
+      for (int m = firstMonth; m <= lastMonth; m++) {
+        final dim = DateTime(year, m + 1, 0).day;
+        final startDay =
+            (e.date.year == year && e.date.month == m) ? e.date.day : 1;
+        final endDay =
+            (e.endDate.year == year && e.endDate.month == m)
+                ? e.endDate.day
+                : dim;
+        final contL = !(e.date.year == year && e.date.month == m);
+        final contR = !(e.endDate.year == year && e.endDate.month == m);
+        map.putIfAbsent(m, () => []).add((
+          startDay: startDay,
+          endDay: endDay,
+          continuesLeft: contL,
+          continuesRight: contR,
+        ));
+      }
+    }
+    return map;
+  }
 }
 
 // ── Event tile ────────────────────────────────────────────────────────────────
@@ -854,7 +920,15 @@ class _EventTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dotColor = event.isPublicHoliday ? accent : _fg(isLight, 0.70);
-    final dateStr = '${_months[event.date.month - 1]} ${event.date.day}';
+    final isSingleDay =
+        event.date == event.endDate ||
+        (event.date.year == event.endDate.year &&
+            event.date.month == event.endDate.month &&
+            event.date.day == event.endDate.day);
+    final dateStr =
+        isSingleDay
+            ? '${_months[event.date.month - 1]} ${event.date.day}'
+            : '${_months[event.date.month - 1]} ${event.date.day} – ${_months[event.endDate.month - 1]} ${event.endDate.day}';
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
@@ -867,7 +941,7 @@ class _EventTile extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           SizedBox(
-            width: 42,
+            width: 60,
             child: Text(
               dateStr,
               style: GoogleFonts.sora(
@@ -913,7 +987,7 @@ class _YearCalendarGrid extends StatelessWidget {
     required this.accent,
     required this.isLight,
     required this.holidayDays,
-    required this.userEventDays,
+    required this.userEventSpans,
   });
 
   final int year;
@@ -921,7 +995,7 @@ class _YearCalendarGrid extends StatelessWidget {
   final Color accent;
   final bool isLight;
   final Map<int, Set<int>> holidayDays;
-  final Map<int, Set<int>> userEventDays;
+  final Map<int, List<_MonthEventSpan>> userEventSpans;
 
   @override
   Widget build(BuildContext context) {
@@ -952,8 +1026,8 @@ class _YearCalendarGrid extends StatelessWidget {
                         isLight: isLight,
                         holidayDates:
                             holidayDays[row * 3 + col + 1] ?? const {},
-                        userEventDates:
-                            userEventDays[row * 3 + col + 1] ?? const {},
+                        userEventSpans:
+                            userEventSpans[row * 3 + col + 1] ?? const [],
                       ),
                     ),
                 ],
@@ -975,7 +1049,7 @@ class _MiniMonth extends StatelessWidget {
     required this.accent,
     required this.isLight,
     required this.holidayDates,
-    required this.userEventDates,
+    required this.userEventSpans,
   });
 
   final int month;
@@ -984,7 +1058,7 @@ class _MiniMonth extends StatelessWidget {
   final Color accent;
   final bool isLight;
   final Set<int> holidayDates;
-  final Set<int> userEventDates;
+  final List<_MonthEventSpan> userEventSpans;
 
   static const _fullNames = [
     'January',
@@ -1080,65 +1154,81 @@ class _MiniMonth extends StatelessWidget {
             for (int row = 0; row < 6; row++)
               SizedBox(
                 height: rowH,
-                child: Row(
-                  children: List.generate(7, (col) {
-                    final dayNum = row * 7 + col - offset + 1;
-                    final valid = dayNum >= 1 && dayNum <= daysInMonth;
-                    final isToday = isCurrentMonth && dayNum == today.day;
-                    final isHoliday = valid && holidayDates.contains(dayNum);
-                    final isUserEvent =
-                        valid && userEventDates.contains(dayNum);
-                    final showDot =
-                        valid && !isToday && (isHoliday || isUserEvent);
-
-                    return SizedBox(
-                      width: cellW,
-                      child: Center(
-                        child:
-                            !valid
-                                ? null
-                                : Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (isToday)
-                                      _TodayBadge(
-                                        day: dayNum,
-                                        size: rowH * 0.72,
-                                        accent: accent,
-                                      )
-                                    else
-                                      Text(
-                                        '$dayNum',
-                                        style: GoogleFonts.sora(
-                                          fontSize: (rowH * 0.42).clamp(
-                                            6.5,
-                                            11.0,
-                                          ),
-                                          fontWeight: FontWeight.w300,
-                                          color: _fg(
-                                            isLight,
-                                            isCurrentMonth ? 0.72 : 0.55,
-                                          ),
-                                        ),
-                                      ),
-                                    if (showDot)
-                                      Container(
-                                        margin: const EdgeInsets.only(top: 1.0),
-                                        width: 2.5,
-                                        height: 2.5,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color:
-                                              isHoliday
-                                                  ? accent
-                                                  : _fg(isLight, 0.65),
-                                        ),
-                                      ),
-                                  ],
-                                ),
+                child: Stack(
+                  children: [
+                    // Outline-box spans for user events
+                    CustomPaint(
+                      size: Size(w, rowH),
+                      painter: _EventSpanPainter(
+                        rowSpans: _computeRowSpans(
+                          userEventSpans,
+                          row,
+                          offset,
+                          daysInMonth,
+                        ),
+                        cellW: cellW,
+                        rowH: rowH,
+                        accent: accent,
                       ),
-                    );
-                  }),
+                    ),
+                    Row(
+                      children: List.generate(7, (col) {
+                        final dayNum = row * 7 + col - offset + 1;
+                        final valid = dayNum >= 1 && dayNum <= daysInMonth;
+                        final isToday = isCurrentMonth && dayNum == today.day;
+                        final isHoliday =
+                            valid && holidayDates.contains(dayNum);
+                        final showDot = valid && !isToday && isHoliday;
+
+                        return SizedBox(
+                          width: cellW,
+                          child: Center(
+                            child:
+                                !valid
+                                    ? null
+                                    : Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (isToday)
+                                          _TodayBadge(
+                                            day: dayNum,
+                                            size: rowH * 0.72,
+                                            accent: accent,
+                                          )
+                                        else
+                                          Text(
+                                            '$dayNum',
+                                            style: GoogleFonts.sora(
+                                              fontSize: (rowH * 0.42).clamp(
+                                                6.5,
+                                                11.0,
+                                              ),
+                                              fontWeight: FontWeight.w300,
+                                              color: _fg(
+                                                isLight,
+                                                isCurrentMonth ? 0.72 : 0.55,
+                                              ),
+                                            ),
+                                          ),
+                                        if (showDot)
+                                          Container(
+                                            margin: const EdgeInsets.only(
+                                              top: 1.0,
+                                            ),
+                                            width: 2.5,
+                                            height: 2.5,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: accent,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                          ),
+                        );
+                      }),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -1419,7 +1509,7 @@ class _AddEventDialog extends StatefulWidget {
   final int displayYear;
   final Color accent;
   final bool isLight;
-  final void Function(DateTime date, String name) onSave;
+  final void Function(DateTime startDate, DateTime endDate, String name) onSave;
 
   @override
   State<_AddEventDialog> createState() => _AddEventDialogState();
@@ -1427,6 +1517,7 @@ class _AddEventDialog extends StatefulWidget {
 
 class _AddEventDialogState extends State<_AddEventDialog> {
   late DateTime _selectedDate;
+  late DateTime _selectedEndDate;
   final _nameCtrl = TextEditingController();
   bool _nameError = false;
 
@@ -1439,6 +1530,7 @@ class _AddEventDialogState extends State<_AddEventDialog> {
       now.year == widget.displayYear ? now.month : 1,
       now.year == widget.displayYear ? now.day : 1,
     );
+    _selectedEndDate = _selectedDate;
   }
 
   @override
@@ -1461,7 +1553,32 @@ class _AddEventDialogState extends State<_AddEventDialog> {
             child: child!,
           ),
     );
-    if (picked != null && mounted) setState(() => _selectedDate = picked);
+    if (picked != null && mounted) {
+      setState(() {
+        _selectedDate = picked;
+        // If end date is now before start, align it
+        if (_selectedEndDate.isBefore(_selectedDate)) {
+          _selectedEndDate = _selectedDate;
+        }
+      });
+    }
+  }
+
+  Future<void> _pickEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedEndDate,
+      firstDate: _selectedDate,
+      lastDate: DateTime(widget.displayYear, 12, 31),
+      builder:
+          (ctx, child) => Theme(
+            data: Theme.of(
+              ctx,
+            ).copyWith(colorScheme: ColorScheme.dark(primary: widget.accent)),
+            child: child!,
+          ),
+    );
+    if (picked != null && mounted) setState(() => _selectedEndDate = picked);
   }
 
   void _save() {
@@ -1470,8 +1587,8 @@ class _AddEventDialogState extends State<_AddEventDialog> {
       setState(() => _nameError = true);
       return;
     }
-    widget.onSave(_selectedDate, name);
-    Navigator.pop(context, true); // true = saved, triggers snackbar in parent
+    widget.onSave(_selectedDate, _selectedEndDate, name);
+    Navigator.pop(context, true);
   }
 
   static const _months = [
@@ -1512,6 +1629,7 @@ class _AddEventDialogState extends State<_AddEventDialog> {
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── From date ────────────────────────────────────────────────
           GestureDetector(
             onTap: _pickDate,
             child: Container(
@@ -1527,9 +1645,53 @@ class _AddEventDialogState extends State<_AddEventDialog> {
                     size: 14,
                     color: widget.accent,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  Text(
+                    'From',
+                    style: GoogleFonts.sora(
+                      fontSize: 11,
+                      color: _fg(widget.isLight, 0.45),
+                    ),
+                  ),
+                  const Spacer(),
                   Text(
                     _fmtDate(_selectedDate),
+                    style: GoogleFonts.sora(fontSize: 13, color: textColor),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // ── To date ──────────────────────────────────────────────────
+          GestureDetector(
+            onTap: _pickEndDate,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: widget.accent.withValues(alpha: 0.25),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    size: 14,
+                    color: widget.accent.withValues(alpha: 0.55),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'To',
+                    style: GoogleFonts.sora(
+                      fontSize: 11,
+                      color: _fg(widget.isLight, 0.45),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _fmtDate(_selectedEndDate),
                     style: GoogleFonts.sora(fontSize: 13, color: textColor),
                   ),
                 ],
@@ -1597,6 +1759,101 @@ class _AddEventDialogState extends State<_AddEventDialog> {
       ],
     );
   }
+}
+
+// ── Event span painter ────────────────────────────────────────────────────────
+
+class _EventSpanPainter extends CustomPainter {
+  const _EventSpanPainter({
+    required this.rowSpans,
+    required this.cellW,
+    required this.rowH,
+    required this.accent,
+  });
+
+  final List<_RowSpan> rowSpans;
+  final double cellW;
+  final double rowH;
+  final Color accent;
+
+  static const _vPad = 2.0;
+  static const _hInset = 1.5;
+  static const _r = 3.5;
+  static const _strokeW = 1.2;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = accent.withValues(alpha: 0.72)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = _strokeW;
+
+    for (final span in rowSpans) {
+      final left = span.colStart * cellW + _hInset;
+      final right = (span.colEnd + 1) * cellW - _hInset;
+      final top = _vPad;
+      final bottom = rowH - _vPad;
+
+      final openL = span.openLeft;
+      final openR = span.openRight;
+
+      if (!openL && !openR) {
+        // Fully closed — simple rounded rect
+        canvas.drawRRect(
+          RRect.fromLTRBR(left, top, right, bottom, const Radius.circular(_r)),
+          paint,
+        );
+      } else if (openL && openR) {
+        // Open both sides — only top and bottom lines
+        canvas.drawLine(Offset(left, top), Offset(right, top), paint);
+        canvas.drawLine(Offset(left, bottom), Offset(right, bottom), paint);
+      } else if (!openL && openR) {
+        // Left cap, open right
+        final path =
+            Path()
+              ..moveTo(right, top)
+              ..lineTo(left + _r, top)
+              ..arcToPoint(
+                Offset(left, top + _r),
+                radius: const Radius.circular(_r),
+              )
+              ..lineTo(left, bottom - _r)
+              ..arcToPoint(
+                Offset(left + _r, bottom),
+                radius: const Radius.circular(_r),
+              )
+              ..lineTo(right, bottom);
+        canvas.drawPath(path, paint);
+      } else {
+        // Open left, right cap
+        final path =
+            Path()
+              ..moveTo(left, top)
+              ..lineTo(right - _r, top)
+              ..arcToPoint(
+                Offset(right, top + _r),
+                radius: const Radius.circular(_r),
+                clockwise: false,
+              )
+              ..lineTo(right, bottom - _r)
+              ..arcToPoint(
+                Offset(right - _r, bottom),
+                radius: const Radius.circular(_r),
+                clockwise: false,
+              )
+              ..lineTo(left, bottom);
+        canvas.drawPath(path, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_EventSpanPainter old) =>
+      old.rowSpans != rowSpans ||
+      old.cellW != cellW ||
+      old.rowH != rowH ||
+      old.accent != accent;
 }
 
 // ── Country picker dialog ─────────────────────────────────────────────────────
