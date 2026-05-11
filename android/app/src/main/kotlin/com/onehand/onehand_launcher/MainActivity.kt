@@ -581,4 +581,3 @@ class MainActivity : FlutterActivity() {
         private const val REQUEST_CODE_SET_DEFAULT_HOME = 1001
     }
 }
-}

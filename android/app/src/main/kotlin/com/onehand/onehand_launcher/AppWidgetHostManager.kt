@@ -71,12 +71,12 @@ class AppWidgetHostManager(private val context: Context) {
                 } catch (_: Exception) { null }
 
                 mapOf(
-                    "label"    to label,
-                    "pkg"      to pkg,
-                    "cls"      to cls,
-                    "preview"  to previewBytes,
-                    "minWidth" to info.minWidth,
-                    "minHeight"to info.minHeight,
+                    "label"     to label,
+                    "pkg"       to pkg,
+                    "cls"       to cls,
+                    "preview"   to previewBytes,
+                    "minWidth"  to info.minWidth,
+                    "minHeight" to info.minHeight,
                 )
             } catch (_: Exception) { null }
         }.sortedBy { (it["label"] as? String)?.lowercase() ?: "" }
@@ -126,12 +126,12 @@ class AppWidgetHostManager(private val context: Context) {
         val h = (heightDp * density).toInt()
         view.setAppWidget(appWidgetId, manager.getAppWidgetInfo(appWidgetId))
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            view.updateAppWidgetSize(null, listOf(
+            view.updateAppWidgetSize(android.os.Bundle(), listOf(
                 android.util.SizeF(widthDp.toFloat(), heightDp.toFloat())
             ))
         } else {
             @Suppress("DEPRECATION")
-            view.updateAppWidgetSize(null, widthDp, heightDp, widthDp, heightDp)
+            view.updateAppWidgetSize(android.os.Bundle(), widthDp, heightDp, widthDp, heightDp)
         }
         view.measure(
             android.view.View.MeasureSpec.makeMeasureSpec(w, android.view.View.MeasureSpec.EXACTLY),
