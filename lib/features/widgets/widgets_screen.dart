@@ -70,7 +70,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
       });
       _loadHolidaysIfNeeded();
     }
-    setState(() => _panelOpen = false);
+    if (_panelOpen) setState(() => _panelOpen = false);
   }
 
   // ── Holiday loading ───────────────────────────────────────────────────────
@@ -168,13 +168,15 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             accent: accent,
             isLight: isLight,
             onSave: (date, name) {
-              ref.read(userEventsProvider.notifier).add(
-                CalendarEvent(
-                  date: date,
-                  name: name,
-                  isPublicHoliday: false,
-                ),
-              );
+              ref
+                  .read(userEventsProvider.notifier)
+                  .add(
+                    CalendarEvent(
+                      date: date,
+                      name: name,
+                      isPublicHoliday: false,
+                    ),
+                  );
             },
           ),
     );
@@ -1428,9 +1430,9 @@ class _AddEventDialogState extends State<_AddEventDialog> {
       lastDate: DateTime(widget.displayYear, 12, 31),
       builder:
           (ctx, child) => Theme(
-            data: Theme.of(ctx).copyWith(
-              colorScheme: ColorScheme.dark(primary: widget.accent),
-            ),
+            data: Theme.of(
+              ctx,
+            ).copyWith(colorScheme: ColorScheme.dark(primary: widget.accent)),
             child: child!,
           ),
     );
@@ -1491,9 +1493,7 @@ class _AddEventDialogState extends State<_AddEventDialog> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: widget.accent.withValues(alpha: 0.4),
-                ),
+                border: Border.all(color: widget.accent.withValues(alpha: 0.4)),
               ),
               child: Row(
                 children: [

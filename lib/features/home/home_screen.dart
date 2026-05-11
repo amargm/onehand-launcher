@@ -26,6 +26,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final PageController _pageController;
   final _widgetKey = GlobalKey<WidgetsScreenState>();
+  double _prevPage = 0;
 
   @override
   void initState() {
@@ -43,9 +44,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   void _onPageScroll() {
     final page = _pageController.page;
-    if (page != null && page < 0.5) {
+    if (page == null) return;
+    // Only call resetToCurrentYear once when crossing the 0.5 threshold back
+    // toward home — not on every frame — to avoid per-frame setState jank.
+    if (_prevPage >= 0.5 && page < 0.5) {
       _widgetKey.currentState?.resetToCurrentYear();
     }
+    _prevPage = page;
   }
 
   @override
@@ -77,8 +82,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           if (page != null && page > 0.5) {
             _pageController.animateToPage(
               0,
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeOut,
+              duration: const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
             );
           }
         }
@@ -87,11 +92,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Colors.black,
         body: PageView(
           controller: _pageController,
+          // BouncingScrollPhysics gives an elastic, iOS-style feel at the
+          // boundaries instead of the rigid Android glow-clamp default.
+          physics: const BouncingScrollPhysics(
+            parent: AlwaysScrollableScrollPhysics(),
+          ),
           children: [
-            // Page 0 — main home (wallpaper + dock)
-            Stack(fit: StackFit.expand, children: [background, _HomeBody()]),
-            // Page 1 — widgets screen (always pure black, no wallpaper)
-            WidgetsScreen(key: _widgetKey),
+            // Page 0 — home: scales slightly back + dims as widgets slides in.
+            // AnimatedBuilder listens to the page controller so the transform
+            // updates every scroll frame without rebuilding the heavy child.
+            AnimatedBuilder(
+              animation: _pageController,
+              builder: (_, child) {
+                final p =
+                    _pageController.hasClients
+                        ? (_pageController.page ?? 0.0).clamp(0.0, 1.0)
+                        : 0.0;
+                return Transform.scale(
+                  scale: 1.0 - p * 0.04,
+                  alignment: Alignment.center,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      child!,
+                      // Lightweight dim overlay — just a solid colour rectangle,
+                      // far cheaper than Opacity on the whole child subtree.
+                      IgnorePointer(
+                        child: ColoredBox(
+                          color: Colors.black.withValues(alpha: p * 0.50),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              child: Stack(
+                fit: StackFit.expand,
+                children: [background, _HomeBody()],
+              ),
+            ),
+            // Page 1 — widgets: fades in from transparent as the user swipes
+            // toward it, giving a soft cross-dissolve feel.
+            AnimatedBuilder(
+              animation: _pageController,
+              builder: (_, child) {
+                final p =
+                    _pageController.hasClients
+                        ? (_pageController.page ?? 0.0).clamp(0.0, 1.0)
+                        : 0.0;
+                return Opacity(opacity: p, child: child);
+              },
+              child: WidgetsScreen(key: _widgetKey),
+            ),
           ],
         ),
       ),
