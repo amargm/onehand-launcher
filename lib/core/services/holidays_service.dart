@@ -122,82 +122,115 @@ class HolidaysService {
     SharedPreferences prefs,
   ) => _download(year, countryCode, prefs);
 
-  // ── Download with fallback ────────────────────────────────────────────────
+  // ── Download orchestration ────────────────────────────────────────────────
 
+  /// Tries both APIs, caches on first success, returns [] (no error)
+  /// when the country is simply not in any API database.
   static Future<List<CalendarEvent>> _download(
     int year,
     String countryCode,
     SharedPreferences prefs,
   ) async {
-    List<CalendarEvent>? events;
-    String? lastError;
+    Exception? primaryError;
 
-    // Primary: Nager.Date — fast, well-known, supports ~100 countries
+    // ── 1. Nager.Date (primary — 115+ countries) ─────────────────────────
     try {
-      events = await _downloadNager(year, countryCode);
-    } catch (e) {
-      lastError = e.toString();
-    }
-
-    // Backup: OpenHolidays API — broader country coverage, different format
-    if (events == null) {
-      try {
-        events = await _downloadOpenHolidays(year, countryCode);
-      } catch (e) {
-        lastError = e.toString();
+      final events = await _tryNager(year, countryCode);
+      if (events != null) {
+        _cache(prefs, year, countryCode, events);
+        return events;
       }
+      // null = 404 = country not in Nager → try backup
+    } catch (e) {
+      primaryError = _wrap(e);
+      // Network / server error — still try backup before giving up
     }
 
-    if (events == null) {
-      throw Exception(lastError ?? 'Could not download holidays');
+    // ── 2. OpenHolidays (backup — ~50 mostly European countries) ─────────
+    try {
+      final events = await _tryOpenHolidays(year, countryCode);
+      if (events != null) {
+        _cache(prefs, year, countryCode, events);
+        return events;
+      }
+      // null = country not in OpenHolidays either
+      if (primaryError != null) {
+        // Nager had a network error and OpenHolidays has no data → throw
+        throw primaryError;
+      }
+      // Both APIs confirmed: no data for this country → empty, not an error
+      return const [];
+    } catch (e) {
+      // OpenHolidays network error — surface best available error
+      throw primaryError ?? _wrap(e);
     }
-
-    // Cache the successful result (CalendarEvent list, not raw API bytes)
-    await prefs.setString(
-      _cacheKey(year, countryCode),
-      jsonEncode(events.map((e) => e.toJson()).toList()),
-    );
-    return events;
   }
 
   // ── Nager.Date ────────────────────────────────────────────────────────────
+  // Returns null  → country not in database (HTTP 404)
+  // Returns list  → data found (may be empty for countries with no public holidays)
+  // Throws        → network / server problem
 
-  static Future<List<CalendarEvent>> _downloadNager(
+  static Future<List<CalendarEvent>?> _tryNager(
     int year,
     String countryCode,
   ) async {
     final uri = Uri.parse(
       'https://date.nager.at/api/v3/PublicHolidays/$year/$countryCode',
     );
-    final response = await http.get(uri).timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      throw Exception('Nager.Date HTTP ${response.statusCode}');
+    final http.Response response;
+    try {
+      response = await http
+          .get(uri, headers: {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 12));
+    } catch (e) {
+      throw _networkException(e);
     }
 
-    final raw = jsonDecode(response.body) as List;
-    if (raw.isEmpty) throw Exception('Nager.Date returned empty list');
-
-    return raw.map((e) {
-      final m = e as Map<String, dynamic>;
-      return CalendarEvent(
-        id: 'holiday_${countryCode}_${m['date']}',
-        date: DateTime.parse(m['date'] as String),
-        name:
-            (m['localName'] as String?)?.isNotEmpty == true
-                ? m['localName'] as String
-                : (m['name'] as String? ?? ''),
-        isPublicHoliday: true,
+    if (response.statusCode == 404) return null; // country not in Nager
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Holiday service temporarily unavailable. Try again later.',
       );
-    }).toList();
+    }
+
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List) return null; // unexpected body = treat as missing
+      final events = <CalendarEvent>[];
+      for (final item in decoded) {
+        try {
+          if (item is! Map) continue;
+          final m = Map<String, dynamic>.from(item);
+          final dateStr = m['date'] as String?;
+          if (dateStr == null || dateStr.isEmpty) continue;
+          final name =
+              (m['localName'] as String?)?.isNotEmpty == true
+                  ? m['localName'] as String
+                  : (m['name'] as String? ?? '');
+          if (name.isEmpty) continue;
+          events.add(CalendarEvent(
+            id: 'holiday_${countryCode}_$dateStr',
+            date: DateTime.parse(dateStr),
+            name: name,
+            isPublicHoliday: true,
+          ));
+        } catch (_) {
+          continue; // skip malformed entries
+        }
+      }
+      return events; // may be empty — that's valid (country has no public holidays)
+    } on FormatException {
+      throw Exception('Received invalid data from holiday service.');
+    }
   }
 
-  // ── OpenHolidays API (backup) ─────────────────────────────────────────────
-  // Endpoint: GET https://openholidaysapi.org/PublicHolidays
-  //   ?countryIsoCode=XX&languageIsoCode=EN&validFrom=YYYY-01-01&validTo=YYYY-12-31
-  // Response: [{id, startDate, endDate, type, name:[{language, text}]}]
+  // ── OpenHolidays API ──────────────────────────────────────────────────────
+  // Returns null  → country not in database (404, 400, or empty response)
+  // Returns list  → data found (non-empty)
+  // Throws        → network / server problem
 
-  static Future<List<CalendarEvent>> _downloadOpenHolidays(
+  static Future<List<CalendarEvent>?> _tryOpenHolidays(
     int year,
     String countryCode,
   ) async {
@@ -208,42 +241,100 @@ class HolidaysService {
       '&validFrom=$year-01-01'
       '&validTo=$year-12-31',
     );
-    final response = await http
-        .get(uri, headers: {'Accept': 'application/json'})
-        .timeout(const Duration(seconds: 15));
+    final http.Response response;
+    try {
+      response = await http
+          .get(uri, headers: {'Accept': 'application/json'})
+          .timeout(const Duration(seconds: 12));
+    } catch (e) {
+      throw _networkException(e);
+    }
 
+    // 400/404 = country not in this database
+    if (response.statusCode == 400 || response.statusCode == 404) return null;
     if (response.statusCode != 200) {
-      throw Exception('OpenHolidays HTTP ${response.statusCode}');
+      throw Exception('Backup holiday service temporarily unavailable.');
     }
 
-    final raw = jsonDecode(response.body) as List;
-    if (raw.isEmpty) throw Exception('OpenHolidays returned empty list');
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List || decoded.isEmpty) {
+        return null; // country not in OpenHolidays
+      }
 
-    final events = <CalendarEvent>[];
-    for (final e in raw) {
-      final m = e as Map<String, dynamic>;
-      // Prefer English name; fall back to first available
-      final names = (m['name'] as List?)?.cast<Map<String, dynamic>>() ?? [];
-      final enEntry = names.firstWhere(
-        (n) => (n['language'] as String? ?? '').toUpperCase() == 'EN',
-        orElse: () => names.isNotEmpty ? names.first : <String, dynamic>{},
-      );
-      final name = (enEntry['text'] as String?) ?? '';
-      if (name.isEmpty) continue;
+      final events = <CalendarEvent>[];
+      for (final item in decoded) {
+        try {
+          if (item is! Map) continue;
+          final m = Map<String, dynamic>.from(item);
+          final dateStr = m['startDate'] as String?;
+          if (dateStr == null || dateStr.isEmpty) continue;
 
-      final dateStr = (m['startDate'] as String?) ?? '';
-      if (dateStr.isEmpty) continue;
+          // name is [{language: "EN", text: "..."}, ...]
+          // Use whereType<Map> to avoid cast exceptions on different Map types
+          final nameList = m['name'];
+          final names =
+              nameList is List
+                  ? nameList.whereType<Map>().toList()
+                  : <Map>[];
 
-      events.add(
-        CalendarEvent(
-          id: 'holiday_${countryCode}_$dateStr',
-          date: DateTime.parse(dateStr),
-          name: name,
-          isPublicHoliday: true,
-        ),
+          String name = '';
+          if (names.isNotEmpty) {
+            final en = names.firstWhere(
+              (n) => (n['language'] as String? ?? '').toUpperCase() == 'EN',
+              orElse: () => names.first,
+            );
+            name = (en['text'] as String?) ?? '';
+          }
+          if (name.isEmpty) continue;
+
+          events.add(CalendarEvent(
+            id: 'holiday_${countryCode}_$dateStr',
+            date: DateTime.parse(dateStr),
+            name: name,
+            isPublicHoliday: true,
+          ));
+        } catch (_) {
+          continue; // skip malformed entries
+        }
+      }
+      return events.isEmpty ? null : events;
+    } on FormatException {
+      throw Exception('Received invalid data from backup holiday service.');
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  static void _cache(
+    SharedPreferences prefs,
+    int year,
+    String cc,
+    List<CalendarEvent> events,
+  ) {
+    if (events.isNotEmpty) {
+      prefs.setString(
+        _cacheKey(year, cc),
+        jsonEncode(events.map((e) => e.toJson()).toList()),
       );
     }
-    if (events.isEmpty) throw Exception('OpenHolidays: no usable entries');
-    return events;
+  }
+
+  static Exception _wrap(Object e) =>
+      e is Exception ? e : Exception(e.toString());
+
+  static Exception _networkException(Object e) {
+    final msg = e.toString().toLowerCase();
+    if (msg.contains('timeout') || msg.contains('timed out')) {
+      return Exception('Connection timed out. Check your internet and try again.');
+    }
+    if (msg.contains('socket') ||
+        msg.contains('connection') ||
+        msg.contains('network') ||
+        msg.contains('host lookup') ||
+        msg.contains('unreachable')) {
+      return Exception('No internet connection.');
+    }
+    return Exception('Could not reach holiday service. Check your connection.');
   }
 }

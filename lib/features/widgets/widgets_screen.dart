@@ -774,18 +774,33 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                 ),
               ],
               if (allHolidays.isEmpty &&
-                  allUserEvents.isEmpty &&
+                  _loadedYear == _displayYear &&
+                  _loadedCountry == cc &&
                   !_holidaysLoading &&
                   _holidaysError == null &&
                   cc != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 16,
-                    horizontal: 16,
-                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                   child: Text(
-                    'No events for $_displayYear',
-                    style: GoogleFonts.sora(fontSize: 12, color: subColor),
+                    'No public holiday data found for $cc · $_displayYear',
+                    style: GoogleFonts.sora(fontSize: 11, color: subColor),
+                  ),
+                ),
+              if (allHolidays.isEmpty &&
+                  allUserEvents.isEmpty &&
+                  _loadedYear == _displayYear &&
+                  _loadedCountry == cc &&
+                  !_holidaysLoading &&
+                  _holidaysError == null &&
+                  cc != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 2, 16, 12),
+                  child: Text(
+                    'Tap + below to add your own events',
+                    style: GoogleFonts.sora(
+                      fontSize: 11,
+                      color: subColor.withValues(alpha: 0.6),
+                    ),
                   ),
                 ),
             ],
