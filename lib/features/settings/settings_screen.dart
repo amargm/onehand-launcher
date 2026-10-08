@@ -653,7 +653,9 @@ class _AboutScreen extends StatelessWidget {
             size: 16,
           ),
           onTap:
-              () => AppsService.openUrl('https://onehandlauncher.app/privacy'),
+              () => AppsService.openUrl(
+                'https://amargm.github.io/onehand-launcher/',
+              ),
         ),
         const SizedBox(height: 8),
         _SettingsTile(
