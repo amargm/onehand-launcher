@@ -3,18 +3,24 @@
 This project is configured to build a signed Android App Bundle (AAB) and
 upload version tags to the Google Play **internal testing** track once Play API
 credentials are configured. It does not publish to production. The Play Console
-app exists, but policy declarations, store assets, Play App Signing enrollment,
-and the first app upload are still outstanding.
+app exists and most content declarations have been saved as unpublished
+changes. The store icon and feature graphic are uploaded to the listing draft;
+phone screenshots, merchant setup, Play App Signing enrollment, and the first
+app upload remain outstanding.
 
 ## Current technical readiness
 
 - Android package/application ID: `com.onehand.onehand_launcher`. The
   **One-Handed Launcher** app has been created in Play Console; do not create
   another app or change this ID.
-- Play Console app setup has started. The privacy-policy URL
-  (`https://amargm.github.io/onehand-launcher/`) and the "no ads" declaration
-  are saved. Paid distribution was selected, but a merchant account is still
-  required before a paid price can be configured.
+- Play Console setup is in progress. The privacy-policy URL
+  (`https://amargm.github.io/onehand-launcher/`), no-ads and no-advertising-ID
+  declarations, content rating, 13+ target audience, sign-in details (no
+  restricted access), Data safety answers, and government/financial/health
+  declarations are saved. The target audience and all other declarations must
+  be checked against the final release before submission. Paid distribution
+  was selected, but a merchant account is still required before a paid price
+  can be configured.
 - The upload key is stored locally at
   `C:\Users\mugal\OneHandLauncherSigning\onehand-upload.jks`; its password
   files are DPAPI-encrypted for the Windows user. The public certificate is
@@ -30,7 +36,8 @@ and the first app upload are still outstanding.
 - The Android workflow has a manual **Build signed AAB for manual Play upload**
   path on `main`. It uses the permanent upload key and uploads only the AAB
   artifact; it does not require Play API credentials and does not publish to a
-  testing track.
+  testing track. This path still needs to be dispatched from an authenticated
+  GitHub session; the available Actions page is currently signed out.
 - Minimum Android version: API 26 (Android 8.0).
 - Compile and target SDK: API 36. Google Play requires API 36 for new apps and
   updates from August 31, 2026; confirm the current requirement before each
@@ -50,8 +57,8 @@ and the first app upload are still outstanding.
 
 ### Privacy, permissions, and Data safety
 
-Review the actual release and all bundled SDKs before completing Data safety.
-The current app source shows these data flows:
+Review the actual release and all bundled SDKs before submitting the saved
+Data safety declaration. The current app source shows these data flows:
 
 | Feature or permission | Current behavior to account for |
 | --- | --- |
@@ -70,10 +77,14 @@ requests do disclose ordinary connection data (including an IP address) to
 their respective providers; automatic country detection additionally sends
 approximate coordinates to Nominatim after the user accepts an in-app
 disclosure and grants Android location permission. Installed-app information
-is accessed for launcher functionality and kept on-device. These behaviors
-are described in the privacy policy; complete Play's Data safety answers to
-match the final packaged release and SDK behavior, not simply the developer's
-lack of a backend.
+is accessed for launcher functionality and kept on-device. The saved Play
+Data safety answers declare optional approximate location as collected and
+shared for app functionality, not processed ephemerally, with data encrypted
+in transit. They also state that the app does not allow account creation,
+does not provide a data deletion request mechanism, and does not use an
+advertising ID. Confirm these answers against the exact release and all
+bundled SDKs before submitting; do not infer that no data is collected merely
+because the app has no backend.
 
 The app's privacy link points to
 `https://amargm.github.io/onehand-launcher/`. The policy page source
@@ -90,15 +101,20 @@ mailbox monitored for privacy and support requests.
 
 Remaining Play Console setup:
 
-- The `QUERY_ALL_PACKAGES` permission declaration and any requested supporting
-  explanation/screenshots.
-- Data safety form, content rating, target audience, app category, public
-  contact details, and app-access declaration. The privacy-policy URL and ads
-  declaration have already been saved; verify them against the release before
-  submitting changes for review.
+- Review the saved target-audience choice (13+) and all other policy
+  declarations against the final app. The privacy policy, no-ads declaration,
+  content rating, Data safety, app access, app category, public contact email,
+  and the government/financial/health declarations are currently saved as
+  unpublished changes.
+- Check the Play Console policy status and any permission declarations for
+  `QUERY_ALL_PACKAGES`; explain that installed-app discovery is core launcher
+  functionality and provide requested evidence. Approval is not guaranteed.
 - Create the merchant account and configure the paid price in Play Console.
   Payout and tax details are account-owner information and must be supplied by
   the developer.
+- The saved declarations and listing text are unpublished changes. Review
+  them in Publishing overview and send them for review only after the listing,
+  paid-app setup, upload-key registration, and release artifact are ready.
 - Confirm the account's testing requirements. Newly created personal
   developer accounts may need a qualifying closed test before production
   access; internal testing alone may not satisfy that requirement.
@@ -107,18 +123,17 @@ Remaining Play Console setup:
 
 ### Listing and test assets
 
-Prepare the listing in Play Console; no listing text or marketing assets are
-submitted by CI. The repository contains Android launcher mipmap icons but
-does not include a complete Play listing asset set. Prepare and verify:
+The listing text and marketing assets are saved as a draft in Play Console; no
+listing content or assets are submitted by CI. The Play icon (512 x 512) and
+feature graphic (1024 x 500) are uploaded. The remaining required listing
+assets are current phone screenshots. Prepare and verify:
 
-- App name, short and full descriptions, category, contact details, and
-  localization. A factual copy draft is provided below; review it against the
-  final release before publishing. **Personalization** is a likely category
-  for a home-screen launcher; choose the closest category actually offered by
-  Play Console.
-- 512 x 512 store icon, 1024 x 500 feature graphic, and current phone
-  screenshots (plus tablet/other device screenshots if you support those
-  device types).
+- 2–8 current phone screenshots. Do not use placeholder artwork or screenshots
+  that do not faithfully show the release app. Play Console accepts screenshots
+  from 320 to 3,840 px per side; at least four with each side at least 1,080 px
+  are needed for eligibility for promotion.
+- Review the saved app name, short and full descriptions, Personalisation
+  category, contact email, and localization against the final release.
 - A closed/internal tester list and tester instructions as appropriate.
 
 Check the current [Play Console listing requirements](https://support.google.com/googleplay/android-developer/answer/9866151)
