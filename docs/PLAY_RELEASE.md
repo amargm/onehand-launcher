@@ -36,8 +36,9 @@ app upload remain outstanding.
 - The Android workflow has a manual **Build signed AAB for manual Play upload**
   path on `main`. It uses the permanent upload key and uploads only the AAB
   artifact; it does not require Play API credentials and does not publish to a
-  testing track. This path still needs to be dispatched from an authenticated
-  GitHub session; the available Actions page is currently signed out.
+  testing track. The `play-internal` environment allows `main` for this
+  manually dispatched job and `v*` tags for the separate internal-track
+  publishing job.
 - Minimum Android version: API 26 (Android 8.0).
 - Compile and target SDK: API 36. Google Play requires API 36 for new apps and
   updates from August 31, 2026; confirm the current requirement before each
@@ -238,10 +239,10 @@ keystore, its passwords, or the Play service-account JSON.
    repository or as a workflow artifact. No Play service-account JSON is
    currently available. Do not attach a billing account to an unrelated Cloud
    project just to complete this step.
-7. Configure `play-internal` with required reviewers and restrict deployments
-   to release tags if the repository plan supports those protections. The
-   workflow grants Play credentials only to tagged release jobs, but anyone
-   able to push a qualifying tag can otherwise request a deployment.
+7. Keep the `play-internal` deployment allowlist limited to `main` (for the
+   manual signed-AAB artifact) and `v*` tags (for internal-track publishing).
+   The workflow grants Play credentials only to tagged release jobs, but
+   anyone able to push a qualifying tag can otherwise request a deployment.
 
 The workflow pins the Play upload action to a specific upstream commit. Review
 that action and its updates before changing the pin.
