@@ -27,6 +27,10 @@ and the first app upload are still outstanding.
   configured, so the tagged workflow cannot upload to Play until a suitable
   Google Cloud project, Play Developer API service account, and Play Console
   access are configured.
+- The Android workflow has a manual **Build signed AAB for manual Play upload**
+  path on `main`. It uses the permanent upload key and uploads only the AAB
+  artifact; it does not require Play API credentials and does not publish to a
+  testing track.
 - Minimum Android version: API 26 (Android 8.0).
 - Compile and target SDK: API 36. Google Play requires API 36 for new apps and
   updates from August 31, 2026; confirm the current requirement before each
@@ -272,10 +276,15 @@ the initial upload manually before relying on automated uploads:
    The Gradle build requires `ANDROID_UPLOAD_KEYSTORE_PATH`,
    `ANDROID_UPLOAD_KEYSTORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS`, and
    `ANDROID_UPLOAD_KEY_PASSWORD` in its process environment.
-3. Complete any required Play Console setup for the internal test. Before
-   relying on the tagged workflow, configure the pending Play service-account
-   secret and verify that the account can upload to this app. The initial AAB
-   can be uploaded manually through Play Console using the signed build above.
+3. Complete any required Play Console setup for the internal test. To create
+   the initial bundle without Play API credentials, run **Android CI and Play
+   internal release → Run workflow** on `main`. The workflow validates the
+   configured upload-signing secrets and exposes `onehand-signed-aab` as a
+   downloadable artifact. Upload that AAB manually only after registering the
+   matching upload certificate and completing Play App Signing setup. This
+   manual workflow does not publish to a testing track. Before relying on the
+   tagged workflow, configure the pending Play service-account secret and
+   verify that the account can upload to this app.
 4. For each update, increase the semantic version and set `pubspec.yaml` to
    `version: MAJOR.MINOR.PATCH+VERSION_CODE`. The version code is
    `MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`. For example, `1.0.1` uses
