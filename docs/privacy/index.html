@@ -3,47 +3,68 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Privacy policy for the One-Handed Launcher Android app.">
 <title>Privacy Policy - One-Handed Launcher</title>
 <style>
-body{max-width:800px;margin:2rem auto;padding:0 1rem 3rem;font:16px/1.65 system-ui,sans-serif;color:#202124;background:#f7f7f8}main{padding:clamp(1.25rem,5vw,3rem);border:1px solid #e4e4e7;border-radius:1rem;background:#fff}h1,h2{line-height:1.25}h1{margin-top:0}h2{margin-top:2rem}a{color:#a33a1b}.updated{color:#5f6368}
+body{max-width:800px;margin:2rem auto;padding:0 1rem 3rem;font:16px/1.65 system-ui,sans-serif;color:#202124;background:#f7f7f8}
+main{padding:clamp(1.25rem,5vw,3rem);border:1px solid #e4e4e7;border-radius:1rem;background:#fff}
+h1,h2{line-height:1.25}h1{margin-top:0}h2{margin-top:2rem}a{color:#a33a1b}.updated{color:#5f6368}
 </style>
 </head>
-<body><main>
+<body>
+<main>
 <h1>Privacy Policy for One-Handed Launcher</h1>
-<p class="updated">Last updated: October 8, 2026</p>
-<p>This policy explains how the One-Handed Launcher Android app ("the app") handles information. The app is a home-screen launcher. It does not require an account, and its developer does not operate a server that receives app usage data.</p>
-<h2>Information used on your device</h2>
+<p class="updated">Effective date: October 8, 2026</p>
+
+<p>This policy describes how the One-Handed Launcher Android application ("the app") handles information. The app is published by Illusions ("the developer"). The app does not require an account, and the developer does not operate an app backend, advertising service, analytics service, or crash-reporting service.</p>
+
+<h2>Information the app accesses and stores on your device</h2>
 <ul>
-<li><strong>Installed apps:</strong> To show launcher icons and let you open apps, the app queries Android for launchable apps and supported media apps. App names, package identifiers, and icons are used on your device and are not sent to the app developer.</li>
-<li><strong>Settings and content you create:</strong> Preferences such as appearance, folders, schedules, and calendar selections are stored in app-private storage on your device. Holiday results and the selected country code may also be cached there.</li>
-<li><strong>Widgets and wallpaper:</strong> If you add a widget, Android displays content from the widget provider you select. If you choose an online wallpaper, the image is downloaded to your device and can be applied through Android's wallpaper service.</li>
+<li><strong>Installed apps:</strong> As a home-screen launcher, the app asks Android for the names, icons, and package identifiers of installed apps so it can display and open them. It also keeps the package identifiers of up to five recently opened apps and app identifiers assigned to folders or widgets in the app's private storage. This information is used by the launcher on your device and is not sent by the app to the developer or to the online services described below.</li>
+<li><strong>Preferences and content you add:</strong> The app stores settings such as appearance, clock and schedule choices, folder names and contents, selected widgets, calendar country, user-created calendar events, and public-holiday results in app-private storage on your device. These items are not sent to the developer.</li>
+<li><strong>Wallpaper:</strong> When you choose a wallpaper, the image is downloaded to app-private storage and displayed by the app. The app can also ask Android to set that image as the device wallpaper.</li>
 </ul>
-<h2>Optional location and holiday calendar</h2>
-<p>If you use automatic country detection for holiday information, the app asks Android for approximate (coarse) location after you choose that feature. The app sends the resulting latitude and longitude to the OpenStreetMap Nominatim service to determine a country. If a country is found, its two-letter country code is saved on your device. You can deny location access and select a country manually instead.</p>
-<p>To retrieve public holidays, the app sends the selected country code and year to Nager.Date and, when needed, OpenHolidays. Holiday results may be cached on your device. These requests are made to those independent services, not to a server operated by the app developer.</p>
-<h2>Online images and fonts</h2>
-<p>The wallpaper picker loads images from Unsplash's image delivery service. The app uses Google Fonts through the google_fonts package; depending on the font cache and installed app version, font files may be requested from Google's font services. As with ordinary network requests, these services may receive your IP address and technical request information. Review their policies for details about their handling of request data.</p>
-<h2>Service providers</h2>
-<p>The app makes requests to the following independent services when you use the related features. Their handling of network request data is governed by their own terms and privacy information:</p>
+<p>Android's app-data backup and restore behavior may copy app-private preferences or files to a backup associated with your device or account if backup is enabled by your Android version and device settings. The developer does not receive or control such Android backups. Removing the app or clearing its storage removes its local app data, subject to any copies retained by Android backup or restore features.</p>
+
+<h2>Optional automatic country detection</h2>
+<p>If you tap <strong>Detect country (one-time)</strong> in the public-holiday calendar and choose to continue, Android may ask you for approximate location permission. If you grant permission, the app obtains a low-accuracy location and sends its latitude and longitude to the OpenStreetMap Nominatim reverse-geocoding service to determine a country. The request also necessarily exposes your network address (such as your IP address) and ordinary request information to that service. This request is made to OpenStreetMap, not to the app developer.</p>
+<p>When a country is successfully found, the app saves its two-letter country code on your device and reuses it for holiday lookups. If detection fails, you can select a country manually instead. You can decline the in-app explanation or Android permission, select a country manually, and revoke location permission later in Android settings. The app does not request location in the background.</p>
+
+<h2>Holiday information</h2>
+<p>When you view public holidays for a selected country and year, the app requests that country's public-holiday data from Nager.Date. If that service does not provide the requested data, the app may request it from OpenHolidays. These requests contain the selected country code, year, and normal network request information, including your network address. Results may be cached in app-private storage. Manually created calendar events remain on your device and are not sent to these services.</p>
+
+<h2>Wallpapers and fonts from the internet</h2>
+<p>The wallpaper picker loads thumbnail images from Unsplash and Pexels. If you preview or apply an image, the app requests the selected full-size image from the same image host. Those hosts receive the image request and ordinary network information, which may include your IP address. The wallpaper image is then stored locally as described above.</p>
+<p>The app uses the Google Fonts for Flutter package for its typefaces and does not bundle font files in the app. When a needed font file is not already cached, the package can request it from Google's font services. Google receives the font request and ordinary network information, which may include your IP address. Google Fonts requests are made to Google, not to the app developer.</p>
+
+<h2>Who receives information</h2>
+<p>The developer does not receive the installed-app list, location, calendar entries, settings, or feature-use information through an app server. The app has no account system and contains no advertising, analytics, or crash-reporting integration.</p>
+<p>When you use the online features described above, the relevant independent service receives the data needed for that request and ordinary internet connection information such as your IP address. Specifically, location coordinates go to Nominatim; country code and year go to Nager.Date or OpenHolidays; wallpaper image requests go to Unsplash or Pexels; and uncached font requests go to Google's font services. These providers operate independently and handle request information under their own policies. The developer does not control their logging, retention, or other processing.</p>
+<p>If you choose Contact &amp; Support or the feedback link in the app, it opens your device's email application. The app does not send a message automatically. If you send one, the email address and message content you choose to include are delivered to the developer through your email provider and may include information you provide yourself.</p>
 <ul>
-<li><a href="https://operations.osmfoundation.org/policies/nominatim/">OpenStreetMap Nominatim usage policy</a> (country lookup)</li>
-<li><a href="https://date.nager.at/">Nager.Date</a> (public holidays)</li>
-<li><a href="https://www.openholidaysapi.org/">OpenHolidays</a> (public holidays)</li>
-<li><a href="https://unsplash.com/privacy">Unsplash privacy policy</a> (wallpaper images)</li>
-<li><a href="https://policies.google.com/privacy">Google privacy policy</a> (font services, if requested)</li>
+<li><a href="https://operations.osmfoundation.org/policies/nominatim/">Nominatim usage policy</a> and <a href="https://osmfoundation.org/wiki/Privacy_Policy">OpenStreetMap Foundation privacy policy</a></li>
+<li><a href="https://date.nager.at/">Nager.Date</a></li>
+<li><a href="https://www.openholidaysapi.org/">OpenHolidays</a></li>
+<li><a href="https://unsplash.com/privacy">Unsplash privacy policy</a></li>
+<li><a href="https://www.pexels.com/privacy-policy/">Pexels privacy policy</a></li>
+<li><a href="https://policies.google.com/privacy">Google privacy policy</a></li>
 </ul>
-<h2>Sharing, advertising, and analytics</h2>
-<p>The app developer does not sell personal information and does not operate an advertising, analytics, or crash-reporting service in the app. Information is sent to the third-party services listed above only when you use the associated network feature. The app developer does not receive the location lookup or holiday requests.</p>
-<h2>Retention and your choices</h2>
-<p>App preferences and cached holiday information remain in app-private storage until you clear the app's storage or remove the app. Android device backup settings may affect restoration of app data. You can manage or revoke location permission in Android settings, or choose a country manually. Clearing app storage removes locally stored app preferences and caches. The app developer has no account or server database from which to delete your app data. Third-party providers may retain request logs under their own policies.</p>
+
+<h2>Retention and choices</h2>
+<p>Settings, app identifiers used by launcher features, selected country, user-created calendar entries, cached holiday results, and a chosen wallpaper remain in app-private storage until you clear the app's storage or uninstall the app. Android backup and restore may retain copies if enabled on your device. The developer does not maintain a copy of this information. Requests sent to an independent online provider may be retained by that provider under its own policy; the developer cannot access or delete those provider records on your behalf.</p>
+<p>You can avoid sending location by choosing a country manually. Holiday lookups and online wallpapers are used only when you open or use those features. Font requests may happen automatically when the app needs a font that is not cached. Blocking the app's internet access through Android device controls prevents its network requests, but online holiday data, wallpapers, and uncached fonts will then be unavailable. You can clear app data or uninstall the app to remove its local data, and manage location permission in Android settings.</p>
+
 <h2>Children</h2>
-<p>The app is not specifically directed to children and does not ask for a user's name, age, or contact details. Its installed-app and optional location features are described above and may be used by anyone using the device.</p>
+<p>The app is a general-purpose home-screen launcher and is not designed specifically for children. It does not ask for a person's name, age, or contact details. Users and guardians should review the device's location-permission and online-service choices before using the app.</p>
+
 <h2>Security</h2>
-<p>App preferences are stored in app-private device storage. Network requests to the services above use HTTPS. No method of storage or transmission is completely risk-free.</p>
+<p>App preferences are stored in Android app-private storage. Requests made by the app to the online services listed above use HTTPS. No storage or network transmission can be guaranteed completely secure.</p>
+
 <h2>Changes to this policy</h2>
-<p>This policy may be updated when app features, service providers, or data practices change. The effective update date will be shown at the top of this page.</p>
+<p>This policy may change if the app's features or data practices change. The effective date at the top of this page will be updated when the policy is revised. The current version is available at <a href="https://amargm.github.io/onehand-launcher/">amargm.github.io/onehand-launcher</a>.</p>
+
 <h2>Contact</h2>
-<p>For privacy questions or requests, contact the developer at <a href="mailto:support@onehandlauncher.app">support@onehandlauncher.app</a>.</p>
-<p>Before publication, verify that this email address is active and monitored, and confirm the described behavior against the exact release build and bundled SDKs.</p>
-</main></body>
+<p>For privacy questions or requests, contact the developer, Illusions, at <a href="mailto:mugaliamar@gmail.com">mugaliamar@gmail.com</a>.</p>
+</main>
+</body>
 </html>

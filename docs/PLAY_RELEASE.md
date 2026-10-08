@@ -1,15 +1,32 @@
 # Google Play release guide
 
 This project is configured to build a signed Android App Bundle (AAB) and
-upload version tags to the Google Play **internal testing** track. It does not
-publish to production. Play Console account setup, policy declarations, store
-assets, and the initial app upload still require the account owner.
+upload version tags to the Google Play **internal testing** track once Play API
+credentials are configured. It does not publish to production. The Play Console
+app exists, but policy declarations, store assets, Play App Signing enrollment,
+and the first app upload are still outstanding.
 
 ## Current technical readiness
 
-- Android package/application ID: `com.onehand.onehand_launcher`. Treat this
-  as permanent once the app is created in Play Console, and confirm it is
-  available in the account before creating the listing.
+- Android package/application ID: `com.onehand.onehand_launcher`. The
+  **One-Handed Launcher** app has been created in Play Console; do not create
+  another app or change this ID.
+- Play Console app setup has started. The privacy-policy URL
+  (`https://amargm.github.io/onehand-launcher/`) and the "no ads" declaration
+  are saved. Paid distribution was selected, but a merchant account is still
+  required before a paid price can be configured.
+- The upload key is stored locally at
+  `C:\Users\mugal\OneHandLauncherSigning\onehand-upload.jks`; its password
+  files are DPAPI-encrypted for the Windows user. The public certificate is
+  `C:\Users\mugal\OneHandLauncherSigning\onehand-upload-certificate.pem`.
+  Register this certificate in Play Console's Play App Signing setup before
+  uploading an AAB. The private key and password files must never be committed
+  or sent in chat.
+- The `play-internal` GitHub environment already contains the four
+  `ANDROID_UPLOAD_*` signing secrets. `PLAY_SERVICE_ACCOUNT_JSON` is not yet
+  configured, so the tagged workflow cannot upload to Play until a suitable
+  Google Cloud project, Play Developer API service account, and Play Console
+  access are configured.
 - Minimum Android version: API 26 (Android 8.0).
 - Compile and target SDK: API 36. Google Play requires API 36 for new apps and
   updates from August 31, 2026; confirm the current requirement before each
@@ -25,7 +42,7 @@ assets, and the initial app upload still require the account owner.
 - The existing test file is only a placeholder smoke test. Passing `flutter
   test` is not a substitute for device/launcher acceptance testing.
 
-## Before creating the public listing
+## Before completing the public listing
 
 ### Privacy, permissions, and Data safety
 
@@ -37,18 +54,22 @@ The current app source shows these data flows:
 | `QUERY_ALL_PACKAGES` | The launcher queries installed launchable apps and media apps to populate launcher UI. Google Play requires a declaration and review for broad package visibility. Describe the launcher as the core use; approval is not guaranteed. |
 | Coarse location | Optional holiday country detection obtains a low-accuracy location and sends latitude/longitude to Nominatim for country-level reverse geocoding. The resulting country code is cached locally. A user can choose a country manually if location is declined. |
 | Holiday lookup | The selected country code and year are sent to Nager.Date and OpenHolidays. |
-| Wallpaper picker | Image requests go to Unsplash's image CDN. |
-| Fonts | The app uses `google_fonts`; verify whether Google Fonts requests occur at runtime for the packaged versions and disclose any resulting external data flow. |
-| Local preferences | Settings, folders, calendar-related data, and cached country/holiday values use local preferences. |
+| Wallpaper picker | Visible thumbnail requests go to Unsplash or Pexels; preview/apply requests the selected full-size image. |
+| Fonts | The app uses `google_fonts` without bundled font assets; missing font files may be requested automatically from Google Fonts while rendering the UI. |
+| Local preferences | Settings, folders, recent app package IDs, widget selections, calendar-related data, and cached country/holiday values use local preferences. |
 | Wallpaper setting | The user-selected image is downloaded and passed to Android's wallpaper service. |
+| Support and feedback | The app opens the device email app; a message and any details in it are sent only if the user chooses to send it. |
 
-The listed dependencies do not include an analytics, advertising, or crash
-reporting SDK, but inspect the complete resolved dependency tree and each SDK's
-data practices before asserting that no data is collected or shared. Installed
-app inventory and location are sensitive data for Play policy purposes.
-Provide any required prominent in-app disclosure/consent before the relevant
-collection or transfer, and keep the privacy policy and Play Data safety form
-consistent with the actual binary.
+The resolved app dependencies do not include an advertising, analytics, or
+crash-reporting SDK. Online font, wallpaper, holiday, and reverse-geocoding
+requests do disclose ordinary connection data (including an IP address) to
+their respective providers; automatic country detection additionally sends
+approximate coordinates to Nominatim after the user accepts an in-app
+disclosure and grants Android location permission. Installed-app information
+is accessed for launcher functionality and kept on-device. These behaviors
+are described in the privacy policy; complete Play's Data safety answers to
+match the final packaged release and SDK behavior, not simply the developer's
+lack of a backend.
 
 The app's privacy link points to
 `https://amargm.github.io/onehand-launcher/`. The policy page source
@@ -58,17 +79,22 @@ pushed to `main`. Enable GitHub Pages with
 **Settings → Pages → Build and deployment → Source: GitHub Actions**, push
 the change to `main`, and wait for the Pages deployment workflow to succeed.
 Then open the URL in a private browser and confirm it loads over HTTPS before
-using it in Play Console. The policy uses the app's existing
-`support@onehandlauncher.app` contact; verify that this mailbox is active and
-monitored and that the policy matches the actual release and dependencies
-before publication.
+using it in Play Console. The policy and in-app support link use
+`mugaliamar@gmail.com`, the developer account email currently shown in Play
+Console. This address appears publicly in the policy and app; keep the
+mailbox monitored for privacy and support requests.
 
-Complete in Play Console:
+Remaining Play Console setup:
 
 - The `QUERY_ALL_PACKAGES` permission declaration and any requested supporting
   explanation/screenshots.
-- Data safety form, privacy-policy URL, content rating, target audience, ads
-  declaration, app category, contact details, and app-access declaration.
+- Data safety form, content rating, target audience, app category, public
+  contact details, and app-access declaration. The privacy-policy URL and ads
+  declaration have already been saved; verify them against the release before
+  submitting changes for review.
+- Create the merchant account and configure the paid price in Play Console.
+  Payout and tax details are account-owner information and must be supplied by
+  the developer.
 - Confirm the account's testing requirements. Newly created personal
   developer accounts may need a qualifying closed test before production
   access; internal testing alone may not satisfy that requirement.
@@ -82,7 +108,10 @@ submitted by CI. The repository contains Android launcher mipmap icons but
 does not include a complete Play listing asset set. Prepare and verify:
 
 - App name, short and full descriptions, category, contact details, and
-  localization.
+  localization. A factual copy draft is provided below; review it against the
+  final release before publishing. **Personalization** is a likely category
+  for a home-screen launcher; choose the closest category actually offered by
+  Play Console.
 - 512 x 512 store icon, 1024 x 500 feature graphic, and current phone
   screenshots (plus tablet/other device screenshots if you support those
   device types).
@@ -91,16 +120,50 @@ does not include a complete Play listing asset set. Prepare and verify:
 Check the current [Play Console listing requirements](https://support.google.com/googleplay/android-developer/answer/9866151)
 for exact formats and limits.
 
+#### Listing copy draft
+
+**App name:** One-Handed Launcher
+
+**Short description (66/80 characters):**
+
+A calm, ergonomic Android home screen designed for one-handed use.
+
+**Full description:**
+
+Make your Android home screen easier to use with One-Handed Launcher, a
+minimalist launcher designed around comfortable reach and a calm, dark visual
+style.
+
+Keep the apps you use most close at hand. Organize apps into folders, search
+for apps, and arrange your home screen to suit the way you use your phone.
+
+Personalize your setup with appearance options and wallpapers. Add widgets from
+compatible apps, and explore the optional public-holiday calendar with manual
+country selection or automatic country detection.
+
+One-Handed Launcher is a home-screen replacement. Choose it as your default
+Home app in Android settings to use it. Some features, including widgets and
+automatic country detection, depend on Android permissions and compatible
+apps. Automatic country detection uses approximate location to look up a
+country; you can deny location permission and choose a country manually.
+
+Requires Android 8.0 or later.
+
 ## Signing and credential setup
 
 Google Play App Signing should hold the **app signing key**. The key used in
 this repository/CI is the separate **upload key**. Never commit the upload
 keystore, its passwords, or the Play service-account JSON.
 
-1. Create a new app in Play Console using package ID
-   `com.onehand.onehand_launcher` and enroll in Play App Signing.
-2. Generate an upload key using Java's `keytool`. Run this from a secure
-   directory outside the repository; `keytool` prompts for passwords:
+1. The Play Console app already exists with package ID
+   `com.onehand.onehand_launcher`. Enroll it in Play App Signing and register
+   the existing upload certificate
+   `C:\Users\mugal\OneHandLauncherSigning\onehand-upload-certificate.pem`.
+2. The upload key has already been generated locally. Keep at least two
+   encrypted offline backups of the keystore, and store passwords separately.
+   If replacing or resetting the upload key, generate a new key using Java's
+   `keytool` from a secure directory outside the repository; `keytool` prompts
+   for passwords:
 
    ```powershell
    keytool -genkeypair -v `
@@ -112,8 +175,8 @@ keystore, its passwords, or the Play service-account JSON.
      -alias onehand-upload
    ```
 
-3. Export the upload certificate and register it in Play Console when
-   prompted:
+3. If rotating the upload key, export its certificate and register the new
+   certificate in Play Console when prompted:
 
    ```powershell
    keytool -exportcert -rfc `
@@ -122,21 +185,22 @@ keystore, its passwords, or the Play service-account JSON.
      -file C:\secure\onehand-upload-certificate.pem
    ```
 
-4. Keep at least two encrypted offline backups of the keystore and store
-   passwords separately. The repository's Android `.gitignore` excludes
+4. The repository's Android `.gitignore` excludes
    `.jks`/`.keystore` files, but do not rely on ignore rules as a secret
    management system. If an upload key is lost, follow Google's upload-key
    reset procedure; do not replace the Play app-signing key.
-5. Create a GitHub Actions environment named `play-internal`. Add these
-   **environment secrets** with exact names:
+5. The GitHub Actions environment `play-internal` and its four signing secrets
+   are already configured. The following table shows the required
+   **environment secrets**; only `PLAY_SERVICE_ACCOUNT_JSON` remains to be
+   added:
 
    | Secret | Value |
    | --- | --- |
-   | `ANDROID_UPLOAD_KEYSTORE_BASE64` | Base64 of the upload `.jks` file |
-   | `ANDROID_UPLOAD_KEYSTORE_PASSWORD` | Keystore password |
-   | `ANDROID_UPLOAD_KEY_ALIAS` | `onehand-upload` (or the alias actually created) |
-   | `ANDROID_UPLOAD_KEY_PASSWORD` | Key password |
-   | `PLAY_SERVICE_ACCOUNT_JSON` | Full service-account JSON, as plain text |
+   | `ANDROID_UPLOAD_KEYSTORE_BASE64` | Configured |
+   | `ANDROID_UPLOAD_KEYSTORE_PASSWORD` | Configured |
+   | `ANDROID_UPLOAD_KEY_ALIAS` | Configured (`onehand-upload`) |
+   | `ANDROID_UPLOAD_KEY_PASSWORD` | Configured |
+   | `PLAY_SERVICE_ACCOUNT_JSON` | Pending: full service-account JSON, as plain text |
 
    To copy the keystore's base64 value to the Windows clipboard without
    printing it:
@@ -145,13 +209,16 @@ keystore, its passwords, or the Play service-account JSON.
    [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\secure\onehand-upload.jks")) | Set-Clipboard
    ```
 
-   Paste it directly into the GitHub environment secret, then clear the
-   clipboard. Keep the source keystore and offline backups.
-6. In the Google Cloud project linked to Play Console, enable the Google Play
-   Android Developer API and create a service account. Invite its email in
-   Play Console with only the app-level permissions needed to manage testing
-   releases. Put the JSON key in `PLAY_SERVICE_ACCOUNT_JSON`; never store it in
-   the repository or as a workflow artifact.
+   This is only needed when initially configuring or rotating the existing
+   signing secret. Paste the value directly into the GitHub environment secret,
+   then clear the clipboard. Keep the source keystore and offline backups.
+6. In a suitable Google Cloud project, enable the Google Play Android
+   Developer API and create a service account. Invite its email in Play Console
+   with only the app-level permissions needed to manage testing releases. Add
+   its JSON key directly to `PLAY_SERVICE_ACCOUNT_JSON`; never store it in the
+   repository or as a workflow artifact. No Play service-account JSON is
+   currently available. Do not attach a billing account to an unrelated Cloud
+   project just to complete this step.
 7. Configure `play-internal` with required reviewers and restrict deployments
    to release tags if the repository plan supports those protections. The
    workflow grants Play credentials only to tagged release jobs, but anyone
@@ -165,7 +232,8 @@ that action and its updates before changing the pin.
 The Play upload API requires the package to exist in Play Console, so perform
 the initial upload manually before relying on automated uploads:
 
-1. Complete the app creation and Play App Signing setup above.
+1. The app already exists in Play Console. Register the upload certificate and
+   finish Play App Signing setup before uploading.
 2. Set the release environment variables locally (do not put passwords in
    source files or commit them), build the initial signed AAB, and upload it
    through Play Console. This PowerShell example prompts for passwords without
@@ -204,9 +272,10 @@ the initial upload manually before relying on automated uploads:
    The Gradle build requires `ANDROID_UPLOAD_KEYSTORE_PATH`,
    `ANDROID_UPLOAD_KEYSTORE_PASSWORD`, `ANDROID_UPLOAD_KEY_ALIAS`, and
    `ANDROID_UPLOAD_KEY_PASSWORD` in its process environment.
-3. Complete any required Play Console setup for the internal test. Add the
-   five GitHub environment secrets only after the initial package/upload
-   bootstrap is complete.
+3. Complete any required Play Console setup for the internal test. Before
+   relying on the tagged workflow, configure the pending Play service-account
+   secret and verify that the account can upload to this app. The initial AAB
+   can be uploaded manually through Play Console using the signed build above.
 4. For each update, increase the semantic version and set `pubspec.yaml` to
    `version: MAJOR.MINOR.PATCH+VERSION_CODE`. The version code is
    `MAJOR * 1,000,000 + MINOR * 1,000 + PATCH`. For example, `1.0.1` uses

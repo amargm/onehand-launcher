@@ -281,7 +281,7 @@ void _showFeedbackDialog(BuildContext context) {
                 GestureDetector(
                   onTap: () {
                     AppsService.openUrl(
-                      'mailto:feedback@onehandlauncher.app'
+                      'mailto:mugaliamar@gmail.com'
                       '?subject=Feedback%20%E2%80%94%20One-Handed%20Launcher'
                       '&body=Hi%2C%0A%0AApp%20version%3A%20v1.0.0%0A%0A',
                     );
@@ -693,7 +693,7 @@ class _AboutScreen extends StatelessWidget {
         _SettingsTile(
           icon: Icons.mail_outline_rounded,
           label: 'Contact & Support',
-          subtitle: 'support@onehandlauncher.app',
+          subtitle: 'mugaliamar@gmail.com',
           trailing: const Icon(
             Icons.open_in_new_rounded,
             color: Colors.white24,
@@ -701,7 +701,7 @@ class _AboutScreen extends StatelessWidget {
           ),
           onTap:
               () => AppsService.openUrl(
-                'mailto:support@onehandlauncher.app'
+                'mailto:mugaliamar@gmail.com'
                 '?subject=Support%20%E2%80%94%20One-Handed%20Launcher',
               ),
         ),
@@ -725,8 +725,11 @@ class _AboutScreen extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Text(
-                  'This app does not collect, store, or transmit any personal data. '
-                  'All settings are stored locally on your device.',
+                  'Your app settings and app list are stored on this device. '
+                  'If you use online features, their service providers receive '
+                  'the data needed for each request. Automatic country '
+                  'detection sends approximate location to OpenStreetMap '
+                  'Nominatim. See the Privacy Policy for details and choices.',
                   style: GoogleFonts.hankenGrotesk(
                     fontSize: 12,
                     color: Colors.white38,

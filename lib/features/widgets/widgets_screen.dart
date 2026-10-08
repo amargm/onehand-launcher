@@ -144,8 +144,47 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     }
   }
 
+  Future<bool?> _showLocationDisclosure() {
+    return showDialog<bool>(
+      context: context,
+      builder:
+          (dialogContext) => AlertDialog(
+            title: const Text('Before detecting your country'),
+            content: const Text(
+              'If you continue, approximate location coordinates are sent '
+              'over HTTPS to OpenStreetMap Nominatim to identify your country. '
+              'That service also receives ordinary connection information '
+              'such as your IP address. The app saves the country code on this '
+              'device for holiday lookups; the app developer does not receive '
+              'your location. You can deny location permission and choose a '
+              'country manually instead.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(dialogContext).pop(false),
+                child: const Text('Choose country manually'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(dialogContext).pop(true),
+                child: const Text('Continue'),
+              ),
+            ],
+          ),
+    );
+  }
+
   Future<void> _requestCountryAndLoad() async {
     if (!mounted) return;
+    final allowLocation = await _showLocationDisclosure();
+    if (!mounted || allowLocation == null) return;
+    if (!allowLocation) {
+      await _showCountryPicker();
+      return;
+    }
     setState(() {
       _holidaysLoading = true;
       _holidaysError = null;
