@@ -30,25 +30,37 @@ class PlannerItemsNotifier extends StateNotifier<List<PlannerItem>> {
     }
   }
 
-  void add(PlannerItem item) {
+  /// Mutations update the current session immediately, then report whether
+  /// persistence succeeded so the UI can offer an explicit retry.
+  Future<bool> add(PlannerItem item) async {
     state = [...state, item];
-    _save();
+    return _save();
   }
 
-  void toggleCompleted(String id) {
+  Future<bool> toggleCompleted(String id) async {
     state = [
       for (final item in state)
         if (item.id == id) item.copyWith(isCompleted: !item.isCompleted) else item,
     ];
-    _save();
+    return _save();
   }
 
-  void remove(String id) {
+  Future<bool> remove(String id) async {
     state = state.where((item) => item.id != id).toList();
-    _save();
+    return _save();
   }
 
-  void _save() {
-    _prefs.setString(_key, jsonEncode(state.map((e) => e.toJson()).toList()));
+  /// Retry persisting the current state after a previous failed write.
+  Future<bool> persist() => _save();
+
+  Future<bool> _save() async {
+    try {
+      return await _prefs.setString(
+        _key,
+        jsonEncode(state.map((e) => e.toJson()).toList()),
+      );
+    } catch (_) {
+      return false;
+    }
   }
 }
