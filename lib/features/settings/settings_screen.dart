@@ -500,6 +500,8 @@ class _AppearanceScreen extends ConsumerWidget {
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        _ThemePreviewCard(accent: accent),
         const SizedBox(height: 24),
         _SectionHeader('Clock'),
         _ToggleTile(
@@ -528,6 +530,116 @@ class _AppearanceScreen extends ConsumerWidget {
               ),
         ),
       ],
+    );
+  }
+}
+
+
+// ── Live theme preview ──────────────────────────────────────────────────────
+class _ThemePreviewCard extends StatelessWidget {
+  const _ThemePreviewCard({required this.accent});
+
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E1E1E),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.visibility_outlined, color: Colors.white54, size: 18),
+              const SizedBox(width: 10),
+              Text(
+                'Live preview',
+                style: GoogleFonts.hankenGrotesk(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'ACCENT',
+                style: GoogleFonts.sora(
+                  fontSize: 9,
+                  letterSpacing: 1.2,
+                  color: Colors.white30,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.apps_rounded, color: accent, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'One-Handed Launcher',
+                      style: GoogleFonts.hankenGrotesk(
+                        fontSize: 13,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      'Your selected colour in context',
+                      style: GoogleFonts.hankenGrotesk(
+                        fontSize: 11,
+                        color: Colors.white38,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  'Active',
+                  style: GoogleFonts.sora(
+                    color: accent,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: 0.72,
+              minHeight: 4,
+              backgroundColor: Colors.white10,
+              valueColor: AlwaysStoppedAnimation<Color>(accent),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
