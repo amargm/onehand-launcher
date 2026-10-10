@@ -7,7 +7,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/models/app_info.dart';
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/favorite_apps_provider.dart';
 import '../../core/providers/recent_apps_provider.dart';
+import '../home/widgets/circular_app_icon.dart';
 import '../../core/providers/settings_provider.dart';
 import '../../core/services/apps_service.dart';
 
@@ -164,6 +166,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     final accent = Theme.of(context).colorScheme.primary;
     final appsAsync = ref.watch(appsProvider);
     final overrides = ref.watch(appDrawerGroupOverridesProvider);
+    final favorites = ref.watch(favoriteAppsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -272,6 +275,70 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                   return ListView(
                     padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
                     children: [
+                      if (favorites.any((packageName) =>
+                          filtered.any((app) => app.packageName == packageName))) ...[
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Color(0xFFFFC857), size: 16),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  'FAVORITES',
+                                  style: GoogleFonts.sora(
+                                    color: Colors.white70,
+                                    fontSize: 10,
+                                    letterSpacing: 1.5,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '${favorites.where((p) => filtered.any((a) => a.packageName == p)).length}',
+                                style: GoogleFonts.sora(color: Colors.white38, fontSize: 10),
+                              ),
+                            ],
+                          ),
+                        ),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: favorites.where((p) => filtered.any((a) => a.packageName == p)).length,
+                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                            maxCrossAxisExtent: 86,
+                            mainAxisExtent: 82,
+                            crossAxisSpacing: 7,
+                            mainAxisSpacing: 6,
+                          ),
+                          itemBuilder: (context, index) {
+                            final packageName = favorites
+                                .where((p) => filtered.any((a) => a.packageName == p))
+                                .elementAt(index);
+                            final app = filtered.firstWhere((a) => a.packageName == packageName);
+                            return _DrawerAppTile(
+                              key: ValueKey('favorite-$packageName'),
+                              app: app,
+                              accent: accent,
+                              onTap: () async {
+                                await AppsService.openApp(app.packageName);
+                                if (context.mounted) {
+                                  ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
+                                }
+                              },
+                              onLongPress: () => showAppContextMenu(
+                                context,
+                                ref,
+                                app,
+                                onOrganize: () => _customizeGroup(
+                                  app,
+                                  overrides[app.packageName] ?? _automaticGroup(app),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
                       for (final group in _drawerGroups)
                         if (grouped[group]!.isNotEmpty) ...[
                           Padding(
@@ -306,7 +373,12 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                     ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
                                   }
                                 },
-                                onLongPress: () => _customizeGroup(app, group),
+                                onLongPress: () => showAppContextMenu(
+                                  context,
+                                  ref,
+                                  app,
+                                  onOrganize: () => _customizeGroup(app, group),
+                                ),
                               );
                             },
                           ),
@@ -325,6 +397,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
 
 class _DrawerAppTile extends StatelessWidget {
   const _DrawerAppTile({
+    super.key,
     required this.app,
     required this.accent,
     required this.onTap,
@@ -351,19 +424,20 @@ class _DrawerAppTile extends StatelessWidget {
             Container(
               width: 46,
               height: 46,
-              decoration: BoxDecoration(
-                color: const Color(0xFF17171B),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(color: accent.withValues(alpha: 0.18)),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Color(0xFF17171B),
               ),
               clipBehavior: Clip.antiAlias,
-              child: app.icon == null
+              child: ClipOval(
+                child: app.icon == null
                   ? Icon(Icons.android_rounded, color: accent, size: 25)
                   : Image.memory(
                       app.icon!,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Icon(Icons.android_rounded, color: accent, size: 25),
                     ),
+              ),
             ),
             const SizedBox(height: 5),
             SizedBox(

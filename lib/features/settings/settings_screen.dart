@@ -668,14 +668,16 @@ class _AboutScreen extends StatelessWidget {
         const SizedBox(height: 8),
         _SettingsTile(
           icon: Icons.gavel_outlined,
-          label: 'Terms of Service',
-          subtitle: 'Usage terms and conditions',
+          label: 'Terms & Conditions',
+          subtitle: 'Terms for using One-Handed Launcher',
           trailing: const Icon(
             Icons.open_in_new_rounded,
             color: Colors.white24,
             size: 16,
           ),
-          onTap: () => AppsService.openUrl('https://onehandlauncher.app/terms'),
+          onTap: () => AppsService.openUrl(
+            'https://amargm.github.io/onehand-launcher/terms.html',
+          ),
         ),
         const SizedBox(height: 8),
         _SettingsTile(

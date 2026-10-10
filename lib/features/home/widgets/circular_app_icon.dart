@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/models/app_info.dart';
+import '../../../core/providers/favorite_apps_provider.dart';
 import '../../../core/providers/folders_provider.dart';
 import '../../../core/services/apps_service.dart';
 
@@ -62,7 +63,12 @@ class CircularAppIcon extends ConsumerWidget {
 
 // ── App context menu (add to folder + uninstall) ──────────────────────────────
 // Top-level so it's reachable from any widget (folder panel, search results).
-void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
+void showAppContextMenu(
+  BuildContext context,
+  WidgetRef ref,
+  AppInfo app, {
+  VoidCallback? onOrganize,
+}) {
   final accent = Theme.of(context).colorScheme.primary;
 
   showModalBottomSheet(
@@ -77,6 +83,9 @@ void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
             // Watch live folder list so additions made while the sheet is open
             // are reflected immediately (avoids the stale-snapshot bug).
             final folders = watchRef.watch(foldersProvider);
+            final favorites = watchRef.watch(favoriteAppsProvider);
+            final isFavorite = favorites.contains(app.packageName);
+            final favoriteIndex = favorites.indexOf(app.packageName);
             return Padding(
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
               child: Column(
@@ -99,7 +108,53 @@ void showAppContextMenu(BuildContext context, WidgetRef ref, AppInfo app) {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 14),
+
+                  ListTile(
+                    leading: Icon(
+                      isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+                      color: isFavorite ? const Color(0xFFFFC857) : Colors.white54,
+                      size: 20,
+                    ),
+                    title: Text(
+                      isFavorite ? 'Remove from favorites' : 'Add to favorites',
+                      style: GoogleFonts.sora(color: Colors.white70, fontSize: 14),
+                    ),
+                    onTap: () {
+                      watchRef.read(favoriteAppsProvider.notifier).toggle(app.packageName);
+                      Navigator.of(ctx).pop();
+                    },
+                  ),
+                  if (isFavorite) ...[
+                    ListTile(
+                      enabled: favoriteIndex > 0,
+                      leading: const Icon(Icons.arrow_upward_rounded, color: Colors.white54, size: 20),
+                      title: Text('Move earlier in favorites', style: GoogleFonts.sora(color: Colors.white70, fontSize: 14)),
+                      onTap: favoriteIndex <= 0 ? null : () {
+                        watchRef.read(favoriteAppsProvider.notifier).move(app.packageName, -1);
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                    ListTile(
+                      enabled: favoriteIndex < favorites.length - 1,
+                      leading: const Icon(Icons.arrow_downward_rounded, color: Colors.white54, size: 20),
+                      title: Text('Move later in favorites', style: GoogleFonts.sora(color: Colors.white70, fontSize: 14)),
+                      onTap: favoriteIndex >= favorites.length - 1 ? null : () {
+                        watchRef.read(favoriteAppsProvider.notifier).move(app.packageName, 1);
+                        Navigator.of(ctx).pop();
+                      },
+                    ),
+                  ],
+                  if (onOrganize != null)
+                    ListTile(
+                      leading: const Icon(Icons.grid_view_rounded, color: Colors.white54, size: 20),
+                      title: Text('Change app group', style: GoogleFonts.sora(color: Colors.white70, fontSize: 14)),
+                      onTap: () {
+                        Navigator.of(ctx).pop();
+                        onOrganize();
+                      },
+                    ),
+                  const Divider(color: Colors.white12),
 
                   // Add to folder section
                   Text(
