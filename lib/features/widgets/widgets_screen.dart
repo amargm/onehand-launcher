@@ -1190,7 +1190,7 @@ class _MiniMonth extends StatelessWidget {
         final dowH = h * dowRatio;
         final rowH = (h * daysRatio) / 6;
 
-        final headerColor = isCurrentMonth ? accent : _fg(isLight, 0.55);
+        final headerColor = isCurrentMonth ? accent : _fg(isLight, 0.78);
 
         final nameFontSize = (nameH * 0.62).clamp(7.0, 11.0);
 
@@ -1232,7 +1232,7 @@ class _MiniMonth extends StatelessWidget {
                                 style: GoogleFonts.sora(
                                   fontSize: (dowH * 0.52).clamp(5.5, 8.5),
                                   fontWeight: FontWeight.w500,
-                                  color: _fg(isLight, 0.55),
+                                  color: _fg(isLight, 0.72),
                                 ),
                               ),
                             ),
@@ -1298,7 +1298,7 @@ class _MiniMonth extends StatelessWidget {
                                               fontWeight: FontWeight.w300,
                                               color: _fg(
                                                 isLight,
-                                                isCurrentMonth ? 0.72 : 0.55,
+                                                isCurrentMonth ? 0.90 : 0.76,
                                               ),
                                             ),
                                           ),
