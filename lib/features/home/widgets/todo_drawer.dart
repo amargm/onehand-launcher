@@ -93,10 +93,18 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                   left: 0,
                   right: 0,
                   bottom: 0,
-                  height: panelHeight * t,
-                  child: IgnorePointer(
-                    ignoring: !_open,
-                    child: _buildPanel(items, accent, mq.padding.bottom),
+                  child: ClipRect(
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      heightFactor: t,
+                      child: SizedBox(
+                        height: panelHeight,
+                        child: IgnorePointer(
+                          ignoring: !_open,
+                          child: _buildPanel(items, accent, mq.padding.bottom),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               Positioned(
