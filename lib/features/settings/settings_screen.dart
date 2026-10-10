@@ -12,6 +12,7 @@ import '../../core/models/app_info.dart';
 import '../../core/models/schedule_rule.dart';
 import '../../core/models/special_date_event.dart';
 import '../../core/providers/apps_provider.dart';
+import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/favorite_apps_provider.dart';
 import '../../core/providers/recent_apps_provider.dart';
 import '../../core/providers/folders_provider.dart';
@@ -717,7 +718,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     'snooze_duration_mins', 'use_24_hour_clock', 'widget_light_mode', 'clock_font',
     'app_folders', 'favorite_apps_v1', 'app_drawer_enabled',
     'app_drawer_group_overrides', 'context_shell_apps_v1', 'schedule_rules_v1',
-    'special_date_events_v1', 'special_date_dismissed_v1', 'special_date_snooze_v1',
+    'special_date_events_v1',
     'home_planner_items_v1', 'counter_widgets', 'recent_apps',
     'drawer_icon_size', 'drawer_grid_columns', 'show_drawer_labels',
   };
