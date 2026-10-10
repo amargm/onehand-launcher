@@ -80,7 +80,7 @@ private fun unavailableWidgetView(context: Context): View {
             message,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                FrameLayout.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
             ),
         )
     }
