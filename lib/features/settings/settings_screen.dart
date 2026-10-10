@@ -3074,7 +3074,6 @@ Future<void> _importIndiaPublicHolidays(BuildContext context, WidgetRef ref) asy
                   ? 'India holidays for $year are already in your dates.'
                   : 'Added $added India holidays for $year.',
           ),
-        ),
         behavior: SnackBarBehavior.floating,
       ),
     );

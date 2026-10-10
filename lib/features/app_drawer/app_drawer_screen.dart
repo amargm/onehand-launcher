@@ -291,7 +291,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                     physics: const BouncingScrollPhysics(
                       parent: AlwaysScrollableScrollPhysics(),
                     ),
-                    scrollCacheExtent: 500,
+                    scrollCacheExtent: const ScrollCacheExtent.pixels(500),
                     slivers: [
                       if (visibleFavorites.isNotEmpty) ...[
                         SliverPadding(
