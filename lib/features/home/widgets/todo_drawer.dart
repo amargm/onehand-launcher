@@ -66,6 +66,28 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     }
   }
 
+  void _deletePlannerItem(PlannerItem item) {
+    final notifier = ref.read(plannerItemsProvider.notifier);
+    notifier.remove(item.id);
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            '“${item.title}” deleted',
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () => notifier.add(item),
+          ),
+        ),
+      );
+  }
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
@@ -322,7 +344,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                               item: item,
                               accent: accent,
                               onToggle: () => ref.read(plannerItemsProvider.notifier).toggleCompleted(item.id),
-                              onDelete: () => ref.read(plannerItemsProvider.notifier).remove(item.id),
+                              onDelete: () => _deletePlannerItem(item),
                             ),
                         ],
                       );
