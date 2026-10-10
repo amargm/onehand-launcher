@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -94,6 +93,15 @@ class SettingsScreen extends ConsumerWidget {
                     builder: (_) => const _SpecialDatesScreen(),
                   ),
                 ),
+          ),
+          const SizedBox(height: 8),
+          _NavTile(
+            icon: Icons.backup_outlined,
+            label: 'Backup & Restore',
+            subtitle: 'Save or restore your launcher setup',
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const _BackupRestoreScreen()),
+            ),
           ),
           const SizedBox(height: 8),
           _NavTile(
@@ -600,6 +608,15 @@ class _DockScreen extends ConsumerWidget {
         const SizedBox(height: 24),
         _SectionHeader('Layout'),
         _HandednessTile(),
+        const SizedBox(height: 8),
+        _ToggleTile(
+          icon: Icons.text_fields_rounded,
+          label: 'Show app names in library',
+          value: ref.watch(showDrawerLabelsProvider),
+          onChanged: ref.read(showDrawerLabelsProvider.notifier).set,
+        ),
+        const SizedBox(height: 12),
+        _DrawerGridControls(),
         const SizedBox(height: 24),
         _SectionHeader('Dock folders'),
         for (final folder in folders) ...[
