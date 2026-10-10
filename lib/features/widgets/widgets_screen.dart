@@ -1979,7 +1979,7 @@ class _CounterCard extends StatelessWidget {
     return GestureDetector(
       onLongPress: () => _showOptions(context),
       child: Container(
-        height: 88,
+        height: 108,
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(14),
@@ -2074,6 +2074,35 @@ class _CounterCard extends StatelessWidget {
                             onTap: onIncrement,
                           ),
                           const SizedBox(width: 2),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Icon(
+                            model.lastChangeDirection > 0
+                                ? Icons.arrow_upward_rounded
+                                : model.lastChangeDirection < 0
+                                    ? Icons.arrow_downward_rounded
+                                    : Icons.history_rounded,
+                            size: 11,
+                            color: model.lastChangeDirection > 0
+                                ? Colors.greenAccent.shade400
+                                : model.lastChangeDirection < 0
+                                    ? Colors.orangeAccent.shade200
+                                    : noteColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              model.lastModifiedAt == null
+                                  ? 'No changes yet'
+                                  : model.lastModifiedAt!.day.toString().padLeft(2, '0') + '/' + model.lastModifiedAt!.month.toString().padLeft(2, '0') + ' ' + model.lastModifiedAt!.hour.toString().padLeft(2, '0') + ':' + model.lastModifiedAt!.minute.toString().padLeft(2, '0'),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.sora(fontSize: 8, color: noteColor),
+                            ),
+                          ),
                         ],
                       ),
                     ],
