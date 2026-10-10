@@ -198,3 +198,31 @@ class _StringNotifier extends StateNotifier<String> {
     _prefs.setString(_key, value);
   }
 }
+
+
+// ── App library layout ─────────────────────────────────────────────────────
+
+const _kDrawerIconSize = 'drawer_icon_size';
+const _kDrawerGridColumns = 'drawer_grid_columns';
+const _kShowDrawerLabels = 'show_drawer_labels';
+
+/// App icon diameter in the app library, clamped to a comfortable range.
+final drawerIconSizeProvider =
+    StateNotifierProvider<_IntNotifier, int>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _IntNotifier(prefs, _kDrawerIconSize, defaultValue: 46);
+});
+
+/// Number of app columns in the library grid.
+final drawerGridColumnsProvider =
+    StateNotifierProvider<_IntNotifier, int>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _IntNotifier(prefs, _kDrawerGridColumns, defaultValue: 4);
+});
+
+/// Whether app names are displayed below their icons in the library.
+final showDrawerLabelsProvider =
+    StateNotifierProvider<_BoolNotifier, bool>((ref) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _BoolNotifier(prefs, _kShowDrawerLabels, defaultValue: true);
+});

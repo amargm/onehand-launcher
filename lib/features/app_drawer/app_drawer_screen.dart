@@ -166,7 +166,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     final accent = Theme.of(context).colorScheme.primary;
     final appsAsync = ref.watch(appsProvider);
     final overrides = ref.watch(appDrawerGroupOverridesProvider);
-    final favorites = ref.watch(favoriteAppsProvider);
+    final favorites = ref.watch(favoriteAppsProvider);\n    final iconSize = ref.watch(drawerIconSizeProvider);\n    final gridColumns = ref.watch(drawerGridColumnsProvider);\n    final showLabels = ref.watch(showDrawerLabelsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),

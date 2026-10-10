@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';\n\nimport 'package:flutter/material.dart';\nimport 'package:flutter/services.dart';\nimport 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,13 +8,13 @@ import '../../core/models/app_folder.dart';
 import '../../core/models/app_info.dart';
 import '../../core/models/schedule_rule.dart';
 import '../../core/models/special_date_event.dart';
-import '../../core/providers/apps_provider.dart';
+import '../../core/providers/apps_provider.dart';\nimport '../../core/providers/favorite_apps_provider.dart';\nimport '../../core/providers/context_apps_provider.dart';\nimport '../../core/providers/recent_apps_provider.dart';
 import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/schedule_rules_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../app_drawer/app_drawer_screen.dart';
-import '../../core/providers/special_date_provider.dart';
+import '../../core/providers/special_date_provider.dart';\nimport '../../core/providers/planner_items_provider.dart';\nimport '../../core/providers/counter_widgets_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../search/search_overlay.dart';
@@ -609,6 +609,266 @@ class _DockScreen extends ConsumerWidget {
               ),
             ),
           ),
+      ],
+    );
+  }
+}
+
+
+// ── App library layout controls ─────────────────────────────────────────────
+class _DrawerGridControls extends ConsumerWidget {
+  const _DrawerGridControls();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final columns = ref.watch(drawerGridColumnsProvider);
+    final iconSize = ref.watch(drawerIconSizeProvider);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A1A),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.grid_view_rounded, color: Colors.white54, size: 18),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Grid density', style: GoogleFonts.hankenGrotesk(fontSize: 13, color: Colors.white))),
+              Text('$columns columns', style: GoogleFonts.sora(fontSize: 11, color: Theme.of(context).colorScheme.primary)),
+            ],
+          ),
+          Slider(
+            value: columns.toDouble(),
+            min: 3,
+            max: 6,
+            divisions: 3,
+            label: '$columns columns',
+            onChanged: (value) => ref.read(drawerGridColumnsProvider.notifier).set(value.round()),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.photo_size_select_large_outlined, color: Colors.white54, size: 18),
+              const SizedBox(width: 10),
+              Expanded(child: Text('App icon size', style: GoogleFonts.hankenGrotesk(fontSize: 13, color: Colors.white))),
+              Text('$iconSize px', style: GoogleFonts.sora(fontSize: 11, color: Theme.of(context).colorScheme.primary)),
+            ],
+          ),
+          Slider(
+            value: iconSize.toDouble(),
+            min: 36,
+            max: 60,
+            divisions: 6,
+            label: '$iconSize px',
+            onChanged: (value) => ref.read(drawerIconSizeProvider.notifier).set(value.round()),
+          ),
+          Text(
+            'Changes apply to the app library and favorites.',
+            style: GoogleFonts.hankenGrotesk(fontSize: 11, color: Colors.white38),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Backup & restore ────────────────────────────────────────────────────────
+class _BackupRestoreScreen extends ConsumerStatefulWidget {
+  const _BackupRestoreScreen();
+
+  @override
+  ConsumerState<_BackupRestoreScreen> createState() => _BackupRestoreScreenState();
+}
+
+class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
+  final _restoreController = TextEditingController();
+  bool _busy = false;
+
+  // Local wallpaper paths are device-specific and intentionally excluded.
+  static const _backupKeys = <String>{
+    'accent_color', 'show_folder_labels', 'show_search_label', 'right_handed',
+    'snooze_duration_mins', 'use_24_hour_clock', 'widget_light_mode', 'clock_font',
+    'app_folders', 'favorite_apps_v1', 'app_drawer_enabled',
+    'app_drawer_group_overrides', 'context_shell_apps_v1', 'schedule_rules_v1',
+    'special_date_events_v1', 'special_date_dismissed_v1', 'special_date_snooze_v1',
+    'planner_items_v1', 'counter_widgets_v1', 'recent_apps_v1',
+    'drawer_icon_size', 'drawer_grid_columns', 'show_drawer_labels',
+  };
+
+  @override
+  void dispose() {
+    _restoreController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _exportBackup() async {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final values = <String, dynamic>{};
+    for (final key in _backupKeys) {
+      if (!prefs.containsKey(key)) continue;
+      final value = prefs.get(key);
+      if (value is String || value is bool || value is int || value is double ||
+          value is List<String>) {
+        values[key] = value;
+      }
+    }
+    final backup = const JsonEncoder.withIndent('  ').convert({
+      'format': 'onehand-launcher-backup',
+      'version': 1,
+      'createdAt': DateTime.now().toUtc().toIso8601String(),
+      'preferences': values,
+    });
+    await Clipboard.setData(ClipboardData(text: backup));
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Backup copied to clipboard. Save it somewhere safe.')),
+    );
+  }
+
+  Future<void> _restoreBackup() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1A1A1A),
+        title: Text('Restore backup?', style: GoogleFonts.sora(color: Colors.white, fontSize: 15)),
+        content: Text(
+          'Supported launcher settings in this backup will replace their current values. This cannot be undone.',
+          style: GoogleFonts.hankenGrotesk(color: Colors.white60, fontSize: 13),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Restore')),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final decoded = jsonDecode(_restoreController.text);
+      if (decoded is! Map<String, dynamic> ||
+          decoded['format'] != 'onehand-launcher-backup' ||
+          decoded['version'] != 1 ||
+          decoded['preferences'] is! Map<String, dynamic>) {
+        throw const FormatException('This is not a supported One-Handed Launcher backup.');
+      }
+      final values = decoded['preferences'] as Map<String, dynamic>;
+      final prefs = ref.read(sharedPreferencesProvider);
+      for (final entry in values.entries) {
+        if (!_backupKeys.contains(entry.key)) continue;
+        final value = entry.value;
+        if (value is String) {
+          await prefs.setString(entry.key, value);
+        } else if (value is bool) {
+          await prefs.setBool(entry.key, value);
+        } else if (value is int) {
+          await prefs.setInt(entry.key, value);
+        } else if (value is double) {
+          await prefs.setDouble(entry.key, value);
+        } else if (value is List && value.every((item) => item is String)) {
+          await prefs.setStringList(entry.key, value.cast<String>());
+        }
+      }
+      // Recreate persisted notifiers so their in-memory state matches the restore.
+      for (final provider in [
+        accentColorProvider, showFolderLabelsProvider, showSearchLabelProvider,
+        rightHandedProvider, use24HourClockProvider, snoozeDurationProvider,
+        widgetLightModeProvider, clockFontProvider, wallpaperPathProvider,
+        foldersProvider, favoriteAppsProvider, appDrawerEnabledProvider,
+        appDrawerGroupOverridesProvider, contextShellAppsProvider,
+        scheduleRulesProvider, specialDateEventsProvider, plannerItemsProvider,
+        counterWidgetsProvider, recentAppsProvider, drawerIconSizeProvider,
+        drawerGridColumnsProvider, showDrawerLabelsProvider,
+      ]) {
+        ref.invalidate(provider);
+      }
+      if (!mounted) return;
+      _restoreController.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Backup restored successfully.')),
+      );
+    } on FormatException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(error.message)),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not restore this backup. Check the JSON and try again.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _SubScreen(
+      title: 'Backup & Restore',
+      children: [
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A1A),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.backup_outlined, color: Colors.white70, size: 24),
+              const SizedBox(height: 12),
+              Text('Keep your setup safe', style: GoogleFonts.sora(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 6),
+              Text(
+                'Back up your theme, accent colour, dock folders, favorites, app groups, layout choices, schedules and launcher preferences. Wallpaper files are not included because their paths are device-specific.',
+                style: GoogleFonts.hankenGrotesk(color: Colors.white54, fontSize: 12, height: 1.55),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: _busy ? null : _exportBackup,
+                  icon: const Icon(Icons.copy_rounded, size: 17),
+                  label: const Text('Copy backup JSON'),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        _SectionHeader('Restore from backup'),
+        Text(
+          'Paste a backup JSON below. Restoring updates supported settings on this device.',
+          style: GoogleFonts.hankenGrotesk(color: Colors.white38, fontSize: 12, height: 1.5),
+        ),
+        const SizedBox(height: 10),
+        TextField(
+          controller: _restoreController,
+          minLines: 6,
+          maxLines: 12,
+          style: GoogleFonts.robotoMono(fontSize: 11, color: Colors.white70),
+          decoration: InputDecoration(
+            hintText: 'Paste backup JSON here…',
+            hintStyle: GoogleFonts.sora(fontSize: 12, color: Colors.white24),
+            filled: true,
+            fillColor: const Color(0xFF1A1A1A),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+          ),
+        ),
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: _busy ? null : _restoreBackup,
+            icon: const Icon(Icons.restore_rounded, size: 17),
+            label: Text(_busy ? 'Restoring…' : 'Restore backup'),
+          ),
+        ),
       ],
     );
   }
