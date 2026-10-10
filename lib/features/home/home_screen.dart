@@ -15,6 +15,7 @@ import '../../core/services/launcher_service.dart';
 import '../settings/settings_screen.dart';
 import '../widgets/widgets_screen.dart';
 import 'widgets/app_dock.dart';
+import 'widgets/todo_drawer.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -315,6 +316,8 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
             ),
           ],
         ),
+        // Floating planner drawer sits above the home content and dock.
+        const TodoDrawer(),
       ],
     );
   }
