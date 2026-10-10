@@ -296,7 +296,23 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
             ),
 
             // ── Negative space / wallpaper zone ─────────────────────────
-            const Spacer(),
+            // When the planner arrow is hidden, an upward swipe in this
+            // open wallpaper area becomes the discoverable opener.
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onVerticalDragEnd: (details) {
+                  final hidden = !ref.read(showPlannerArrowProvider);
+                  final velocity = details.primaryVelocity ?? 0;
+                  if (hidden &&
+                      !ref.read(todoDrawerOpenProvider) &&
+                      velocity < -180) {
+                    ref.read(todoDrawerOpenProvider.notifier).state = true;
+                  }
+                },
+                child: const SizedBox.expand(),
+              ),
+            ),
 
             // ── Unified dock (context row + action buttons) ───────────────
             const AppDock(),
