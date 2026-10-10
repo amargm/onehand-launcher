@@ -19,6 +19,17 @@ import 'android_widget_view.dart';
 Color _fg(bool isLight, double alpha) =>
     (isLight ? Colors.black : Colors.white).withValues(alpha: alpha);
 
+/// Keeps accent foregrounds readable when the selected accent is too close
+/// to the surface color, especially white accents on light surfaces.
+Color _accentInk(Color accent, bool isLight) {
+  final hsl = HSLColor.fromColor(accent);
+  final lightness = isLight
+      ? hsl.lightness.clamp(0.22, 0.40).toDouble()
+      : hsl.lightness.clamp(0.60, 0.82).toDouble();
+  return hsl.withLightness(lightness).toColor();
+}
+
+
 // ── Event span types & helpers ────────────────────────────────────────────────
 
 typedef _MonthEventSpan =
@@ -258,7 +269,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: accent, size: 16),
+              Icon(Icons.check_circle_rounded, color: _accentInk(accent, isLight), size: 16),
               const SizedBox(width: 8),
               Text(
                 'Event added',
@@ -742,13 +753,13 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.location_on_rounded, size: 14, color: accent),
+                    Icon(Icons.location_on_rounded, size: 14, color: _accentInk(accent, isLight)),
                     const SizedBox(width: 8),
                     Text(
                       'Detect country (one-time)',
                       style: GoogleFonts.sora(
                         fontSize: 12,
-                        color: accent,
+                        color: _accentInk(accent, isLight),
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -832,7 +843,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.add_rounded, size: 15, color: accent),
+                Icon(Icons.add_rounded, size: 15, color: _accentInk(accent, isLight)),
                 const SizedBox(width: 6),
                 Text(
                   'Add my event',
@@ -889,7 +900,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     icon: Icons.widgets_rounded,
                     label: 'App Widget',
                     subtitle: 'Embed a live widget from another app',
-                    accent: accent,
+                    accent: _accentInk(accent, isLight),
                     textColor: textColor,
                     subColor: subColor,
                     onTap: () {
@@ -1190,7 +1201,7 @@ class _MiniMonth extends StatelessWidget {
         final dowH = h * dowRatio;
         final rowH = (h * daysRatio) / 6;
 
-        final headerColor = isCurrentMonth ? accent : _fg(isLight, 0.78);
+        final headerColor = isCurrentMonth ? _accentInk(accent, isLight) : _fg(isLight, 0.78);
 
         final nameFontSize = (nameH * 0.62).clamp(7.0, 11.0);
 
@@ -1286,6 +1297,7 @@ class _MiniMonth extends StatelessWidget {
                                             day: dayNum,
                                             size: rowH * 0.72,
                                             accent: accent,
+                                            isLight: isLight,
                                           )
                                         else
                                           Text(
@@ -1311,7 +1323,7 @@ class _MiniMonth extends StatelessWidget {
                                             height: 2.5,
                                             decoration: BoxDecoration(
                                               shape: BoxShape.circle,
-                                              color: accent,
+                                              color: _accentInk(accent, isLight),
                                             ),
                                           ),
                                       ],
@@ -1337,11 +1349,13 @@ class _TodayBadge extends StatelessWidget {
     required this.day,
     required this.size,
     required this.accent,
+    required this.isLight,
   });
 
   final int day;
   final double size;
   final Color accent;
+  final bool isLight;
 
   @override
   Widget build(BuildContext context) {
@@ -1351,7 +1365,7 @@ class _TodayBadge extends StatelessWidget {
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: accent.withValues(alpha: 0.16),
-        border: Border.all(color: accent.withValues(alpha: 0.75), width: 0.8),
+        border: Border.all(color: _accentInk(accent, isLight).withValues(alpha: 0.75), width: 0.8),
       ),
       child: Center(
         child: Text(
@@ -1359,7 +1373,7 @@ class _TodayBadge extends StatelessWidget {
           style: GoogleFonts.sora(
             fontSize: (size * 0.42).clamp(6.5, 11.0),
             fontWeight: FontWeight.w700,
-            color: accent,
+            color: _accentInk(accent, isLight),
           ),
         ),
       ),
@@ -1398,7 +1412,7 @@ class _YearNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isNow = year == currentYear;
     final yearColor =
-        isNow ? accent : _fg(isLight, 0.72);
+        isNow ? _accentInk(accent, isLight) : _fg(isLight, 0.72);
 
     final actionButtons = Row(
       mainAxisSize: MainAxisSize.min,
@@ -1494,7 +1508,7 @@ class _NavChevron extends StatelessWidget {
           shape: BoxShape.circle,
           color: _fg(isLight, 0.06),
         ),
-        child: Icon(icon, size: 17, color: accent.withValues(alpha: 0.65)),
+        child: Icon(icon, size: 17, color: _accentInk(accent, isLight).withValues(alpha: 0.85)),
       ),
     );
   }
@@ -1524,11 +1538,11 @@ class _SmallButton extends StatelessWidget {
         height: 30,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          color: active ? accent.withValues(alpha: 0.15) : _fg(isLight, 0.07),
+          color: active ? _accentInk(accent, isLight).withValues(alpha: 0.15) : _fg(isLight, 0.07),
           border:
               active
                   ? Border.all(
-                    color: accent.withValues(alpha: 0.35),
+                    color: _accentInk(accent, isLight).withValues(alpha: 0.45),
                     width: 0.8,
                   )
                   : null,
@@ -1536,7 +1550,7 @@ class _SmallButton extends StatelessWidget {
         child: Icon(
           icon,
           size: 15,
-          color: active ? accent : _fg(isLight, 0.60),
+          color: active ? _accentInk(accent, isLight) : _fg(isLight, 0.60),
         ),
       ),
     );
@@ -2008,7 +2022,7 @@ class _CounterCard extends StatelessWidget {
                           style: GoogleFonts.sora(
                             fontSize: 52,
                             fontWeight: FontWeight.w700,
-                            color: accent,
+                            color: _accentInk(accent, isLight),
                             height: 1.0,
                           ),
                         ),
@@ -2106,7 +2120,7 @@ class _CounterCard extends StatelessWidget {
                   ListTile(
                     leading: Icon(
                       Icons.restart_alt_rounded,
-                      color: accent,
+                      color: _accentInk(accent, isLight),
                       size: 20,
                     ),
                     title: Text(
@@ -2172,7 +2186,7 @@ class _CounterBtn extends StatelessWidget {
         width: 26,
         height: 22,
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.12),
+          color: _accentInk(accent, isLight).withValues(alpha: 0.12),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Center(
@@ -2181,7 +2195,7 @@ class _CounterBtn extends StatelessWidget {
             style: GoogleFonts.sora(
               fontSize: 15,
               fontWeight: FontWeight.w600,
-              color: accent,
+              color: _accentInk(accent, isLight),
               height: 1.0,
             ),
           ),

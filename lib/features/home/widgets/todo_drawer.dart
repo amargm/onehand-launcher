@@ -8,6 +8,9 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
 import '../../../core/providers/schedule_rules_provider.dart';
 
+Color _contrastForeground(Color background) =>
+    background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
+
 class TodoDrawer extends ConsumerStatefulWidget {
   const TodoDrawer({super.key});
 
@@ -147,10 +150,6 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final items = [...ref.watch(plannerItemsProvider)]
       ..sort((a, b) => a.date.compareTo(b.date));
     final panelHeight = mq.size.height * 0.65;
-    // Resolve the collapsed position during build, so the control follows the
-    // same dock/shell state throughout the entire opening animation.
-    final collapsedControlOffset =
-        _collapsedControlOffset(context, mq.size.height);
 
     return Positioned.fill(
       child: AnimatedBuilder(
@@ -191,78 +190,23 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                     ),
                   ),
                 ),
-              Positioned(
-                // Interpolate continuously between the dock-safe resting
-                // position and a position just above the expanding panel.
-                // Using a t == 0 branch caused the control to jump as soon as
-                // the animation started, briefly overlapping the dock/shell.
-                bottom: mq.padding.bottom +
-                    (collapsedControlOffset * (1 - t)) +
-                    ((panelHeight + 10) * t),
-                child: _togglePill(accent, t),
-              ),
+              if (!_open)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: mq.padding.bottom + 64,
+                  height: 96,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onVerticalDragEnd: (details) {
+                      if ((details.primaryVelocity ?? 0) < -120) _toggle();
+                    },
+                    child: const SizedBox.expand(),
+                  ),
+                ),
             ],
           );
         },
-      ),
-    );
-  }
-
-  double _collapsedControlOffset(BuildContext context, double screenHeight) {
-    final shellVisible = ref.watch(headphoneProvider) ||
-        ref.watch(isScheduleContextActiveProvider);
-    final showFolderLabels = ref.watch(showFolderLabelsProvider);
-    final showSearchLabel = ref.watch(showSearchLabelProvider);
-
-    // The dock's 56 dp icons sit inside 14 dp vertical padding on both
-    // sides. Include the shell's own padding and gap, plus any context row
-    // and optional labels, so the control clears the complete visible stack.
-    final hasLabels = showFolderLabels || showSearchLabel;
-    const dockRowHeight = 56.0 + 28.0;
-    const shellChrome = 16.0 + 6.0;
-    final contextRowHeight = shellVisible ? 32.0 : 0.0;
-    final labelHeight = hasLabels ? 18.0 : 0.0;
-    final dockFootprint = dockRowHeight +
-        (shellVisible ? shellChrome + contextRowHeight : 0.0) +
-        labelHeight;
-    return dockFootprint + 18.0;
-  }
-
-  Widget _togglePill(Color accent, double t) {
-    return Semantics(
-      button: true,
-      label: t > 0.5 ? 'Close to-do and events' : 'Open to-do and events',
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: _toggle,
-        onVerticalDragUpdate: (details) {
-          if (details.delta.dy < -3 && !_open) _toggle();
-          if (details.delta.dy > 3 && _open) _toggle();
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF202023),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.24),
-                blurRadius: 18,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: Icon(
-            t > 0.5
-                ? Icons.keyboard_arrow_down_rounded
-                : Icons.keyboard_arrow_up_rounded,
-            size: 22,
-            color: accent,
-          ),
-        ),
       ),
     );
   }
@@ -314,7 +258,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(20, 17, 18, 12),
+            padding: const EdgeInsets.fromLTRB(18, 10, 12, 8),
             child: Row(
               children: [
                 Expanded(
@@ -325,21 +269,40 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                           style: GoogleFonts.sora(
                             color: accent,
                             fontSize: 9,
-                            letterSpacing: 1.8,
+                            letterSpacing: 1.5,
                             fontWeight: FontWeight.w700,
                           )),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 3),
                       Text('Your upcoming plans',
                           style: GoogleFonts.sora(
                             color: Colors.white,
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: FontWeight.w600,
                           )),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${items.where((e) => !e.isCompleted && e.type == PlannerItemType.todo).length} to-do left',
+                        style: GoogleFonts.sora(color: Colors.white54, fontSize: 10),
+                      ),
                     ],
                   ),
                 ),
-                Text('${items.where((e) => !e.isCompleted && e.type == PlannerItemType.todo).length} left',
-                    style: GoogleFonts.sora(color: Colors.white54, fontSize: 11)),
+                const SizedBox(width: 8),
+                Semantics(
+                  button: true,
+                  label: 'Add a to-do or event',
+                  child: IconButton(
+                    tooltip: 'Add a to-do or event',
+                    onPressed: _addItem,
+                    style: IconButton.styleFrom(
+                      backgroundColor: accent,
+                      foregroundColor: _contrastForeground(accent),
+                      minimumSize: const Size(48, 48),
+                      fixedSize: const Size(48, 48),
+                    ),
+                    icon: const Icon(Icons.add_rounded, size: 23),
+                  ),
+                ),
               ],
             ),
           ),
@@ -354,17 +317,17 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                           Icon(Icons.event_note_rounded, size: 34, color: accent.withValues(alpha: 0.8)),
                           const SizedBox(height: 12),
                           Text('A little space for what matters',
-                              style: GoogleFonts.sora(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500)),
+                              style: GoogleFonts.sora(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 6),
                           Text('Add a to-do or event and it will appear here by date.',
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.sora(color: Colors.white54, fontSize: 11, height: 1.5)),
+                              style: GoogleFonts.sora(color: Colors.white54, fontSize: 10, height: 1.45)),
                         ],
                       ),
                     ),
                   )
                 : ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 88),
+                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
                     itemCount: dates.length,
                     itemBuilder: (context, index) {
                       final date = dates[index];
@@ -406,17 +369,17 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           Align(
             alignment: Alignment.centerRight,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 2, 18, 12 + bottomInset),
-              child: FloatingActionButton(
-                heroTag: 'planner_add_button',
-                tooltip: 'Add a to-do or event',
-                onPressed: _addItem,
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                elevation: 3,
-                highlightElevation: 6,
-                mini: false,
-                child: const Icon(Icons.add_rounded, size: 25),
+              padding: EdgeInsets.fromLTRB(12, 2, 12, 8 + bottomInset),
+              child: IconButton(
+                tooltip: 'Collapse to-do and events',
+                onPressed: _toggle,
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFF29292D),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(48, 48),
+                  fixedSize: const Size(48, 48),
+                ),
+                icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 27),
               ),
             ),
           ),
@@ -466,7 +429,7 @@ class _PlannerItemTile extends StatelessWidget {
       onDismissed: (_) => onDelete(),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
           color: const Color(0xFF252529),
           borderRadius: BorderRadius.circular(14),
@@ -520,18 +483,18 @@ class _PlannerItemTile extends StatelessWidget {
                   Text(item.title,
                       style: GoogleFonts.sora(
                         color: item.isCompleted ? Colors.white38 : Colors.white,
-                        fontSize: 12,
+                        fontSize: 11.5,
                         fontWeight: FontWeight.w600,
                         decoration: item.isCompleted ? TextDecoration.lineThrough : null,
                       )),
                   if (item.description.trim().isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(item.description,
-                        style: GoogleFonts.sora(color: Colors.white54, fontSize: 10, height: 1.4)),
+                        style: GoogleFonts.sora(color: Colors.white54, fontSize: 9.5, height: 1.35)),
                   ],
                   const SizedBox(height: 5),
                   Text(isTodo ? (item.isCompleted ? 'COMPLETED' : 'TO-DO') : 'EVENT',
-                      style: GoogleFonts.sora(color: accent.withValues(alpha: 0.9), fontSize: 8, letterSpacing: 1.1, fontWeight: FontWeight.w700)),
+                      style: GoogleFonts.sora(color: accent.withValues(alpha: 0.9), fontSize: 7.5, letterSpacing: 1.0, fontWeight: FontWeight.w700)),
                 ],
               ),
             ),
