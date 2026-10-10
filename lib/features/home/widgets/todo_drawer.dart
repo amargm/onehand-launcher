@@ -62,13 +62,62 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       builder: (_) => const _PlannerItemForm(),
     );
     if (item != null && mounted) {
-      ref.read(plannerItemsProvider.notifier).add(item);
+      final saved = await ref.read(plannerItemsProvider.notifier).add(item);
+      if (!saved && mounted) _showPersistenceWarning();
     }
   }
 
-  void _deletePlannerItem(PlannerItem item) {
+  Future<void> _togglePlannerItem(PlannerItem item) async {
+    final saved = await ref
+        .read(plannerItemsProvider.notifier)
+        .toggleCompleted(item.id);
+    if (!saved && mounted) _showPersistenceWarning();
+  }
+
+  void _showPersistenceWarning() {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: const Text(
+            "Couldn't save this change. It may be lost when the app closes.",
+          ),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'RETRY',
+            onPressed: () async {
+              final saved =
+                  await ref.read(plannerItemsProvider.notifier).persist();
+              if (!mounted) return;
+              final messenger = ScaffoldMessenger.of(context);
+              messenger
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      saved
+                          ? 'Planner changes saved'
+                          : 'Still unable to save planner changes',
+                    ),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+            },
+          ),
+        ),
+      );
+  }
+
+  Future<void> _deletePlannerItem(PlannerItem item) async {
     final notifier = ref.read(plannerItemsProvider.notifier);
-    notifier.remove(item.id);
+    final saved = await notifier.remove(item.id);
+    if (!mounted) return;
+    if (!saved) {
+      _showPersistenceWarning();
+      return;
+    }
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(
@@ -82,7 +131,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           duration: const Duration(seconds: 5),
           action: SnackBarAction(
             label: 'UNDO',
-            onPressed: () => notifier.add(item),
+            onPressed: () async {
+              final restored = await notifier.add(item);
+              if (!restored && mounted) _showPersistenceWarning();
+            },
           ),
         ),
       );
