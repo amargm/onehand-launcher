@@ -813,7 +813,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     'Tap + below to add your own events',
                     style: GoogleFonts.sora(
                       fontSize: 11,
-                      color: subColor.withValues(alpha: 0.6),
+                      color: subColor,
                     ),
                   ),
                 ),
@@ -1038,7 +1038,7 @@ class _EventTile extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: GoogleFonts.sora(
                 fontSize: 10,
-                color: _fg(isLight, 0.45),
+                color: _fg(isLight, 0.65),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1398,7 +1398,7 @@ class _YearNavBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final isNow = year == currentYear;
     final yearColor =
-        isNow ? accent.withValues(alpha: 0.85) : _fg(isLight, 0.55);
+        isNow ? accent : _fg(isLight, 0.72);
 
     final actionButtons = Row(
       mainAxisSize: MainAxisSize.min,
@@ -1564,13 +1564,13 @@ class _AddWidgetButton extends StatelessWidget {
         height: 44,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _fg(isLight, 0.10)),
-          color: _fg(isLight, 0.03),
+          border: Border.all(color: _fg(isLight, 0.18)),
+          color: _fg(isLight, 0.05),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.add_rounded, size: 15, color: _fg(isLight, 0.30)),
+            Icon(Icons.add_rounded, size: 15, color: _fg(isLight, 0.65)),
             const SizedBox(width: 8),
             Text(
               'Add Widget',
@@ -1578,7 +1578,7 @@ class _AddWidgetButton extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w400,
                 letterSpacing: 0.5,
-                color: _fg(isLight, 0.30),
+                color: _fg(isLight, 0.65),
               ),
             ),
           ],
@@ -1973,7 +1973,7 @@ class _CounterCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cardBg = isLight ? Colors.white : const Color(0xFF141414);
     final dividerColor = _fg(isLight, 0.10);
-    final noteColor = _fg(isLight, 0.60);
+    final noteColor = _fg(isLight, 0.78);
     final borderColor = _fg(isLight, 0.08);
 
     return GestureDetector(
