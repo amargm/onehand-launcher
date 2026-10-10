@@ -24,10 +24,14 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 320),
-      reverseDuration: const Duration(milliseconds: 260),
+      duration: const Duration(milliseconds: 380),
+      reverseDuration: const Duration(milliseconds: 280),
     );
-    _curve = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
+    _curve = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutQuart,
+      reverseCurve: Curves.easeInCubic,
+    );
   }
 
   @override
@@ -188,13 +192,32 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       ),
       child: Column(
         children: [
-          const SizedBox(height: 10),
-          Container(
-            width: 38,
-            height: 4,
-            decoration: BoxDecoration(
-              color: Colors.white24,
-              borderRadius: BorderRadius.circular(8),
+          const SizedBox(height: 8),
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onVerticalDragEnd: (details) {
+              final velocity = details.primaryVelocity ?? 0;
+              if (velocity < -120 && !_open) {
+                _toggle();
+              } else if (velocity > 120 && _open) {
+                _toggle();
+              }
+            },
+            onTap: _toggle,
+            child: SizedBox(
+              width: double.infinity,
+              height: 24,
+              child: Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  width: _open ? 42 : 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: _open ? 0.38 : 0.24),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
             ),
           ),
           Padding(
@@ -290,13 +313,15 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           Align(
             alignment: Alignment.centerRight,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 0, 18, 12 + bottomInset),
+              padding: EdgeInsets.fromLTRB(16, 2, 18, 12 + bottomInset),
               child: FloatingActionButton(
                 heroTag: 'planner_add_button',
+                tooltip: 'Add a to-do or event',
                 onPressed: _addItem,
                 backgroundColor: accent,
                 foregroundColor: Colors.white,
-                elevation: 5,
+                elevation: 3,
+                highlightElevation: 6,
                 mini: false,
                 child: const Icon(Icons.add_rounded, size: 25),
               ),
@@ -358,14 +383,35 @@ class _PlannerItemTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (isTodo)
-              GestureDetector(
-                onTap: onToggle,
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 10, top: 1),
-                  child: Icon(
-                    item.isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined,
-                    size: 20,
-                    color: item.isCompleted ? accent : Colors.white38,
+              Semantics(
+                button: true,
+                label: item.isCompleted ? 'Mark as not completed' : 'Mark as completed',
+                child: InkWell(
+                  onTap: () {
+                    Feedback.forTap(context);
+                    onToggle();
+                  },
+                  customBorder: const CircleBorder(),
+                  child: SizedBox(
+                    width: 34,
+                    height: 34,
+                    child: Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 180),
+                        switchInCurve: Curves.easeOutBack,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, animation) => ScaleTransition(
+                          scale: animation,
+                          child: FadeTransition(opacity: animation, child: child),
+                        ),
+                        child: Icon(
+                          item.isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined,
+                          key: ValueKey(item.isCompleted),
+                          size: 20,
+                          color: item.isCompleted ? accent : Colors.white38,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               )
