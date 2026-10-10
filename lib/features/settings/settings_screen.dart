@@ -583,6 +583,15 @@ class _DockScreen extends ConsumerWidget {
           onChanged: (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
         ),
         const SizedBox(height: 24),
+        _SectionHeader('Planner'),
+        _ToggleTile(
+          icon: Icons.keyboard_arrow_up_rounded,
+          label: 'Show planner arrow button',
+          value: ref.watch(showPlannerArrowProvider),
+          onChanged: (value) =>
+              ref.read(showPlannerArrowProvider.notifier).set(value),
+        ),
+        const SizedBox(height: 24),
         _SectionHeader('Layout'),
         _HandednessTile(),
         const SizedBox(height: 24),
