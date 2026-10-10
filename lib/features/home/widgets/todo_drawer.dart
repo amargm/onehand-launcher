@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/planner_item.dart';
 import '../../../core/providers/planner_items_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/headphone_provider.dart';
+import '../../../core/providers/schedule_rules_provider.dart';
 
 class TodoDrawer extends ConsumerStatefulWidget {
   const TodoDrawer({super.key});
@@ -112,7 +114,12 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                   ),
                 ),
               Positioned(
-                bottom: mq.padding.bottom + 72 * (1 - t),
+                // Keep the control above the dock/shell footprint. The shell
+                // grows when context rows or labels are visible, so derive the
+                // resting offset from the same state that drives AppDock.
+                bottom: mq.padding.bottom +
+                    (t * (panelHeight - 28)) +
+                    (t == 0 ? _collapsedControlOffset(context, mq.size.height) : 10),
                 child: _togglePill(accent, t),
               ),
             ],
@@ -122,53 +129,53 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     );
   }
 
+  double _collapsedControlOffset(BuildContext context, double screenHeight) {
+    final shellVisible = ref.watch(headphoneProvider) ||
+        ref.watch(isScheduleContextActiveProvider);
+    final showFolderLabels = ref.watch(showFolderLabelsProvider);
+    final showSearchLabel = ref.watch(showSearchLabelProvider);
+
+    // AppDock's inner circles are 56 dp; the optional context row and labels
+    // increase the outer-shell footprint. Keep the pill just above that area.
+    final hasLabels = showFolderLabels || showSearchLabel;
+    final dockFootprint = 56.0 +
+        (shellVisible ? 32.0 + (hasLabels ? 18.0 : 0.0) : (hasLabels ? 18.0 : 0.0));
+    return dockFootprint + 18.0;
+  }
+
   Widget _togglePill(Color accent, double t) {
-    return GestureDetector(
-      onTap: _toggle,
-      onVerticalDragUpdate: (details) {
-        if (details.delta.dy < -3 && !_open) _toggle();
-        if (details.delta.dy > 3 && _open) _toggle();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 19, vertical: 10),
-        decoration: BoxDecoration(
-          color: const Color(0xFF202023),
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.24),
-              blurRadius: 18,
-              offset: const Offset(0, 5),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              t > 0.5 ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-              size: 18,
-              color: accent,
-            ),
-            const SizedBox(width: 7),
-            Text(
-              'TO-DO & EVENTS',
-              style: GoogleFonts.sora(
-                color: Colors.white.withValues(alpha: 0.86),
-                fontSize: 10,
-                letterSpacing: 1.15,
-                fontWeight: FontWeight.w600,
+    return Semantics(
+      button: true,
+      label: t > 0.5 ? 'Close to-do and events' : 'Open to-do and events',
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggle,
+        onVerticalDragUpdate: (details) {
+          if (details.delta.dy < -3 && !_open) _toggle();
+          if (details.delta.dy > 3 && _open) _toggle();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF202023),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.10)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.24),
+                blurRadius: 18,
+                offset: const Offset(0, 5),
               ),
-            ),
-            const SizedBox(width: 7),
-            Icon(
-              t > 0.5 ? Icons.keyboard_arrow_down_rounded : Icons.keyboard_arrow_up_rounded,
-              size: 18,
-              color: accent.withValues(alpha: 0.85),
-            ),
-          ],
+            ],
+          ),
+          child: Icon(
+            t > 0.5
+                ? Icons.keyboard_arrow_down_rounded
+                : Icons.keyboard_arrow_up_rounded,
+            size: 22,
+            color: accent,
+          ),
         ),
       ),
     );
