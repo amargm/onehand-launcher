@@ -395,7 +395,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                             _PlannerItemTile(
                               item: item,
                               accent: accent,
-                              onToggle: () => ref.read(plannerItemsProvider.notifier).toggleCompleted(item.id),
+                              onToggle: () => _togglePlannerItem(item),
                               onDelete: () => _deletePlannerItem(item),
                             ),
                         ],
