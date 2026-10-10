@@ -166,7 +166,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     final accent = Theme.of(context).colorScheme.primary;
     final appsAsync = ref.watch(appsProvider);
     final overrides = ref.watch(appDrawerGroupOverridesProvider);
-    final favorites = ref.watch(favoriteAppsProvider);\n    final iconSize = ref.watch(drawerIconSizeProvider);\n    final gridColumns = ref.watch(drawerGridColumnsProvider);\n    final showLabels = ref.watch(showDrawerLabelsProvider);
+    final favorites = ref.watch(favoriteAppsProvider);
+    final iconSize = ref.watch(drawerIconSizeProvider);
+    final gridColumns = ref.watch(drawerGridColumnsProvider);
+    final showLabels = ref.watch(showDrawerLabelsProvider);
 
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
@@ -305,9 +308,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
                           itemCount: favorites.where((p) => filtered.any((a) => a.packageName == p)).length,
-                          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                            maxCrossAxisExtent: 86,
-                            mainAxisExtent: 82,
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: gridColumns,
+                            mainAxisExtent: iconSize + (showLabels ? 36 : 12),
                             crossAxisSpacing: 7,
                             mainAxisSpacing: 6,
                           ),
@@ -320,6 +323,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                               key: ValueKey('favorite-$packageName'),
                               app: app,
                               accent: accent,
+                              iconSize: iconSize,
+                              showLabel: showLabels,
                               onTap: () async {
                                 await AppsService.openApp(app.packageName);
                                 if (context.mounted) {
@@ -356,9 +361,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: grouped[group]!.length,
-                            gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 86,
-                              mainAxisExtent: 82,
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: gridColumns,
+                              mainAxisExtent: iconSize + (showLabels ? 36 : 12),
                               crossAxisSpacing: 7,
                               mainAxisSpacing: 6,
                             ),
@@ -367,6 +372,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                               return _DrawerAppTile(
                                 app: app,
                                 accent: accent,
+                                iconSize: iconSize,
+                                showLabel: showLabels,
                                 onTap: () async {
                                   await AppsService.openApp(app.packageName);
                                   if (context.mounted) {
@@ -400,12 +407,16 @@ class _DrawerAppTile extends StatelessWidget {
     super.key,
     required this.app,
     required this.accent,
+    required this.iconSize,
+    required this.showLabel,
     required this.onTap,
     required this.onLongPress,
   });
 
   final AppInfo app;
   final Color accent;
+  final int iconSize;
+  final bool showLabel;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
 
@@ -422,8 +433,8 @@ class _DrawerAppTile extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.start,
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: iconSize.toDouble(),
+              height: iconSize.toDouble(),
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: Color(0xFF17171B),
@@ -439,17 +450,19 @@ class _DrawerAppTile extends StatelessWidget {
                     ),
               ),
             ),
-            const SizedBox(height: 5),
-            SizedBox(
-              width: double.infinity,
-              child: Text(
-                app.appName,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.sora(color: Colors.white70, fontSize: 9),
+            if (showLabel) ...[
+              const SizedBox(height: 5),
+              SizedBox(
+                width: double.infinity,
+                child: Text(
+                  app.appName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.sora(color: Colors.white70, fontSize: 9),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

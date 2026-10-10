@@ -1,4 +1,8 @@
-import 'dart:convert';\n\nimport 'package:flutter/material.dart';\nimport 'package:flutter/services.dart';\nimport 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,13 +12,16 @@ import '../../core/models/app_folder.dart';
 import '../../core/models/app_info.dart';
 import '../../core/models/schedule_rule.dart';
 import '../../core/models/special_date_event.dart';
-import '../../core/providers/apps_provider.dart';\nimport '../../core/providers/favorite_apps_provider.dart';\nimport '../../core/providers/context_apps_provider.dart';\nimport '../../core/providers/recent_apps_provider.dart';
-import '../../core/providers/context_apps_provider.dart';
+import '../../core/providers/apps_provider.dart';
+import '../../core/providers/favorite_apps_provider.dart';
+import '../../core/providers/recent_apps_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/schedule_rules_provider.dart';
 import '../../core/providers/settings_provider.dart';
 import '../app_drawer/app_drawer_screen.dart';
-import '../../core/providers/special_date_provider.dart';\nimport '../../core/providers/planner_items_provider.dart';\nimport '../../core/providers/counter_widgets_provider.dart';
+import '../../core/providers/special_date_provider.dart';
+import '../../core/providers/planner_items_provider.dart';
+import '../../core/providers/counter_widgets_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../search/search_overlay.dart';
@@ -694,7 +701,7 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
     'app_folders', 'favorite_apps_v1', 'app_drawer_enabled',
     'app_drawer_group_overrides', 'context_shell_apps_v1', 'schedule_rules_v1',
     'special_date_events_v1', 'special_date_dismissed_v1', 'special_date_snooze_v1',
-    'planner_items_v1', 'counter_widgets_v1', 'recent_apps_v1',
+    'home_planner_items_v1', 'counter_widgets', 'recent_apps',
     'drawer_icon_size', 'drawer_grid_columns', 'show_drawer_labels',
   };
 
@@ -772,18 +779,27 @@ class _BackupRestoreScreenState extends ConsumerState<_BackupRestoreScreen> {
         }
       }
       // Recreate persisted notifiers so their in-memory state matches the restore.
-      for (final provider in [
-        accentColorProvider, showFolderLabelsProvider, showSearchLabelProvider,
-        rightHandedProvider, use24HourClockProvider, snoozeDurationProvider,
-        widgetLightModeProvider, clockFontProvider, wallpaperPathProvider,
-        foldersProvider, favoriteAppsProvider, appDrawerEnabledProvider,
-        appDrawerGroupOverridesProvider, contextShellAppsProvider,
-        scheduleRulesProvider, specialDateEventsProvider, plannerItemsProvider,
-        counterWidgetsProvider, recentAppsProvider, drawerIconSizeProvider,
-        drawerGridColumnsProvider, showDrawerLabelsProvider,
-      ]) {
-        ref.invalidate(provider);
-      }
+      ref.invalidate(accentColorProvider);
+      ref.invalidate(showFolderLabelsProvider);
+      ref.invalidate(showSearchLabelProvider);
+      ref.invalidate(rightHandedProvider);
+      ref.invalidate(use24HourClockProvider);
+      ref.invalidate(snoozeDurationProvider);
+      ref.invalidate(widgetLightModeProvider);
+      ref.invalidate(clockFontProvider);
+      ref.invalidate(foldersProvider);
+      ref.invalidate(favoriteAppsProvider);
+      ref.invalidate(appDrawerEnabledProvider);
+      ref.invalidate(appDrawerGroupOverridesProvider);
+      ref.invalidate(contextShellAppsProvider);
+      ref.invalidate(scheduleRulesProvider);
+      ref.invalidate(specialDateEventsProvider);
+      ref.invalidate(plannerItemsProvider);
+      ref.invalidate(counterWidgetsProvider);
+      ref.invalidate(recentAppsProvider);
+      ref.invalidate(drawerIconSizeProvider);
+      ref.invalidate(drawerGridColumnsProvider);
+      ref.invalidate(showDrawerLabelsProvider);
       if (!mounted) return;
       _restoreController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
