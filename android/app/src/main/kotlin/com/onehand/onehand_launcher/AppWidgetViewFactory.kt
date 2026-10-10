@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Color
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
 import io.flutter.plugin.common.StandardMessageCodec
@@ -59,7 +60,7 @@ private class AppWidgetPlatformView(
 private fun unavailableWidgetView(context: Context): View {
     val density = context.resources.displayMetrics.density
     val message = TextView(context).apply {
-        text = "Widget unavailable\\nRemove it and add it again"
+        text = "Widget unavailable\nRemove it and add it again"
         contentDescription = "App widget unavailable. Remove it and add it again."
         setTextColor(Color.WHITE)
         setTextSize(12f)
@@ -78,7 +79,7 @@ private fun unavailableWidgetView(context: Context): View {
         addView(
             message,
             FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT,
             ),
         )
