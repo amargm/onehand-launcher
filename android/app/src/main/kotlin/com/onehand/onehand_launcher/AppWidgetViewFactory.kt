@@ -1,7 +1,11 @@
 package com.onehand.onehand_launcher
 
 import android.content.Context
+import android.graphics.Color
+import android.view.Gravity
 import android.view.View
+import android.widget.FrameLayout
+import android.widget.TextView
 import io.flutter.plugin.common.StandardMessageCodec
 import io.flutter.plugin.platform.PlatformView
 import io.flutter.plugin.platform.PlatformViewFactory
@@ -37,13 +41,11 @@ private class AppWidgetPlatformView(
     private val view: View = if (appWidgetId >= 0) {
         try {
             hostManager.createHostView(appWidgetId, widthDp, heightDp)
-        } catch (e: Exception) {
-            // If the widget host view fails (widget removed / provider gone),
-            // return an empty transparent view rather than crashing.
-            android.widget.FrameLayout(context)
+        } catch (_: Exception) {
+            unavailableWidgetView(context)
         }
     } else {
-        android.widget.FrameLayout(context)
+        unavailableWidgetView(context)
     }
 
     override fun getView(): View = view
@@ -51,5 +53,34 @@ private class AppWidgetPlatformView(
     override fun dispose() {
         // AppWidgetHostView cleanup is handled by AppWidgetHostManager.deleteWidget()
         // called from the Flutter side before this view is disposed.
+    }
+}
+
+private fun unavailableWidgetView(context: Context): View {
+    val density = context.resources.displayMetrics.density
+    val message = TextView(context).apply {
+        text = "Widget unavailable\\nRemove it and add it again"
+        contentDescription = "App widget unavailable. Remove it and add it again."
+        setTextColor(Color.WHITE)
+        setTextSize(12f)
+        gravity = Gravity.CENTER
+        setPadding(
+            (12 * density).toInt(),
+            (12 * density).toInt(),
+            (12 * density).toInt(),
+            (12 * density).toInt(),
+        )
+    }
+
+    return FrameLayout(context).apply {
+        setBackgroundColor(Color.rgb(38, 38, 42))
+        importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_YES
+        addView(
+            message,
+            FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.MATCH_PARENT,
+                FrameLayout.LayoutParams.MATCH_PARENT,
+            ),
+        )
     }
 }
