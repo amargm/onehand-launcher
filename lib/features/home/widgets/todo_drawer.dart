@@ -73,6 +73,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final items = [...ref.watch(plannerItemsProvider)]
       ..sort((a, b) => a.date.compareTo(b.date));
     final panelHeight = mq.size.height * 0.65;
+    // Resolve the collapsed position during build, so the control follows the
+    // same dock/shell state throughout the entire opening animation.
+    final collapsedControlOffset =
+        _collapsedControlOffset(context, mq.size.height);
 
     return Positioned.fill(
       child: AnimatedBuilder(
@@ -114,12 +118,13 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                   ),
                 ),
               Positioned(
-                // Keep the control above the dock/shell footprint. The shell
-                // grows when context rows or labels are visible, so derive the
-                // resting offset from the same state that drives AppDock.
+                // Interpolate continuously between the dock-safe resting
+                // position and a position just above the expanding panel.
+                // Using a t == 0 branch caused the control to jump as soon as
+                // the animation started, briefly overlapping the dock/shell.
                 bottom: mq.padding.bottom +
-                    (t * (panelHeight - 28)) +
-                    (t == 0 ? _collapsedControlOffset(context, mq.size.height) : 10),
+                    (collapsedControlOffset * (1 - t)) +
+                    ((panelHeight + 10) * t),
                 child: _togglePill(accent, t),
               ),
             ],
@@ -135,11 +140,17 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
     final showSearchLabel = ref.watch(showSearchLabelProvider);
 
-    // AppDock's inner circles are 56 dp; the optional context row and labels
-    // increase the outer-shell footprint. Keep the pill just above that area.
+    // The dock's 56 dp icons sit inside 14 dp vertical padding on both
+    // sides. Include the shell's own padding and gap, plus any context row
+    // and optional labels, so the control clears the complete visible stack.
     final hasLabels = showFolderLabels || showSearchLabel;
-    final dockFootprint = 56.0 +
-        (shellVisible ? 32.0 + (hasLabels ? 18.0 : 0.0) : (hasLabels ? 18.0 : 0.0));
+    const dockRowHeight = 56.0 + 28.0;
+    const shellChrome = 16.0 + 6.0;
+    final contextRowHeight = shellVisible ? 32.0 : 0.0;
+    final labelHeight = hasLabels ? 18.0 : 0.0;
+    final dockFootprint = dockRowHeight +
+        (shellVisible ? shellChrome + contextRowHeight : 0.0) +
+        labelHeight;
     return dockFootprint + 18.0;
   }
 
