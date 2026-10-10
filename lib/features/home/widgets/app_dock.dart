@@ -17,6 +17,7 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/special_date_provider.dart';
 import '../../../core/services/apps_service.dart';
 import '../../search/search_overlay.dart';
+import '../../app_drawer/app_drawer_screen.dart';
 import 'circular_app_icon.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ class _AppDockState extends ConsumerState<AppDock> {
     final dayActive = ref.watch(isScheduleContextActiveProvider);
     final showFolderLabels = ref.watch(showFolderLabelsProvider);
     final showSearchLabel = ref.watch(showSearchLabelProvider);
+    final useAppDrawer = ref.watch(appDrawerEnabledProvider);
     final accent = Theme.of(context).colorScheme.primary;
     final hasSpecialDate = ref.watch(hasActiveSpecialDateProvider);
     final activeSpecialEvents = ref.watch(activeSpecialDateEventsProvider);
@@ -81,11 +83,11 @@ class _AppDockState extends ConsumerState<AppDock> {
             : folders.where((f) => f.id == _activeFolderId).firstOrNull;
 
     final searchCircle = _DockCircle(
-      icon: Icons.search_rounded,
+      icon: useAppDrawer ? Icons.apps_rounded : Icons.search_rounded,
       isSearch: true,
       isActive: false,
       accent: accent,
-      label: 'Search',
+      label: useAppDrawer ? 'Apps' : 'Search',
       showLabel: showSearchLabel,
       onTap: () {
         setState(() => _activeFolderId = null);
@@ -335,6 +337,12 @@ class _AppDockState extends ConsumerState<AppDock> {
   }
 
   void _openSearch(BuildContext context) {
+    if (ref.read(appDrawerEnabledProvider)) {
+      Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const AppDrawerScreen()),
+      );
+      return;
+    }
     // Set provider BEFORE pushing the route so the clock starts fading
     // immediately — avoids a 1-frame gap where the clock hasn't dimmed yet.
     // Must NOT be set inside SearchOverlay.initState, as that fires during

@@ -318,6 +318,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     final bgColor = isLight ? const Color(0xFFF2F2F2) : Colors.black;
     final placedWidgets = ref.watch(placedAndroidWidgetsProvider);
     final counterWidgets = ref.watch(counterWidgetsProvider);
+    final counterUse24h = ref.watch(use24HourClockProvider);
 
     final holidayDays = _buildDayMap(
       _holidays.where((e) => e.date.year == _displayYear),
@@ -383,6 +384,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                                       model: cw,
                                       accent: accent,
                                       isLight: isLight,
+                                      use24h: counterUse24h,
                                       onIncrement:
                                           () => ref
                                               .read(
@@ -1962,6 +1964,30 @@ class _EventSpanPainter extends CustomPainter {
       old.accent != accent;
 }
 
+String _counterModifiedLabel(DateTime date, bool use24h) {
+  const months = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  ];
+  final day = date.day;
+  final suffix = (day >= 11 && day <= 13)
+      ? 'th'
+      : switch (day % 10) {
+          1 => 'st',
+          2 => 'nd',
+          3 => 'rd',
+          _ => 'th',
+        };
+  final hour = use24h
+      ? date.hour.toString().padLeft(2, '0')
+      : (date.hour % 12 == 0 ? 12 : date.hour % 12).toString();
+  final minute = date.minute.toString().padLeft(2, '0');
+  final time = use24h
+      ? '$hour:$minute'
+      : '$hour:$minute ${date.hour < 12 ? 'AM' : 'PM'}';
+  return '$day$suffix ${months[date.month - 1]} · $time';
+}
+
 // ── Counter card ──────────────────────────────────────────────────────────────
 
 class _CounterCard extends StatelessWidget {
@@ -1969,6 +1995,7 @@ class _CounterCard extends StatelessWidget {
     required this.model,
     required this.accent,
     required this.isLight,
+    required this.use24h,
     required this.onIncrement,
     required this.onDecrement,
     required this.onReset,
@@ -1978,6 +2005,7 @@ class _CounterCard extends StatelessWidget {
   final CounterWidgetModel model;
   final Color accent;
   final bool isLight;
+  final bool use24h;
   final VoidCallback onIncrement;
   final VoidCallback onDecrement;
   final VoidCallback onReset;
@@ -1993,7 +2021,7 @@ class _CounterCard extends StatelessWidget {
     return GestureDetector(
       onLongPress: () => _showOptions(context),
       child: Container(
-        height: 88,
+        height: 102,
         decoration: BoxDecoration(
           color: cardBg,
           borderRadius: BorderRadius.circular(14),
@@ -2070,7 +2098,8 @@ class _CounterCard extends StatelessWidget {
                         ),
                       ),
 
-                      // − / + controls row
+                      // Count controls stay easy to reach; the tiny line
+                      // underneath records the latest change.
                       Row(
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
@@ -2088,6 +2117,38 @@ class _CounterCard extends StatelessWidget {
                             onTap: onIncrement,
                           ),
                           const SizedBox(width: 2),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          if (model.lastChangeDirection != 0)
+                            Icon(
+                              model.lastChangeDirection > 0
+                                  ? Icons.arrow_upward_rounded
+                                  : Icons.arrow_downward_rounded,
+                              size: 10,
+                              color: _accentInk(accent, isLight),
+                            ),
+                          if (model.lastChangeDirection != 0)
+                            const SizedBox(width: 3),
+                          Expanded(
+                            child: Text(
+                              model.lastModifiedAt == null
+                                  ? 'No change recorded yet'
+                                  : _counterModifiedLabel(
+                                      model.lastModifiedAt!,
+                                      use24h,
+                                    ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.sora(
+                                fontSize: 8,
+                                color: _fg(isLight, 0.48),
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],

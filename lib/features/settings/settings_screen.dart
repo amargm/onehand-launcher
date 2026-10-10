@@ -13,6 +13,7 @@ import '../../core/providers/context_apps_provider.dart';
 import '../../core/providers/folders_provider.dart';
 import '../../core/providers/schedule_rules_provider.dart';
 import '../../core/providers/settings_provider.dart';
+import '../app_drawer/app_drawer_screen.dart';
 import '../../core/providers/special_date_provider.dart';
 import '../../core/services/apps_service.dart';
 import '../../core/theme/app_theme.dart';
@@ -581,6 +582,13 @@ class _DockScreen extends ConsumerWidget {
           label: 'Show "Search" label',
           value: ref.watch(showSearchLabelProvider),
           onChanged: (_) => ref.read(showSearchLabelProvider.notifier).toggle(),
+        ),
+        const SizedBox(height: 8),
+        _ToggleTile(
+          icon: Icons.apps_rounded,
+          label: 'Use grouped app drawer',
+          value: ref.watch(appDrawerEnabledProvider),
+          onChanged: (_) => ref.read(appDrawerEnabledProvider.notifier).toggle(),
         ),
         const SizedBox(height: 24),
         _SectionHeader('Layout'),

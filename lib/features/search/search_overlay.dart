@@ -42,7 +42,7 @@ class SearchOverlay extends ConsumerStatefulWidget {
 }
 
 class _SearchOverlayState extends ConsumerState<SearchOverlay>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   String _query = '';
@@ -52,10 +52,28 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
 
   // Multi-pick selection set
   final Set<String> _selected = {};
+  bool _keyboardWasVisible = false;
+  bool _isDismissing = false;
+
+  @override
+  void didChangeMetrics() {
+    // Android may consume the first system-back gesture to hide the IME before
+    // Flutter's route PopScope is called. Treat that dismissal as cancelling search.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _isDismissing) return;
+      final inset = MediaQuery.maybeOf(context)?.viewInsets.bottom ?? 0;
+      if (inset > 8) {
+        _keyboardWasVisible = true;
+      } else if (_keyboardWasVisible) {
+        _dismiss();
+      }
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _animCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 220),
@@ -74,6 +92,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _debounce?.cancel();
     _controller.dispose();
     _focusNode.dispose();
@@ -82,6 +101,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   }
 
   void _dismiss() {
+    if (_isDismissing) return;
+    _isDismissing = true;
     // Fade the home clock back in before the overlay reverse-animates.
     ref.read(searchOverlayActiveProvider.notifier).state = false;
     // In multi-pick mode commit whatever was selected before animating out.
@@ -128,6 +149,7 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
             ? (mq.viewInsets.bottom / kKeyboardApproxHeight).clamp(0.0, 1.0)
             : _fade.value;
     final blurSigma = kbFraction * 20.0;
+    if (mq.viewInsets.bottom > 8) _keyboardWasVisible = true;
 
     // Material(transparency) is required so that IconButton / InkWell widgets
     // inside this overlay can find a Material ancestor. PageRouteBuilder does

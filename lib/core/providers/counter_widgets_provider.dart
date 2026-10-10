@@ -40,7 +40,14 @@ class CounterWidgetsNotifier extends StateNotifier<List<CounterWidgetModel>> {
   void increment(String id) {
     state = [
       for (final w in state)
-        if (w.id == id) w.copyWith(count: w.count + 1) else w,
+        if (w.id == id)
+          w.copyWith(
+            count: w.count + 1,
+            lastModifiedAt: DateTime.now(),
+            lastChangeDirection: 1,
+          )
+        else
+          w,
     ];
     _save();
   }
@@ -48,7 +55,14 @@ class CounterWidgetsNotifier extends StateNotifier<List<CounterWidgetModel>> {
   void decrement(String id) {
     state = [
       for (final w in state)
-        if (w.id == id) w.copyWith(count: w.count - 1) else w,
+        if (w.id == id)
+          w.copyWith(
+            count: w.count - 1,
+            lastModifiedAt: DateTime.now(),
+            lastChangeDirection: -1,
+          )
+        else
+          w,
     ];
     _save();
   }
@@ -56,7 +70,14 @@ class CounterWidgetsNotifier extends StateNotifier<List<CounterWidgetModel>> {
   void reset(String id) {
     state = [
       for (final w in state)
-        if (w.id == id) w.copyWith(count: 0) else w,
+        if (w.id == id)
+          w.copyWith(
+            count: 0,
+            lastModifiedAt: DateTime.now(),
+            lastChangeDirection: w.count > 0 ? -1 : (w.count < 0 ? 1 : 0),
+          )
+        else
+          w,
     ];
     _save();
   }

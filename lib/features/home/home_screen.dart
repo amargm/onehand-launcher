@@ -93,11 +93,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Colors.black,
         body: PageView(
           controller: _pageController,
-          // BouncingScrollPhysics gives an elastic, iOS-style feel at the
-          // boundaries instead of the rigid Android glow-clamp default.
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
+          // Rigid boundaries prevent the blank elastic page at the home edge,
+          // making vertical swipe gestures easier to start reliably.
+          physics: const ClampingScrollPhysics(),
           children: [
             // Page 0 — home: scales slightly back + dims as widgets slides in.
             // AnimatedBuilder listens to the page controller so the transform
