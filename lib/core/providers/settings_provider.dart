@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 const _kAccentColorKey = 'accent_color';
 const _kShowFolderLabels = 'show_folder_labels';
 const _kShowSearchLabel = 'show_search_label';
+const _kShowPlannerArrow = 'show_planner_arrow';
 const _kRightHanded = 'right_handed';
 const _kSnoozeDurationMins = 'snooze_duration_mins';
 
@@ -58,6 +59,15 @@ final showSearchLabelProvider = StateNotifierProvider<_BoolNotifier, bool>((
 ) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return _BoolNotifier(prefs, _kShowSearchLabel, defaultValue: false);
+});
+
+/// Whether the planner drawer's floating arrow button is visible.
+/// When hidden, swiping up on the wallpaper opens the planner instead.
+final showPlannerArrowProvider = StateNotifierProvider<_BoolNotifier, bool>((
+  ref,
+) {
+  final prefs = ref.watch(sharedPreferencesProvider);
+  return _BoolNotifier(prefs, _kShowPlannerArrow, defaultValue: true);
 });
 
 class _BoolNotifier extends StateNotifier<bool> {
