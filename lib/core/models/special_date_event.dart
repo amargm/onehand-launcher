@@ -65,6 +65,7 @@ class SpecialDateEvent {
     required this.name,
     required this.month,
     required this.day,
+    this.year,
     required this.isRecurring,
     required this.message,
     this.snoozeMinutes = 30,
@@ -75,19 +76,24 @@ class SpecialDateEvent {
   final String name;
   final int month; // 1–12
   final int day; // 1–31
+  final int? year; // null for legacy/manual dates and dates that recur annually
   final bool isRecurring; // true = shows every year
   final List<RichParagraph> message;
   final int snoozeMinutes; // per-event override; 0 = use global default
   final String iconKey;
 
   /// Whether this event falls on [date]'s month/day.
-  bool isToday(DateTime date) => date.month == month && date.day == day;
+  bool isToday(DateTime date) =>
+      date.month == month &&
+      date.day == day &&
+      (isRecurring || year == null || date.year == year);
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'name': name,
     'month': month,
     'day': day,
+    'year': year,
     'isRecurring': isRecurring,
     'message': message.map((p) => p.toJson()).toList(),
     'snoozeMinutes': snoozeMinutes,
@@ -99,6 +105,7 @@ class SpecialDateEvent {
     name: j['name'] as String? ?? '',
     month: j['month'] as int? ?? 1,
     day: j['day'] as int? ?? 1,
+    year: j['year'] as int?,
     isRecurring: j['isRecurring'] as bool? ?? true,
     message:
         (j['message'] as List<dynamic>? ?? [])
@@ -127,6 +134,7 @@ class SpecialDateEvent {
     String? name,
     int? month,
     int? day,
+    int? year,
     bool? isRecurring,
     List<RichParagraph>? message,
     int? snoozeMinutes,
@@ -136,6 +144,7 @@ class SpecialDateEvent {
     name: name ?? this.name,
     month: month ?? this.month,
     day: day ?? this.day,
+    year: year ?? this.year,
     isRecurring: isRecurring ?? this.isRecurring,
     message: message ?? this.message,
     snoozeMinutes: snoozeMinutes ?? this.snoozeMinutes,

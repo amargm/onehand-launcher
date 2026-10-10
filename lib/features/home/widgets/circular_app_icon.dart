@@ -73,6 +73,8 @@ void showAppContextMenu(
 
   showModalBottomSheet(
     context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: const Color(0xFF111111),
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -86,9 +88,15 @@ void showAppContextMenu(
             final favorites = watchRef.watch(favoriteAppsProvider);
             final isFavorite = favorites.contains(app.packageName);
             final favoriteIndex = favorites.indexOf(app.packageName);
-            return Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              child: Column(
+            return ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(ctx).size.height * 0.82,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                  child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -251,7 +259,9 @@ void showAppContextMenu(
                       AppsService.requestUninstall(app.packageName);
                     },
                   ),
-                ],
+                  ],
+                  ),
+                ),
               ),
             );
           },

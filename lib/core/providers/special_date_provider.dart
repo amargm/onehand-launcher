@@ -36,6 +36,15 @@ class SpecialDateEventsNotifier extends StateNotifier<List<SpecialDateEvent>> {
     _save();
   }
 
+  int addAll(Iterable<SpecialDateEvent> events) {
+    final knownIds = state.map((event) => event.id).toSet();
+    final additions = events.where((event) => knownIds.add(event.id)).toList();
+    if (additions.isEmpty) return 0;
+    state = [...state, ...additions];
+    _save();
+    return additions.length;
+  }
+
   void update(SpecialDateEvent event) {
     state = [for (final e in state) e.id == event.id ? event : e];
     _save();

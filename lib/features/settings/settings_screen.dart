@@ -23,6 +23,7 @@ import '../../core/providers/special_date_provider.dart';
 import '../../core/providers/planner_items_provider.dart';
 import '../../core/providers/counter_widgets_provider.dart';
 import '../../core/services/apps_service.dart';
+import '../../core/services/holidays_service.dart';
 import '../../core/theme/app_theme.dart';
 import '../search/search_overlay.dart';
 import '../wallpaper/wallpaper_picker_screen.dart';
@@ -2998,6 +2999,96 @@ class _TimeTile extends StatelessWidget {
 // SPECIAL DATES
 // -------------------------------------------------------------------------------
 
+// Import a selected year of India public holidays as year-specific reminders.
+Future<void> _importIndiaPublicHolidays(BuildContext context, WidgetRef ref) async {
+  final year = await showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    backgroundColor: const Color(0xFF17171B),
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(sheetContext).size.height * 0.76,
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 20),
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 10),
+            child: Text(
+              'Import India public holidays',
+              style: GoogleFonts.sora(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+            ),
+          ),
+          for (var year = 2026; year <= 2035; year++)
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.calendar_month_rounded, color: Colors.white54),
+              title: Text('$year', style: GoogleFonts.sora(color: Colors.white70, fontSize: 13)),
+              subtitle: Text('National-level holidays', style: GoogleFonts.sora(color: Colors.white30, fontSize: 10)),
+              onTap: () => Navigator.of(sheetContext).pop(year),
+            ),
+        ],
+      ),
+    ),
+  );
+  if (year == null || !context.mounted) return;
+
+  try {
+    final prefs = ref.read(sharedPreferencesProvider);
+    final holidays = await HolidaysService.fetchHolidays(year, 'IN', prefs);
+    if (!context.mounted) return;
+    final reminders = holidays.map((holiday) {
+      final date = holiday.date;
+      final dateKey = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      final estimated = holiday.name.toLowerCase().contains('estimated');
+      return SpecialDateEvent(
+        id: 'public_holiday_IN_$dateKey',
+        name: holiday.name,
+        month: date.month,
+        day: date.day,
+        year: date.year,
+        isRecurring: false,
+        message: [
+          RichParagraph(
+            text: estimated
+                ? 'India public holiday. This lunar-calendar date is an estimate and may change after official announcements.'
+                : 'India national-level public holiday.',
+          ),
+        ],
+        snoozeMinutes: 0,
+        iconKey: 'celebration',
+      );
+    }).toList();
+    final added = ref.read(specialDateEventsProvider.notifier).addAll(reminders);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          holidays.isEmpty
+              ? 'No holiday data available for $year.'
+              : added == 0
+                  ? 'India holidays for $year are already in your dates.'
+                  : 'Added $added India holidays for $year.',
+          ),
+        ),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  } catch (_) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Could not load holidays for $year. Please try again.'),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+}
+
 // -- Special Dates sub-screen --------------------------------------------------
 class _SpecialDatesScreen extends ConsumerWidget {
   const _SpecialDatesScreen();
@@ -3108,6 +3199,38 @@ class _SpecialDatesScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 24),
 
+        // -- Public holidays import --------------------------------------
+        GestureDetector(
+          onTap: () => _importIndiaPublicHolidays(context, ref),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(15),
+            decoration: BoxDecoration(
+              color: accent.withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(15),
+              border: Border.all(color: accent.withValues(alpha: 0.24)),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.public_rounded, color: accent, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Import public holidays', style: GoogleFonts.sora(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text('India · offline backup for 2026–2035. Some lunar dates are estimates; state holidays vary.', style: GoogleFonts.sora(color: Colors.white38, fontSize: 10, height: 1.4)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: accent, size: 20),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+
         // -- Events list -------------------------------------------------
         _SectionHeader('Your dates'),
         if (events.isEmpty)
@@ -3213,7 +3336,7 @@ class _SpecialDateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateLabel =
-        '${_months[event.month - 1]} ${event.day}${event.isRecurring ? ' · every year' : ''}';
+        '${_months[event.month - 1]} ${event.day}${event.isRecurring ? ' · every year' : event.year != null ? ' · ${event.year}' : ''}';
     return GestureDetector(
       onTap: onTap,
       child: Container(

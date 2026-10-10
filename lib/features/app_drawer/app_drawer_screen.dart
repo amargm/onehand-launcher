@@ -116,14 +116,21 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   Future<void> _customizeGroup(AppInfo app, String currentGroup) async {
     final selected = await showModalBottomSheet<String>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: const Color(0xFF17171B),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (sheetContext) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
-          child: Column(
+      builder: (sheetContext) => ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(sheetContext).size.height * 0.78,
+        ),
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -151,6 +158,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
           ),
         ),
       ),
+    ),
     );
     if (!mounted || selected == null) return;
     final notifier = ref.read(appDrawerGroupOverridesProvider.notifier);
@@ -275,121 +283,122 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                     grouped[group]!.sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
                   }
 
-                  return ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 0, 18, 28),
-                    children: [
-                      if (favorites.any((packageName) =>
-                          filtered.any((app) => app.packageName == packageName))) ...[
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.star_rounded, color: Color(0xFFFFC857), size: 16),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Text(
-                                  'FAVORITES',
-                                  style: GoogleFonts.sora(
-                                    color: Colors.white70,
-                                    fontSize: 10,
-                                    letterSpacing: 1.5,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                '${favorites.where((p) => filtered.any((a) => a.packageName == p)).length}',
-                                style: GoogleFonts.sora(color: Colors.white38, fontSize: 10),
-                              ),
-                            ],
-                          ),
-                        ),
-                        GridView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: favorites.where((p) => filtered.any((a) => a.packageName == p)).length,
-                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: gridColumns,
-                            mainAxisExtent: iconSize + (showLabels ? 36 : 12),
-                            crossAxisSpacing: 7,
-                            mainAxisSpacing: 6,
-                          ),
-                          itemBuilder: (context, index) {
-                            final packageName = favorites
-                                .where((p) => filtered.any((a) => a.packageName == p))
-                                .elementAt(index);
-                            final app = filtered.firstWhere((a) => a.packageName == packageName);
-                            return _DrawerAppTile(
-                              key: ValueKey('favorite-$packageName'),
-                              app: app,
-                              accent: accent,
-                              iconSize: iconSize,
-                              showLabel: showLabels,
-                              onTap: () async {
-                                await AppsService.openApp(app.packageName);
-                                if (context.mounted) {
-                                  ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
-                                }
-                              },
-                              onLongPress: () => showAppContextMenu(
-                                context,
-                                ref,
-                                app,
-                                onOrganize: () => _customizeGroup(
-                                  app,
-                                  overrides[app.packageName] ?? _automaticGroup(app),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ],
-                      for (final group in _drawerGroups)
-                        if (grouped[group]!.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(2, 12, 2, 10),
+                  final visibleFavorites = favorites
+                      .where((packageName) => filtered.any((app) => app.packageName == packageName))
+                      .toList();
+
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(
+                      parent: AlwaysScrollableScrollPhysics(),
+                    ),
+                    scrollCacheExtent: 500,
+                    slivers: [
+                      if (visibleFavorites.isNotEmpty) ...[
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+                          sliver: SliverToBoxAdapter(
                             child: Row(
                               children: [
-                                Container(width: 3, height: 16, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4))),
+                                const Icon(Icons.star_rounded, color: Color(0xFFFFC857), size: 16),
                                 const SizedBox(width: 9),
-                                Expanded(child: Text(group.toUpperCase(), style: GoogleFonts.sora(color: Colors.white70, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.w700))),
-                                Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                Expanded(
+                                  child: Text(
+                                    'FAVORITES',
+                                    style: GoogleFonts.sora(
+                                      color: Colors.white70,
+                                      fontSize: 10,
+                                      letterSpacing: 1.5,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                Text('${visibleFavorites.length}', style: GoogleFonts.sora(color: Colors.white38, fontSize: 10)),
                               ],
                             ),
                           ),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: grouped[group]!.length,
+                        ),
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+                          sliver: SliverGrid(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final packageName = visibleFavorites[index];
+                                final app = filtered.firstWhere((a) => a.packageName == packageName);
+                                return _DrawerAppTile(
+                                  key: ValueKey('favorite-$packageName'),
+                                  app: app,
+                                  accent: accent,
+                                  iconSize: iconSize,
+                                  showLabel: showLabels,
+                                  onTap: () async {
+                                    await AppsService.openApp(app.packageName);
+                                    if (context.mounted) ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
+                                  },
+                                  onLongPress: () => showAppContextMenu(
+                                    context,
+                                    ref,
+                                    app,
+                                    onOrganize: () => _customizeGroup(app, overrides[app.packageName] ?? _automaticGroup(app)),
+                                  ),
+                                );
+                              },
+                              childCount: visibleFavorites.length,
+                            ),
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: gridColumns,
                               mainAxisExtent: iconSize + (showLabels ? 36 : 12),
                               crossAxisSpacing: 7,
                               mainAxisSpacing: 6,
                             ),
-                            itemBuilder: (context, index) {
-                              final app = grouped[group]![index];
-                              return _DrawerAppTile(
-                                app: app,
-                                accent: accent,
-                                iconSize: iconSize,
-                                showLabel: showLabels,
-                                onTap: () async {
-                                  await AppsService.openApp(app.packageName);
-                                  if (context.mounted) {
-                                    ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
-                                  }
+                          ),
+                        ),
+                      ],
+                      for (final group in _drawerGroups)
+                        if (grouped[group]!.isNotEmpty) ...[
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+                            sliver: SliverToBoxAdapter(
+                              child: Row(
+                                children: [
+                                  Container(width: 3, height: 16, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4))),
+                                  const SizedBox(width: 9),
+                                  Expanded(child: Text(group.toUpperCase(), style: GoogleFonts.sora(color: Colors.white70, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.w700))),
+                                  Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                ],
+                              ),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+                            sliver: SliverGrid(
+                              delegate: SliverChildBuilderDelegate(
+                                (context, index) {
+                                  final app = grouped[group]![index];
+                                  return _DrawerAppTile(
+                                    key: ValueKey('group-$group-${app.packageName}'),
+                                    app: app,
+                                    accent: accent,
+                                    iconSize: iconSize,
+                                    showLabel: showLabels,
+                                    onTap: () async {
+                                      await AppsService.openApp(app.packageName);
+                                      if (context.mounted) ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
+                                    },
+                                    onLongPress: () => showAppContextMenu(context, ref, app, onOrganize: () => _customizeGroup(app, group)),
+                                  );
                                 },
-                                onLongPress: () => showAppContextMenu(
-                                  context,
-                                  ref,
-                                  app,
-                                  onOrganize: () => _customizeGroup(app, group),
-                                ),
-                              );
-                            },
+                                childCount: grouped[group]!.length,
+                              ),
+                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: gridColumns,
+                                mainAxisExtent: iconSize + (showLabels ? 36 : 12),
+                                crossAxisSpacing: 7,
+                                mainAxisSpacing: 6,
+                              ),
+                            ),
                           ),
                         ],
+                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
                     ],
                   );
                 },

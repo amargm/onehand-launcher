@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -131,38 +132,64 @@ class HolidaysService {
     String countryCode,
     SharedPreferences prefs,
   ) async {
-    Exception? primaryError;
-
-    // ── 1. Nager.Date (primary — 115+ countries) ─────────────────────────
+    Exception? lastError;
     try {
       final events = await _tryNager(year, countryCode);
-      if (events != null) {
+      if (events != null && (events.isNotEmpty || countryCode != 'IN')) {
         _cache(prefs, year, countryCode, events);
         return events;
       }
-      // null = 404 = country not in Nager → try backup
     } catch (e) {
-      primaryError = _wrap(e);
-      // Network / server error — still try backup before giving up
+      lastError = _wrap(e);
     }
-
-    // ── 2. OpenHolidays (backup — ~50 mostly European countries) ─────────
     try {
       final events = await _tryOpenHolidays(year, countryCode);
-      if (events != null) {
+      if (events != null && events.isNotEmpty) {
         _cache(prefs, year, countryCode, events);
         return events;
       }
-      // null = country not in OpenHolidays either
-      if (primaryError != null) {
-        // Nager had a network error and OpenHolidays has no data → throw
-        throw primaryError;
-      }
-      // Both APIs confirmed: no data for this country → empty, not an error
-      return const [];
     } catch (e) {
-      // OpenHolidays network error — surface best available error
-      throw primaryError ?? _wrap(e);
+      lastError ??= _wrap(e);
+    }
+    if (countryCode == 'IN') {
+      final bundled = await _loadBundledIndiaHolidays(year);
+      if (bundled != null && bundled.isNotEmpty) {
+        _cache(prefs, year, countryCode, bundled);
+        return bundled;
+      }
+    }
+    if (lastError != null) throw lastError;
+    return const [];
+  }
+
+  static Future<List<CalendarEvent>?> _loadBundledIndiaHolidays(int year) async {
+    if (year < 2026 || year > 2035) return null;
+    try {
+      final raw = await rootBundle.loadString(
+        'assets/data/india_public_holidays_2026_2035.json',
+      );
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+      final years = decoded['years'] as Map<String, dynamic>;
+      final entries = years['$year'];
+      if (entries is! List) return null;
+      final events = <CalendarEvent>[];
+      for (final entry in entries) {
+        if (entry is! Map) continue;
+        final item = Map<String, dynamic>.from(entry);
+        final date = item['date'] as String?;
+        final name = item['holiday'] as String?;
+        if (date == null || name == null || name.isEmpty) continue;
+        events.add(CalendarEvent(
+          id: 'holiday_IN_$date',
+          date: DateTime.parse(date),
+          name: name,
+          isPublicHoliday: true,
+        ));
+      }
+      events.sort((a, b) => a.date.compareTo(b.date));
+      return events;
+    } catch (_) {
+      return null;
     }
   }
 

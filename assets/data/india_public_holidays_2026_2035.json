@@ -1,0 +1,673 @@
+{
+  "source": "eramitgupta/world-holidays-data",
+  "sourceUrl": "https://github.com/eramitgupta/world-holidays-data",
+  "license": "MIT",
+  "coverage": {
+    "countryCode": "IN",
+    "from": 2026,
+    "to": 2035
+  },
+  "notice": "Offline fallback for national-level holiday dates. Some lunar-calendar dates are estimates and may change after official announcements. This is not a state-specific government holiday list.",
+  "years": {
+    "2026": [
+      {
+        "date": "2026-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2026-02-15",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2026-03-21",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2026-03-31",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2026-04-03",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2026-05-01",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2026-05-28",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2026-06-26",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2026-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2026-08-26",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2026-09-04",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2026-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2026-10-20",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2026-11-08",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2026-11-24",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2026-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2027": [
+      {
+        "date": "2027-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2027-03-06",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2027-03-10",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2027-03-26",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2027-04-18",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2027-05-17",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2027-05-20",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2027-06-16",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2027-08-15",
+        "holiday": "Independence Day; Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2027-08-25",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2027-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2027-10-09",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2027-10-29",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2027-11-14",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2027-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2028": [
+      {
+        "date": "2028-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2028-02-23",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2028-02-27",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2028-04-07",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2028-04-14",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2028-05-06",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2028-05-08",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2028-06-04",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2028-08-04",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2028-08-13",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2028-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2028-09-27",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2028-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2028-10-17",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2028-11-02",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2028-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2029": [
+      {
+        "date": "2029-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2029-02-11",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2029-02-15",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2029-03-30",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2029-04-25",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2029-04-26",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2029-05-24",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2029-05-27",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2029-07-25",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2029-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2029-09-01",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2029-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2029-10-16",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2029-11-05",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2029-11-21",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2029-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2030": [
+      {
+        "date": "2030-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2030-02-05",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2030-03-02",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2030-04-14",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2030-04-16",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2030-04-19",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2030-05-13",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2030-05-17",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2030-07-14",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2030-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2030-08-21",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2030-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2030-10-06",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2030-10-26",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2030-11-10",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2030-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2031": [
+      {
+        "date": "2031-01-25",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2031-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2031-02-20",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2031-04-03",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2031-04-05",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2031-04-11",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2031-05-03",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2031-05-07",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2031-07-03",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2031-08-10",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2031-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2031-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2031-10-25",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2031-11-14",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2031-11-28",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2031-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2032": [
+      {
+        "date": "2032-01-15",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2032-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2032-03-10",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2032-03-23",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2032-03-26",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2032-04-21",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2032-04-23",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2032-05-25",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2032-06-21",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2032-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2032-08-28",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2032-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2032-10-14",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2032-11-02",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2032-11-17",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2032-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2033": [
+      {
+        "date": "2033-01-03",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2033-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2033-02-27",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2033-03-12",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2033-04-11",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2033-04-12",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2033-04-15",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2033-05-14",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2033-06-10",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2033-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2033-08-17",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2033-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2033-10-03",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2033-10-22",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2033-11-06",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2033-12-24",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2033-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2034": [
+      {
+        "date": "2034-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2034-02-17",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2034-03-02",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2034-03-31",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2034-04-01",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2034-04-07",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2034-05-03",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2034-05-31",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2034-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2034-09-06",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2034-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2034-10-22",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2034-11-10",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2034-11-25",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2034-12-13",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2034-12-25",
+        "holiday": "Christmas"
+      }
+    ],
+    "2035": [
+      {
+        "date": "2035-01-26",
+        "holiday": "Republic Day"
+      },
+      {
+        "date": "2035-02-19",
+        "holiday": "Eid al-Adha (estimated)"
+      },
+      {
+        "date": "2035-03-08",
+        "holiday": "Maha Shivaratri"
+      },
+      {
+        "date": "2035-03-21",
+        "holiday": "Ashura (estimated)"
+      },
+      {
+        "date": "2035-03-23",
+        "holiday": "Good Friday"
+      },
+      {
+        "date": "2035-04-20",
+        "holiday": "Mahavir Jayanti"
+      },
+      {
+        "date": "2035-05-21",
+        "holiday": "Prophet's Birthday (estimated)"
+      },
+      {
+        "date": "2035-05-22",
+        "holiday": "Buddha Purnima"
+      },
+      {
+        "date": "2035-08-15",
+        "holiday": "Independence Day"
+      },
+      {
+        "date": "2035-08-26",
+        "holiday": "Janmashtami"
+      },
+      {
+        "date": "2035-10-02",
+        "holiday": "Gandhi Jayanti"
+      },
+      {
+        "date": "2035-10-11",
+        "holiday": "Dussehra"
+      },
+      {
+        "date": "2035-10-30",
+        "holiday": "Diwali"
+      },
+      {
+        "date": "2035-11-15",
+        "holiday": "Guru Nanak Jayanti"
+      },
+      {
+        "date": "2035-12-02",
+        "holiday": "Eid al-Fitr (estimated)"
+      },
+      {
+        "date": "2035-12-25",
+        "holiday": "Christmas"
+      }
+    ]
+  }
+}
