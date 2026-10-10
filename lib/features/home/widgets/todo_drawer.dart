@@ -8,6 +8,8 @@ import '../../../core/providers/settings_provider.dart';
 import '../../../core/providers/headphone_provider.dart';
 import '../../../core/providers/schedule_rules_provider.dart';
 
+final todoDrawerOpenProvider = StateProvider<bool>((ref) => false);
+
 class TodoDrawer extends ConsumerStatefulWidget {
   const TodoDrawer({super.key});
 
@@ -44,6 +46,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
 
   void _toggle() {
     setState(() => _open = !_open);
+    ref.read(todoDrawerOpenProvider.notifier).state = _open;
     if (_open) {
       _controller.forward();
     } else {
@@ -120,6 +123,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 bottom: mq.padding.bottom +
                     (t * (panelHeight - 28)) +
                     (t == 0 ? _collapsedControlOffset(context, mq.size.height) : 10),
+                left: t > 0.5 ? null : 0,
+                right: t > 0.5 ? 18 : 0,
                 child: _togglePill(accent, t),
               ),
             ],
@@ -254,6 +259,17 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 ),
                 Text('${items.where((e) => !e.isCompleted && e.type == PlannerItemType.todo).length} left',
                     style: GoogleFonts.sora(color: Colors.white54, fontSize: 11)),
+                const SizedBox(width: 10),
+                Material(
+                  color: accent.withValues(alpha: 0.14),
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    tooltip: 'Add a to-do or event',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: _addItem,
+                    icon: Icon(Icons.add_rounded, color: accent, size: 22),
+                  ),
+                ),
               ],
             ),
           ),
@@ -316,23 +332,6 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                       );
                     },
                   ),
-          ),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 2, 18, 12 + bottomInset),
-              child: FloatingActionButton(
-                heroTag: 'planner_add_button',
-                tooltip: 'Add a to-do or event',
-                onPressed: _addItem,
-                backgroundColor: accent,
-                foregroundColor: Colors.white,
-                elevation: 3,
-                highlightElevation: 6,
-                mini: false,
-                child: const Icon(Icons.add_rounded, size: 25),
-              ),
-            ),
           ),
         ],
       ),
