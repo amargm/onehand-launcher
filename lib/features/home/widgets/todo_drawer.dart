@@ -110,7 +110,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                         height: panelHeight,
                         child: IgnorePointer(
                           ignoring: !_open,
-                          child: _buildPanel(items, accent, mq.padding.bottom),
+                          child: _buildPanel(items, accent),
                         ),
                       ),
                     ),
@@ -121,7 +121,6 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 // grows when context rows or labels are visible, so derive the
                 // resting offset from the same state that drives AppDock.
                 bottom: mq.padding.bottom +
-                    (t * (panelHeight - 28)) +
                     (t == 0 ? _collapsedControlOffset(context, mq.size.height) : 10),
                 left: t > 0.5 ? null : 0,
                 right: t > 0.5 ? 18 : 0,
@@ -186,7 +185,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     );
   }
 
-  Widget _buildPanel(List<PlannerItem> items, Color accent, double bottomInset) {
+  Widget _buildPanel(List<PlannerItem> items, Color accent) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final grouped = <DateTime, List<PlannerItem>>{};
