@@ -5,8 +5,6 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/planner_item.dart';
 import '../../../core/providers/planner_items_provider.dart';
 import '../../../core/providers/settings_provider.dart';
-import '../../../core/providers/headphone_provider.dart';
-import '../../../core/providers/schedule_rules_provider.dart';
 
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
