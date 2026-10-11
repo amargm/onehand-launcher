@@ -242,7 +242,6 @@ class _AppDockState extends ConsumerState<AppDock> {
             },
             child: SizeChangedLayoutNotifier(
               child: Stack(
-                key: _dockSurfaceKey,
                 clipBehavior: Clip.none,
                 children: [
               // Outer shell + inner dock (unchanged layout)
@@ -253,7 +252,9 @@ class _AppDockState extends ConsumerState<AppDock> {
                 child: IgnorePointer(
                   ignoring: plannerCoveringDock,
                   child: Center(
-                    child: AnimatedContainer(
+                    child: SizeChangedLayoutNotifier(
+                      child: AnimatedContainer(
+                        key: _dockSurfaceKey,
                   duration: const Duration(milliseconds: 700),
                   curve: Curves.easeInOutQuart,
                   padding:
@@ -349,6 +350,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                       ),
                     ],
                   ),
+                    ),
                     ),
                   ),
                 ),
