@@ -547,8 +547,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                               children: [
                                                 Expanded(
                                                   child: AnimatedDefaultTextStyle(
-                                                    duration: const Duration(milliseconds: 320),
-                                                    curve: Curves.easeInOutCubic,
+                                                    duration: const Duration(milliseconds: 460),
+                                                    curve: Curves.easeInOutQuart,
                                                     style: GoogleFonts.sora(
                                                       color: Colors.white70,
                                                       fontSize: (_query.isEmpty && collapsedGroups.contains(group)) ? 15.5 : 11,
@@ -566,8 +566,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                 const SizedBox(width: 8),
                                                 AnimatedRotation(
                                                   turns: (_query.isEmpty && collapsedGroups.contains(group)) ? -0.25 : 0,
-                                                  duration: const Duration(milliseconds: 240),
-                                                  curve: Curves.easeInOutCubic,
+                                                  duration: const Duration(milliseconds: 400),
+                                                  curve: Curves.easeInOutQuart,
                                                   child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54, size: 20),
                                                 ),
                                               ],
@@ -577,8 +577,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                       ),
                                     ),
                                     AnimatedSize(
-                                      duration: const Duration(milliseconds: 320),
-                                      curve: Curves.easeInOutCubic,
+                                      duration: const Duration(milliseconds: 460),
+                                      curve: Curves.easeInOutQuart,
                                       alignment: Alignment.topCenter,
                                       child: _query.isNotEmpty || !collapsedGroups.contains(group)
                                           ? Padding(
