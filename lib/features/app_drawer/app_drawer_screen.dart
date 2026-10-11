@@ -44,6 +44,23 @@ class AppDrawerEnabledNotifier extends StateNotifier<bool> {
 }
 
 const _kAppDrawerGroupsKey = 'app_drawer_group_overrides';
+const _kAppDrawerCustomGroupsKey = 'app_drawer_custom_groups';
+final appDrawerCustomGroupsProvider = StateNotifierProvider<AppDrawerCustomGroupsNotifier, List<String>>(
+  (ref) => AppDrawerCustomGroupsNotifier(ref.watch(sharedPreferencesProvider)),
+);
+class AppDrawerCustomGroupsNotifier extends StateNotifier<List<String>> {
+  AppDrawerCustomGroupsNotifier(this._prefs) : super(_load(_prefs));
+  final SharedPreferences _prefs;
+  static List<String> _load(SharedPreferences prefs) =>
+      (prefs.getStringList(_kAppDrawerCustomGroupsKey) ?? const <String>[])
+          .map((name) => name.trim()).where((name) => name.isNotEmpty && !_drawerGroups.contains(name)).toSet().toList();
+  void addGroup(String name) {
+    final value = name.trim();
+    if (value.isEmpty || _drawerGroups.any((g) => g.toLowerCase() == value.toLowerCase()) || state.any((g) => g.toLowerCase() == value.toLowerCase())) return;
+    state = [...state, value]..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    _prefs.setStringList(_kAppDrawerCustomGroupsKey, state);
+  }
+}
 
 final appDrawerGroupOverridesProvider = StateNotifierProvider<
     AppDrawerGroupOverridesNotifier, Map<String, String>>(
@@ -93,6 +110,7 @@ class AppDrawerScreen extends ConsumerStatefulWidget {
 class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   final _searchController = TextEditingController();
   String _query = '';
+  bool _searchShrunk = false;
 
   @override
   void dispose() {
@@ -111,6 +129,32 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     if (has(['game', 'gaming', 'clash', 'pubg', 'bgmi', 'free fire', 'roblox', 'minecraft', 'genshin', 'asphalt'])) return 'Games';
     if (has(['settings', 'calculator', 'clock', 'files', 'file manager', 'browser', 'chrome', 'firefox', 'vpn', 'scanner', 'weather', 'security', 'play store', 'launcher', 'recorder', 'translate', 'android'])) return 'Tools';
     return 'Other apps';
+  }
+
+  Future<String?> _createGroupName() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E1E),
+        title: Text('Create custom group', style: GoogleFonts.sora(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+        content: TextField(controller: controller, autofocus: true, maxLength: 28, textCapitalization: TextCapitalization.words, style: GoogleFonts.sora(color: Colors.white, fontSize: 13), decoration: const InputDecoration(hintText: 'Group name'), onSubmitted: (value) => Navigator.pop(dialogContext, value.trim())),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Create')),
+        ],
+      ),
+    );
+    controller.dispose();
+    if (result == null || result.trim().isEmpty || !mounted) return null;
+    final name = result.trim();
+    final existing = [..._drawerGroups, ...ref.read(appDrawerCustomGroupsProvider)];
+    if (existing.any((g) => g.toLowerCase() == name.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A group with that name already exists.')));
+      return null;
+    }
+    ref.read(appDrawerCustomGroupsProvider.notifier).addGroup(name);
+    return name;
   }
 
   Future<void> _customizeGroup(AppInfo app, String currentGroup) async {
@@ -144,7 +188,13 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                 title: Text('Automatic · ${_automaticGroup(app)}', style: GoogleFonts.sora(color: Colors.white70, fontSize: 12)),
                 onTap: () => Navigator.pop(sheetContext, '__automatic__'),
               ),
-              for (final group in _drawerGroups)
+              ListTile(
+                dense: true,
+                leading: Icon(Icons.create_new_folder_rounded, color: Theme.of(context).colorScheme.primary),
+                title: Text('Create custom group…', style: GoogleFonts.sora(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w600)),
+                onTap: () => Navigator.pop(sheetContext, '__create_group__'),
+              ),
+              for (final group in [..._drawerGroups, ...ref.read(appDrawerCustomGroupsProvider)])
                 ListTile(
                   dense: true,
                   leading: Icon(
@@ -161,11 +211,17 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     ),
     );
     if (!mounted || selected == null) return;
+    var destination = selected;
+    if (selected == '__create_group__') {
+      final created = await _createGroupName();
+      if (created == null || !mounted) return;
+      destination = created;
+    }
     final notifier = ref.read(appDrawerGroupOverridesProvider.notifier);
-    if (selected == '__automatic__') {
+    if (destination == '__automatic__') {
       notifier.resetToAutomatic(app.packageName);
     } else {
-      notifier.setGroup(app.packageName, selected);
+      notifier.setGroup(app.packageName, destination);
     }
   }
 
@@ -174,6 +230,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     final accent = Theme.of(context).colorScheme.primary;
     final appsAsync = ref.watch(appsProvider);
     final overrides = ref.watch(appDrawerGroupOverridesProvider);
+    final customGroups = ref.watch(appDrawerCustomGroupsProvider);
+    final groups = [..._drawerGroups, ...customGroups];
     final favorites = ref.watch(favoriteAppsProvider);
     final iconSize = ref.watch(drawerIconSizeProvider);
     final gridColumns = ref.watch(drawerGridColumnsProvider);
@@ -182,7 +240,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF09090B),
       body: SafeArea(
-        child: Column(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Column(
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 10, 18, 12),
@@ -212,36 +273,16 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                 ],
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-                style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
-                cursorColor: accent,
-                decoration: InputDecoration(
-                  hintText: 'Search apps',
-                  hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
-                  prefixIcon: Icon(Icons.search_rounded, color: accent, size: 20),
-                  suffixIcon: _query.isEmpty ? null : IconButton(
-                    tooltip: 'Clear search',
-                    onPressed: () {
-                      _searchController.clear();
-                      setState(() => _query = '');
-                    },
-                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
-                  ),
-                  filled: true,
-                  fillColor: const Color(0xFF17171B),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.06))),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: accent.withValues(alpha: 0.7))),
-                ),
-              ),
-            ),
             Expanded(
-              child: appsAsync.when(
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollUpdateNotification || notification is UserScrollNotification) {
+                    final next = notification.metrics.pixels > 24;
+                    if (next != _searchShrunk && mounted) setState(() => _searchShrunk = next);
+                  }
+                  return false;
+                },
+                child: appsAsync.when(
                 loading: () => Center(child: CircularProgressIndicator(color: accent, strokeWidth: 2)),
                 error: (_, __) => Center(
                   child: Padding(
@@ -270,14 +311,14 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                   }
 
                   final grouped = <String, List<AppInfo>>{
-                    for (final group in _drawerGroups) group: <AppInfo>[],
+                    for (final group in groups) group: <AppInfo>[],
                   };
                   for (final app in filtered) {
                     final override = overrides[app.packageName];
-                    final group = override != null && _drawerGroups.contains(override)
+                    final group = override != null && groups.contains(override)
                         ? override
                         : _automaticGroup(app);
-                    grouped[group]!.add(app);
+                    grouped.putIfAbsent(group, () => <AppInfo>[]).add(app);
                   }
                   for (final group in grouped.keys) {
                     grouped[group]!.sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
@@ -352,55 +393,126 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                           ),
                         ),
                       ],
-                      for (final group in _drawerGroups)
-                        if (grouped[group]!.isNotEmpty) ...[
+                      for (final group in groups)
+                        if (grouped[group]?.isNotEmpty ?? false)
                           SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(18, 12, 18, 10),
+                            padding: const EdgeInsets.fromLTRB(14, 8, 14, 4),
                             sliver: SliverToBoxAdapter(
-                              child: Row(
-                                children: [
-                                  Container(width: 3, height: 16, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4))),
-                                  const SizedBox(width: 9),
-                                  Expanded(child: Text(group.toUpperCase(), style: GoogleFonts.sora(color: Colors.white70, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.w700))),
-                                  Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
-                                ],
+                              child: Container(
+                                padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF1E1E1E),
+                                  borderRadius: BorderRadius.circular(22),
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.075)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(width: 3, height: 16, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4))),
+                                        const SizedBox(width: 9),
+                                        Expanded(child: Text(group.toUpperCase(), style: GoogleFonts.sora(color: Colors.white70, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.w700))),
+                                        Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemCount: grouped[group]!.length,
+                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: gridColumns,
+                                        mainAxisExtent: iconSize + (showLabels ? 36 : 12),
+                                        crossAxisSpacing: 7,
+                                        mainAxisSpacing: 8,
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        final app = grouped[group]![index];
+                                        return _DrawerAppTile(
+                                          key: ValueKey('group-$group-${app.packageName}'),
+                                          app: app,
+                                          accent: accent,
+                                          iconSize: iconSize,
+                                          showLabel: showLabels,
+                                          onTap: () async {
+                                            await AppsService.openApp(app.packageName);
+                                            if (context.mounted) ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
+                                          },
+                                          onLongPress: () => showAppContextMenu(context, ref, app, onOrganize: () => _customizeGroup(app, group)),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
                           ),
-                          SliverPadding(
-                            padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
-                            sliver: SliverGrid(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
-                                  final app = grouped[group]![index];
-                                  return _DrawerAppTile(
-                                    key: ValueKey('group-$group-${app.packageName}'),
-                                    app: app,
-                                    accent: accent,
-                                    iconSize: iconSize,
-                                    showLabel: showLabels,
-                                    onTap: () async {
-                                      await AppsService.openApp(app.packageName);
-                                      if (context.mounted) ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
-                                    },
-                                    onLongPress: () => showAppContextMenu(context, ref, app, onOrganize: () => _customizeGroup(app, group)),
-                                  );
-                                },
-                                childCount: grouped[group]!.length,
-                              ),
-                              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: gridColumns,
-                                mainAxisExtent: iconSize + (showLabels ? 36 : 12),
-                                crossAxisSpacing: 7,
-                                mainAxisSpacing: 6,
-                              ),
-                            ),
-                          ),
-                        ],
-                      const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 100)),
                     ],
                   );
                 },
+              ),
+              ),
+            ),
+          ],
+            ),
+            Positioned(
+              left: _searchShrunk ? 42 : 18,
+              right: _searchShrunk ? 42 : 18,
+              bottom: 14,
+              child: AnimatedScale(
+                scale: _searchShrunk ? 0.8 : 1.0,
+                alignment: Alignment.bottomCenter,
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOutCubic,
+                child: Container(
+                  height: _searchShrunk ? 54 : 62,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(color: accent.withValues(alpha: 0.22)),
+                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 6))],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.centerRight,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(left: 18, right: 62),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+                          style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
+                          cursorColor: accent,
+                          textInputAction: TextInputAction.search,
+                          decoration: InputDecoration(
+                            hintText: 'Search apps',
+                            hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(vertical: 17),
+                            suffixIcon: _query.isEmpty ? null : IconButton(
+                              tooltip: 'Clear search',
+                              onPressed: () { _searchController.clear(); setState(() => _query = ''); },
+                              icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        right: 5,
+                        child: Material(
+                          color: accent,
+                          shape: const CircleBorder(),
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () => FocusScope.of(context).unfocus(),
+                            child: SizedBox(width: 48, height: 48, child: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 22)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],
