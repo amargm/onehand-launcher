@@ -46,7 +46,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _syncDockCovering() {
-    final shouldCover = _curve.value >= 0.70;
+    final shouldCover = _controller.value >= 0.72;
     if (shouldCover == _dockCovering) return;
     _dockCovering = shouldCover;
     ref.read(plannerDrawerCoveringDockProvider.notifier).state = shouldCover;
@@ -180,8 +180,13 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           // Phase 1 (0–70%): grow upward from the top of the dock/shell.
           // Phase 2 (70–100%): extend the lower edge down to the dock's
           // floating baseline, while the dock itself gently fades away.
-          final upT = (t / 0.70).clamp(0.0, 1.0);
-          final downT = ((t - 0.70) / 0.30).clamp(0.0, 1.0);
+          final rawT = _controller.value;
+          final upT = Curves.easeOutQuart.transform(
+            (rawT / 0.72).clamp(0.0, 1.0),
+          );
+          final downT = Curves.easeInOutCubic.transform(
+            ((rawT - 0.72) / 0.28).clamp(0.0, 1.0),
+          );
           final compactWidth = (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
           final panelWidth = compactWidth +
               (mq.size.width - 32 - compactWidth) * downT;
