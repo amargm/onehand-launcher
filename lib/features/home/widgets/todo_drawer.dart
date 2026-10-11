@@ -92,20 +92,24 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         (mq.size.height - mq.padding.top - mq.padding.bottom)
             .clamp(1.0, double.infinity)
             .toDouble();
+    // A shorter swipe should travel farther through the morph, so opening
+    // feels like one decisive gesture rather than stopping at the grabber.
     _controller.value = (_controller.value -
-            details.primaryDelta! / (usableHeight * 0.75))
+            details.primaryDelta! / (usableHeight * 0.46))
         .clamp(0.0, 1.0)
         .toDouble();
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    if (velocity < -180) {
+    if (velocity < -80) {
       _settle(true);
-    } else if (velocity > 180) {
+    } else if (velocity > 80) {
       _settle(false);
     } else {
-      _settle(_controller.value >= 0.5);
+      // Once a deliberate upward drag has opened the surface past its
+      // initial handle-only sliver, finish opening instead of snapping back.
+      _settle(_controller.value >= 0.22);
     }
   }
 
@@ -282,8 +286,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: mq.padding.bottom + 64,
-                  height: 96,
+                  bottom: mq.padding.bottom + 40,
+                  height: 160,
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragStart: _onVerticalDragStart,
