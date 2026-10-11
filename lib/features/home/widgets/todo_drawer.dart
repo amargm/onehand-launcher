@@ -61,11 +61,45 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _toggle() {
-    setState(() => _open = !_open);
-    if (_open) {
+    _settle(!_open);
+  }
+
+  void _settle(bool open) {
+    setState(() => _open = open);
+    if (open) {
       _controller.forward();
     } else {
       _controller.reverse();
+    }
+  }
+
+  void _onVerticalDragStart(DragStartDetails details) {
+    // Stop at the current frame so a new gesture can reverse the morph
+    // immediately, even while an earlier animation is still in flight.
+    _controller.stop();
+    _open = _controller.value >= 0.5;
+  }
+
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    final mq = MediaQuery.of(context);
+    final usableHeight =
+        (mq.size.height - mq.padding.top - mq.padding.bottom)
+            .clamp(1.0, double.infinity)
+            .toDouble();
+    _controller.value = (_controller.value -
+            details.primaryDelta! / (usableHeight * 0.75))
+        .clamp(0.0, 1.0)
+        .toDouble();
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity < -180) {
+      _settle(true);
+    } else if (velocity > 180) {
+      _settle(false);
+    } else {
+      _settle(_controller.value >= 0.5);
     }
   }
 
@@ -164,10 +198,19 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final accent = ref.watch(accentColorProvider);
     final items = [...ref.watch(plannerItemsProvider)]
       ..sort((a, b) => a.date.compareTo(b.date));
-    final panelHeight = mq.size.height * 0.65;
     final shellVisible = ref.watch(headphoneProvider) ||
         ref.watch(isScheduleContextActiveProvider);
     final dockBridgeHeight = shellVisible ? 184.0 : 92.0;
+
+    // Size the complete expanded surface (planner + morph bridge) to 75% of
+    // the usable display, not 75% of the raw screen plus system insets.
+    final usableHeight = (mq.size.height - mq.padding.top - mq.padding.bottom)
+        .clamp(1.0, double.infinity)
+        .toDouble();
+    final expandedSurfaceHeight = usableHeight * 0.75;
+    final panelHeight = (expandedSurfaceHeight - dockBridgeHeight)
+        .clamp(220.0, expandedSurfaceHeight)
+        .toDouble();
 
     return Positioned.fill(
       child: AnimatedBuilder(
@@ -245,9 +288,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                   height: 96,
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
-                    onVerticalDragEnd: (details) {
-                      if ((details.primaryVelocity ?? 0) < -120) _toggle();
-                    },
+                    onVerticalDragStart: _onVerticalDragStart,
+                    onVerticalDragUpdate: _onVerticalDragUpdate,
+                    onVerticalDragEnd: _onVerticalDragEnd,
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -290,14 +333,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           const SizedBox(height: 8),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onVerticalDragEnd: (details) {
-              final velocity = details.primaryVelocity ?? 0;
-              if (velocity < -120 && !_open) {
-                _toggle();
-              } else if (velocity > 120 && _open) {
-                _toggle();
-              }
-            },
+            onVerticalDragStart: _onVerticalDragStart,
+            onVerticalDragUpdate: _onVerticalDragUpdate,
+            onVerticalDragEnd: _onVerticalDragEnd,
             onTap: _toggle,
             child: SizedBox(
               width: double.infinity,
@@ -477,32 +515,82 @@ class _PlannerItemTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isTodo = item.type == PlannerItemType.todo;
+    final muted = item.isCompleted;
     return Dismissible(
       key: ValueKey(item.id),
       direction: DismissDirection.endToStart,
       background: Container(
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 1),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 18),
-        decoration: BoxDecoration(color: Colors.red.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+        color: Colors.red.withValues(alpha: 0.15),
         child: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
       ),
       onDismissed: (_) => onDelete(),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: const Color(0xFF252529),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.055)),
+          color: const Color(0xFF1B1B1E),
+          border: Border(
+            bottom: BorderSide(color: Colors.white.withValues(alpha: 0.075)),
+          ),
         ),
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.sora(
+                      color: muted ? Colors.white38 : Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      decoration: muted ? TextDecoration.lineThrough : null,
+                      decorationColor: Colors.white38,
+                    ),
+                  ),
+                  if (item.description.trim().isNotEmpty) ...[
+                    const SizedBox(height: 5),
+                    Text(
+                      item.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.sora(
+                        color: muted ? Colors.white24 : Colors.white54,
+                        fontSize: 10,
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  _PlannerTypePill(
+                    label: isTodo
+                        ? (item.isCompleted ? 'COMPLETED' : 'TO-DO')
+                        : 'EVENT',
+                    icon: isTodo
+                        ? (item.isCompleted
+                            ? Icons.check_rounded
+                            : Icons.radio_button_unchecked_rounded)
+                        : Icons.event_rounded,
+                    color: isTodo ? accent : const Color(0xFFFFB547),
+                    subdued: muted,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
             if (isTodo)
               Semantics(
                 button: true,
-                label: item.isCompleted ? 'Mark as not completed' : 'Mark as completed',
+                label: item.isCompleted
+                    ? 'Mark as not completed'
+                    : 'Mark as completed',
                 child: InkWell(
                   onTap: () {
                     Feedback.forTap(context);
@@ -510,22 +598,30 @@ class _PlannerItemTile extends StatelessWidget {
                   },
                   customBorder: const CircleBorder(),
                   child: SizedBox(
-                    width: 34,
-                    height: 34,
+                    width: 42,
+                    height: 42,
                     child: Center(
                       child: AnimatedSwitcher(
                         duration: const Duration(milliseconds: 180),
                         switchInCurve: Curves.easeOutBack,
                         switchOutCurve: Curves.easeIn,
-                        transitionBuilder: (child, animation) => ScaleTransition(
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(
                           scale: animation,
-                          child: FadeTransition(opacity: animation, child: child),
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
                         ),
                         child: Icon(
-                          item.isCompleted ? Icons.check_circle_rounded : Icons.circle_outlined,
+                          item.isCompleted
+                              ? Icons.check_circle_rounded
+                              : Icons.circle_outlined,
                           key: ValueKey(item.isCompleted),
-                          size: 20,
-                          color: item.isCompleted ? accent : Colors.white38,
+                          size: 25,
+                          color: item.isCompleted
+                              ? accent
+                              : Colors.white.withValues(alpha: 0.48),
                         ),
                       ),
                     ),
@@ -533,34 +629,66 @@ class _PlannerItemTile extends StatelessWidget {
                 ),
               )
             else
-              Padding(
-                padding: const EdgeInsets.only(right: 10, top: 1),
-                child: Icon(Icons.event_available_rounded, size: 19, color: accent),
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFB547).withValues(alpha: 0.13),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.event_available_rounded,
+                  color: Color(0xFFFFB547),
+                  size: 20,
+                ),
               ),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.title,
-                      style: GoogleFonts.sora(
-                        color: item.isCompleted ? Colors.white38 : Colors.white,
-                        fontSize: 11.5,
-                        fontWeight: FontWeight.w600,
-                        decoration: item.isCompleted ? TextDecoration.lineThrough : null,
-                      )),
-                  if (item.description.trim().isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(item.description,
-                        style: GoogleFonts.sora(color: Colors.white54, fontSize: 9.5, height: 1.35)),
-                  ],
-                  const SizedBox(height: 5),
-                  Text(isTodo ? (item.isCompleted ? 'COMPLETED' : 'TO-DO') : 'EVENT',
-                      style: GoogleFonts.sora(color: accent.withValues(alpha: 0.9), fontSize: 7.5, letterSpacing: 1.0, fontWeight: FontWeight.w700)),
-                ],
-              ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PlannerTypePill extends StatelessWidget {
+  const _PlannerTypePill({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.subdued,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final bool subdued;
+
+  @override
+  Widget build(BuildContext context) {
+    final foreground = color.withValues(alpha: subdued ? 0.48 : 1);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: subdued ? 0.055 : 0.13),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withValues(alpha: subdued ? 0.10 : 0.28),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: foreground),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: GoogleFonts.sora(
+              color: foreground,
+              fontSize: 8,
+              letterSpacing: 0.8,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
