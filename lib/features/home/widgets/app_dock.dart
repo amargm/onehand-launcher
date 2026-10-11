@@ -44,6 +44,7 @@ class AppDock extends ConsumerStatefulWidget {
 class _AppDockState extends ConsumerState<AppDock> {
   String? _activeFolderId;
   bool _messageBoxOpen = false;
+  final GlobalKey _dockSurfaceKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +78,20 @@ class _AppDockState extends ConsumerState<AppDock> {
 
     // Outer shell visible when either context source is active.
     final shellVisible = headphones || dayActive;
+
+    // Measure the actual dock/context-shell footprint after layout instead of
+    // making the planner guess its starting height from context flags.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final object = _dockSurfaceKey.currentContext?.findRenderObject();
+      if (object is! RenderBox || !object.hasSize) return;
+      final measuredHeight = object.size.height;
+      final previousHeight = ref.read(dockSurfaceHeightProvider);
+      if (previousHeight == null ||
+          (previousHeight - measuredHeight).abs() > 0.5) {
+        ref.read(dockSurfaceHeightProvider.notifier).state = measuredHeight;
+      }
+    });
 
     // If the active folder was removed, clear selection.
     final activeFolder =
@@ -210,6 +225,7 @@ class _AppDockState extends ConsumerState<AppDock> {
 
           // ── Outer shell + inner dock — wrapped in Stack for amber dot ──
           Stack(
+            key: _dockSurfaceKey,
             clipBehavior: Clip.none,
             children: [
               // Outer shell + inner dock (unchanged layout)
