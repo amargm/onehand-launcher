@@ -100,6 +100,57 @@ class AppDrawerGroupOverridesNotifier
   }
 }
 
+class _CreateGroupDialog extends StatefulWidget {
+  const _CreateGroupDialog();
+
+  @override
+  State<_CreateGroupDialog> createState() => _CreateGroupDialogState();
+}
+
+class _CreateGroupDialogState extends State<_CreateGroupDialog> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E1E1E),
+      title: Text(
+        'Create custom group',
+        style: GoogleFonts.sora(
+          color: Colors.white,
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      content: TextField(
+        controller: _controller,
+        autofocus: true,
+        maxLength: 28,
+        textCapitalization: TextCapitalization.words,
+        style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
+        decoration: const InputDecoration(hintText: 'Group name'),
+        onSubmitted: (value) => Navigator.pop(context, value.trim()),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.pop(context, _controller.text.trim()),
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
+}
+
 class AppDrawerScreen extends ConsumerStatefulWidget {
   const AppDrawerScreen({super.key});
 
@@ -136,25 +187,17 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   }
 
   Future<String?> _createGroupName() async {
-    final controller = TextEditingController();
     final result = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: const Color(0xFF1E1E1E),
-        title: Text('Create custom group', style: GoogleFonts.sora(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
-        content: TextField(controller: controller, autofocus: true, maxLength: 28, textCapitalization: TextCapitalization.words, style: GoogleFonts.sora(color: Colors.white, fontSize: 13), decoration: const InputDecoration(hintText: 'Group name'), onSubmitted: (value) => Navigator.pop(dialogContext, value.trim())),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(dialogContext, controller.text.trim()), child: const Text('Create')),
-        ],
-      ),
+      builder: (_) => const _CreateGroupDialog(),
     );
-    controller.dispose();
     if (result == null || result.trim().isEmpty || !mounted) return null;
     final name = result.trim();
     final existing = [..._drawerGroups, ...ref.read(appDrawerCustomGroupsProvider)];
     if (existing.any((g) => g.toLowerCase() == name.toLowerCase())) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('A group with that name already exists.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('A group with that name already exists.')),
+      );
       return null;
     }
     ref.read(appDrawerCustomGroupsProvider.notifier).addGroup(name);

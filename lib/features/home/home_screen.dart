@@ -48,7 +48,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (page == null) return;
     // Only call resetToCurrentYear once when crossing the 0.5 threshold back
     // toward home — not on every frame — to avoid per-frame setState jank.
-    if (_prevPage >= 0.5 && page < 0.5) {
+    if (_prevPage < 0.5 && page >= 0.5) {
+      ref.read(homePageActiveProvider.notifier).state = false;
+    } else if (_prevPage >= 0.5 && page < 0.5) {
+      ref.read(homePageActiveProvider.notifier).state = true;
       _widgetKey.currentState?.resetToCurrentYear();
     }
     _prevPage = page;

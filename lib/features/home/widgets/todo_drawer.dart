@@ -16,6 +16,10 @@ final plannerDrawerCoveringDockProvider = StateProvider<bool>((ref) => false);
 /// AppDock and used as the planner morph's collapsed geometry.
 final dockSurfaceGeometryProvider = StateProvider<Size?>((ref) => null);
 
+/// Tracks which PageView page is active so the planner can recover its
+/// animation after a round-trip to the calendar page.
+final homePageActiveProvider = StateProvider<bool>((ref) => true);
+
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
 
@@ -193,6 +197,15 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<bool>(homePageActiveProvider, (previous, active) {
+      if (!active || !mounted) return;
+      // A horizontal PageView gesture can interrupt the composited planner
+      // surface. Rebuild it on return and resume the intended open state.
+      setState(() {});
+      if (_open && !_controller.isAnimating) {
+        _controller.forward();
+      }
+    });
     final mq = MediaQuery.of(context);
     final accent = ref.watch(accentColorProvider);
     final items = [...ref.watch(plannerItemsProvider)]
