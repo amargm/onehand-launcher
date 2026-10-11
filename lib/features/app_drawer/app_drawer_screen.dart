@@ -439,11 +439,20 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                 ),
                                                 const SizedBox(width: 9),
                                                 Expanded(
-                                                  child: Text(
-                                                    group.toUpperCase(),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: GoogleFonts.sora(color: Colors.white70, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+                                                  child: AnimatedDefaultTextStyle(
+                                                    duration: const Duration(milliseconds: 240),
+                                                    curve: Curves.easeInOutCubic,
+                                                    style: GoogleFonts.sora(
+                                                      color: Colors.white70,
+                                                      fontSize: _collapsedGroups.contains(group) ? 14 : 11,
+                                                      letterSpacing: _collapsedGroups.contains(group) ? 0.8 : 1.2,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                    child: Text(
+                                                      group.toUpperCase(),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
                                                   ),
                                                 ),
                                                 Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
@@ -563,7 +572,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                     hintText: 'Search apps',
                                     hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 17),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                   ),
                                 ),
                               ),
@@ -604,7 +614,6 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                             ),
                           ),
                         ),
-                        if (_searchOpen) const SizedBox(width: 6),
                       ],
                     ),
                   ),
