@@ -154,6 +154,12 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         animation: _curve,
         builder: (context, _) {
           final t = _curve.value;
+          // The planner grows from the dock's floating footprint instead of
+          // stretching to the physical screen edge. Keep its resting baseline
+          // aligned with AppDock's bottom spacing (system inset + 24 px).
+          final panelWidth = 200 + (mq.size.width - 232) * t;
+          final panelLeft = (mq.size.width - panelWidth) / 2;
+          final floatingBottom = mq.padding.bottom + 24;
           return Stack(
             alignment: Alignment.bottomCenter,
             children: [
@@ -171,15 +177,17 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 ),
               if (t > 0)
                 Positioned(
-                  left: 16 * (1 - t),
-                  right: 16 * (1 - t),
-                  bottom: 0,
+                  left: panelLeft,
+                  right: panelLeft,
+                  bottom: floatingBottom,
                   child: ClipRRect(
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(40 - 12 * t),
                       topRight: Radius.circular(40 - 12 * t),
-                      bottomLeft: Radius.circular(40 * (1 - t)),
-                      bottomRight: Radius.circular(40 * (1 - t)),
+                      // Keep the expanded panel visibly floating, just like
+                      // the dock; never square it off against the screen edge.
+                      bottomLeft: Radius.circular(40 - 12 * t),
+                      bottomRight: Radius.circular(40 - 12 * t),
                     ),
                     child: ClipRect(
                       child: Align(
@@ -189,7 +197,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                           height: panelHeight,
                           child: IgnorePointer(
                             ignoring: !_open,
-                            child: _buildPanel(items, accent, mq.padding.bottom, t),
+                            child: _buildPanel(items, accent, t),
                           ),
                         ),
                       ),
@@ -217,7 +225,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     );
   }
 
-  Widget _buildPanel(List<PlannerItem> items, Color accent, double bottomInset, double expansion) {
+  Widget _buildPanel(List<PlannerItem> items, Color accent, double expansion) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final grouped = <DateTime, List<PlannerItem>>{};
@@ -386,7 +394,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           Align(
             alignment: Alignment.centerRight,
             child: Padding(
-              padding: EdgeInsets.fromLTRB(12, 2, 12, 8 + bottomInset),
+              // The panel already floats above the system navigation inset.
+              padding: const EdgeInsets.fromLTRB(12, 2, 12, 8),
               child: IconButton(
                 tooltip: 'Collapse to-do and events',
                 onPressed: _toggle,
