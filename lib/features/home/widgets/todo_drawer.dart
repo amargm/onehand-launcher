@@ -50,7 +50,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _syncDockCovering() {
-    final shouldCover = _controller.value >= 0.72;
+    // Start fading the dock early enough that its exit overlaps the planner's
+    // growth instead of becoming a second, late animation phase.
+    final shouldCover = _controller.value >= 0.20;
     if (shouldCover == _dockCovering) return;
     _dockCovering = shouldCover;
     ref.read(plannerDrawerCoveringDockProvider.notifier).state = shouldCover;
