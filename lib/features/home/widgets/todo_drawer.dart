@@ -14,7 +14,7 @@ final plannerDrawerCoveringDockProvider = StateProvider<bool>((ref) => false);
 
 /// Actual laid-out height of the dock/context-shell surface, measured by
 /// AppDock and used as the planner morph's collapsed geometry.
-final dockSurfaceHeightProvider = StateProvider<double?>((ref) => null);
+final dockSurfaceGeometryProvider = StateProvider<Size?>((ref) => null);
 
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
@@ -206,8 +206,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         ref.watch(isScheduleContextActiveProvider);
     // Prefer the real laid-out dock/shell height; the fallback is only used
     // for the first frame before AppDock has reported its geometry.
-    final dockBridgeHeight = ref.watch(dockSurfaceHeightProvider) ??
-        (shellVisible ? 184.0 : 92.0);
+    final dockGeometry = ref.watch(dockSurfaceGeometryProvider);
+    final dockBridgeHeight =
+        dockGeometry?.height ?? (shellVisible ? 184.0 : 92.0);
 
     // Size the complete expanded surface (planner + morph bridge) to 75% of
     // the usable display, not 75% of the raw screen plus system insets.
@@ -224,7 +225,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           // morph. Width, height, lower edge, radius and content all move
           // together; there is no delayed second expansion phase.
           final t = _curve.value;
-          final compactWidth =
+          final compactWidth = dockGeometry?.width ??
               (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
           final panelWidth = compactWidth +
               (mq.size.width - 32 - compactWidth) * t;
