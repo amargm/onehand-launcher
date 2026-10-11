@@ -634,6 +634,12 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
     final allUserEvents =
         userEvents.where((e) => e.date.year == _displayYear).toList()
           ..sort((a, b) => a.date.compareTo(b.date));
+    // Highlight every event active today. If none is active, highlight the
+    // next upcoming date across both public holidays and personal events.
+    final highlightedEvents = _eventsToHighlightForToday(
+      [...allHolidays, ...allUserEvents],
+      DateTime.now(),
+    );
 
     final textColor = _fg(isLight, 0.87);
     final subColor = _fg(isLight, 0.45);
@@ -783,6 +789,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     event: e,
                     accent: accent,
                     isLight: isLight,
+                    highlighted: highlightedEvents.contains(e),
                     onDelete: null,
                   ),
                 ),
@@ -794,6 +801,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                     event: e,
                     accent: accent,
                     isLight: isLight,
+                    highlighted: highlightedEvents.contains(e),
                     onDelete:
                         () =>
                             ref.read(userEventsProvider.notifier).remove(e.id),
@@ -990,6 +998,107 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
   }
 }
 
+// ── Current / next event selection ────────────────────────────────────────────
+
+DateTime _dateOnly(DateTime date) =>
+    DateTime(date.year, date.month, date.day);
+
+List<CalendarEvent> _eventsToHighlightForToday(
+  List<CalendarEvent> events,
+  DateTime now,
+) {
+  final today = _dateOnly(now);
+  final activeToday = events.where((event) {
+    final start = _dateOnly(event.date);
+    final end = _dateOnly(event.endDate);
+    return !start.isAfter(today) && !end.isBefore(today);
+  }).toList();
+
+  if (activeToday.isNotEmpty) return activeToday;
+
+  final upcoming = events
+      .where((event) => _dateOnly(event.date).isAfter(today))
+      .toList();
+  if (upcoming.isEmpty) return const [];
+
+  upcoming.sort((a, b) => _dateOnly(a.date).compareTo(_dateOnly(b.date)));
+  final nextDate = _dateOnly(upcoming.first.date);
+  return upcoming
+      .where((event) => _dateOnly(event.date) == nextDate)
+      .toList();
+}
+
+// A yellow ring breathes around the existing dot; the dot itself stays still.
+class _PulsingEventBullet extends StatefulWidget {
+  const _PulsingEventBullet({required this.dotColor});
+
+  final Color dotColor;
+
+  @override
+  State<_PulsingEventBullet> createState() => _PulsingEventBulletState();
+}
+
+class _PulsingEventBulletState extends State<_PulsingEventBullet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _ringScale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 850),
+    )..repeat(reverse: true);
+    _ringScale = Tween<double>(begin: 0.65, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 14,
+      height: 14,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          AnimatedBuilder(
+            animation: _ringScale,
+            builder: (context, child) =>
+                Transform.scale(scale: _ringScale.value, child: child),
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: const Color(0xFFFFD54F),
+                  width: 1.5,
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: widget.dotColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ── Event tile ────────────────────────────────────────────────────────────────
 
 class _EventTile extends StatelessWidget {
@@ -997,12 +1106,14 @@ class _EventTile extends StatelessWidget {
     required this.event,
     required this.accent,
     required this.isLight,
+    required this.highlighted,
     required this.onDelete,
   });
 
   final CalendarEvent event;
   final Color accent;
   final bool isLight;
+  final bool highlighted;
   final VoidCallback? onDelete;
 
   static const _months = [
@@ -1037,12 +1148,18 @@ class _EventTile extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       child: Row(
         children: [
-          Container(
-            width: 6,
-            height: 6,
-            decoration: BoxDecoration(shape: BoxShape.circle, color: dotColor),
-          ),
-          const SizedBox(width: 10),
+          if (highlighted)
+            _PulsingEventBullet(dotColor: dotColor)
+          else
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dotColor,
+              ),
+            ),
+          SizedBox(width: highlighted ? 6 : 10),
           SizedBox(
             width: 80,
             child: Text(
