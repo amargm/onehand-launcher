@@ -48,12 +48,14 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
-      reverseDuration: const Duration(milliseconds: 340),
+      // Give collapse a little more travel time so the surface settles back
+      // into the dock instead of snapping through the final part of the morph.
+      reverseDuration: const Duration(milliseconds: 520),
     );
     _curve = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutQuart,
-      reverseCurve: Curves.easeInOutCubic,
+      reverseCurve: Curves.easeInOutQuart,
     );
     _controller.addListener(_syncDockCovering);
   }
@@ -61,7 +63,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   void _syncDockCovering() {
     // Start fading the dock early enough that its exit overlaps the planner's
     // growth instead of becoming a second, late animation phase.
-    final shouldCover = _controller.value >= 0.20;
+    final shouldCover = _controller.value >= 0.12;
     if (shouldCover == _dockCovering) return;
     _dockCovering = shouldCover;
     ref.read(plannerDrawerCoveringDockProvider.notifier).state = shouldCover;
@@ -333,9 +335,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         ],
       ),
       child: Opacity(
-        opacity: ((expansion - 0.12) / 0.78).clamp(0.0, 1.0),
+        opacity: ((expansion - 0.08) / 0.84).clamp(0.0, 1.0),
         child: Transform.translate(
-          offset: Offset(0, 14 * (1 - expansion)),
+          offset: Offset(0, 10 * (1 - expansion)),
           child: Column(
         children: [
           const SizedBox(height: 8),
