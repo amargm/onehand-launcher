@@ -98,7 +98,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           controller: _pageController,
           // Rigid boundaries prevent the blank elastic page at the home edge,
           // making vertical swipe gestures easier to start reliably.
-          physics: const ClampingScrollPhysics(),
+          // Horizontal page navigation is disabled while the planner is expanded.
+          // This prevents the PageView from moving the home layer away from the
+          // composited dock/shell underneath the planner.
+          physics: ref.watch(plannerDrawerOpenProvider)
+              ? const NeverScrollableScrollPhysics()
+              : const ClampingScrollPhysics(),
           children: [
             // Page 0 — home: scales slightly back + dims as widgets slides in.
             // AnimatedBuilder listens to the page controller so the transform
