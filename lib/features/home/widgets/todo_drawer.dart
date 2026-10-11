@@ -12,6 +12,10 @@ import '../../../core/providers/schedule_rules_provider.dart';
 /// The dock listens to this one threshold rather than rebuilding every frame.
 final plannerDrawerCoveringDockProvider = StateProvider<bool>((ref) => false);
 
+/// Actual laid-out height of the dock/context-shell surface, measured by
+/// AppDock and used as the planner morph's collapsed geometry.
+final dockSurfaceHeightProvider = StateProvider<double?>((ref) => null);
+
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
 
@@ -200,7 +204,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       ..sort((a, b) => a.date.compareTo(b.date));
     final shellVisible = ref.watch(headphoneProvider) ||
         ref.watch(isScheduleContextActiveProvider);
-    final dockBridgeHeight = shellVisible ? 184.0 : 92.0;
+    // Prefer the real laid-out dock/shell height; the fallback is only used
+    // for the first frame before AppDock has reported its geometry.
+    final dockBridgeHeight = ref.watch(dockSurfaceHeightProvider) ??
+        (shellVisible ? 184.0 : 92.0);
 
     // Size the complete expanded surface (planner + morph bridge) to 75% of
     // the usable display, not 75% of the raw screen plus system insets.
