@@ -171,18 +171,26 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 ),
               if (t > 0)
                 Positioned(
-                  left: 0,
-                  right: 0,
+                  left: 16 * (1 - t),
+                  right: 16 * (1 - t),
                   bottom: 0,
-                  child: ClipRect(
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      heightFactor: t,
-                      child: SizedBox(
-                        height: panelHeight,
-                        child: IgnorePointer(
-                          ignoring: !_open,
-                          child: _buildPanel(items, accent, mq.padding.bottom),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(40 - 12 * t),
+                      topRight: Radius.circular(40 - 12 * t),
+                      bottomLeft: Radius.circular(40 * (1 - t)),
+                      bottomRight: Radius.circular(40 * (1 - t)),
+                    ),
+                    child: ClipRect(
+                      child: Align(
+                        alignment: Alignment.bottomCenter,
+                        heightFactor: t,
+                        child: SizedBox(
+                          height: panelHeight,
+                          child: IgnorePointer(
+                            ignoring: !_open,
+                            child: _buildPanel(items, accent, mq.padding.bottom, t),
+                          ),
                         ),
                       ),
                     ),
@@ -209,7 +217,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     );
   }
 
-  Widget _buildPanel(List<PlannerItem> items, Color accent, double bottomInset) {
+  Widget _buildPanel(List<PlannerItem> items, Color accent, double bottomInset, double expansion) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final grouped = <DateTime, List<PlannerItem>>{};
@@ -220,12 +228,23 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final dates = grouped.keys.toList()..sort();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1B1B1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1B1B1E),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28 - 0 * expansion)),
         border: Border(top: BorderSide(color: Color(0x22FFFFFF))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.20 * expansion),
+            blurRadius: 24 * expansion,
+            offset: Offset(0, -4 * expansion),
+          ),
+        ],
       ),
-      child: Column(
+      child: Opacity(
+        opacity: ((expansion - 0.12) / 0.78).clamp(0.0, 1.0),
+        child: Transform.translate(
+          offset: Offset(0, 14 * (1 - expansion)),
+          child: Column(
         children: [
           const SizedBox(height: 8),
           GestureDetector(
@@ -382,6 +401,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
             ),
           ),
         ],
+          ),
+        ),
       ),
     );
   }
