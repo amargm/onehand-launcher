@@ -61,11 +61,44 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _toggle() {
-    setState(() => _open = !_open);
-    if (_open) {
+    _settle(!_open);
+  }
+
+  void _settle(bool open) {
+    setState(() => _open = open);
+    if (open) {
       _controller.forward();
     } else {
       _controller.reverse();
+    }
+  }
+
+  void _onVerticalDragStart(DragStartDetails details) {
+    // Stop at the current frame so a new gesture can reverse the morph
+    // immediately, even while an earlier animation is still in flight.
+    _controller.stop();
+    _open = _controller.value >= 0.5;
+  }
+
+  void _onVerticalDragUpdate(DragUpdateDetails details) {
+    final mq = MediaQuery.of(context);
+    final usableHeight =
+        (mq.size.height - mq.padding.top - mq.padding.bottom)
+            .clamp(1.0, double.infinity)
+            .toDouble();
+    _controller.value = (_controller.value -
+            details.primaryDelta! / (usableHeight * 0.75))
+        .clamp(0.0, 1.0);
+  }
+
+  void _onVerticalDragEnd(DragEndDetails details) {
+    final velocity = details.primaryVelocity ?? 0;
+    if (velocity < -180) {
+      _settle(true);
+    } else if (velocity > 180) {
+      _settle(false);
+    } else {
+      _settle(_controller.value >= 0.5);
     }
   }
 
@@ -164,10 +197,19 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final accent = ref.watch(accentColorProvider);
     final items = [...ref.watch(plannerItemsProvider)]
       ..sort((a, b) => a.date.compareTo(b.date));
-    final panelHeight = mq.size.height * 0.65;
     final shellVisible = ref.watch(headphoneProvider) ||
         ref.watch(isScheduleContextActiveProvider);
     final dockBridgeHeight = shellVisible ? 184.0 : 92.0;
+
+    // Size the complete expanded surface (planner + morph bridge) to 75% of
+    // the usable display, not 75% of the raw screen plus system insets.
+    final usableHeight = (mq.size.height - mq.padding.top - mq.padding.bottom)
+        .clamp(1.0, double.infinity)
+        .toDouble();
+    final expandedSurfaceHeight = usableHeight * 0.75;
+    final panelHeight = (expandedSurfaceHeight - dockBridgeHeight)
+        .clamp(220.0, expandedSurfaceHeight)
+        .toDouble();
 
     return Positioned.fill(
       child: AnimatedBuilder(
@@ -245,9 +287,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                   height: 96,
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
-                    onVerticalDragEnd: (details) {
-                      if ((details.primaryVelocity ?? 0) < -120) _toggle();
-                    },
+                    onVerticalDragStart: _onVerticalDragStart,
+                    onVerticalDragUpdate: _onVerticalDragUpdate,
+                    onVerticalDragEnd: _onVerticalDragEnd,
                     child: const SizedBox.expand(),
                   ),
                 ),
@@ -290,14 +332,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           const SizedBox(height: 8),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onVerticalDragEnd: (details) {
-              final velocity = details.primaryVelocity ?? 0;
-              if (velocity < -120 && !_open) {
-                _toggle();
-              } else if (velocity > 120 && _open) {
-                _toggle();
-              }
-            },
+            onVerticalDragStart: _onVerticalDragStart,
+            onVerticalDragUpdate: _onVerticalDragUpdate,
+            onVerticalDragEnd: _onVerticalDragEnd,
             onTap: _toggle,
             child: SizedBox(
               width: double.infinity,
