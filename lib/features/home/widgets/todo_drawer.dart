@@ -247,7 +247,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
               (mq.size.width - 32 - compactWidth) * t;
           final panelLeft = (mq.size.width - panelWidth) / 2;
           final floatingBottom = mq.padding.bottom + 24;
-          final panelBottom = floatingBottom + dockBridgeHeight * (1 - t);
+          // Keep the planner's lower edge anchored to the dock's lower edge.
+          // The panel height shrinks onto the measured dock/shell bounds, rather
+          // than lifting the whole panel by the dock height during collapse.
+          final panelBottom = floatingBottom;
           final panelHeight = dockBridgeHeight +
               (expandedSurfaceHeight - dockBridgeHeight) * t;
           return Stack(
