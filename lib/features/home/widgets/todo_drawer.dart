@@ -208,34 +208,22 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         .clamp(1.0, double.infinity)
         .toDouble();
     final expandedSurfaceHeight = usableHeight * 0.75;
-    final panelHeight = (expandedSurfaceHeight - dockBridgeHeight)
-        .clamp(220.0, expandedSurfaceHeight)
-        .toDouble();
 
     return Positioned.fill(
       child: AnimatedBuilder(
         animation: _curve,
         builder: (context, _) {
+          // One progress value drives every part of the dock-to-planner
+          // morph. Width, height, lower edge, radius and content all move
+          // together; there is no delayed second expansion phase.
           final t = _curve.value;
-          // The planner grows from the dock's floating footprint instead of
-          // stretching to the physical screen edge. Keep its resting baseline
-          // aligned with AppDock's bottom spacing (system inset + 24 px).
-          // Phase 1 (0–70%): grow upward from the top of the dock/shell.
-          // Phase 2 (70–100%): extend the lower edge down to the dock's
-          // floating baseline, while the dock itself gently fades away.
-          final rawT = _controller.value;
-          final upT = Curves.easeOutQuart.transform(
-            (rawT / 0.72).clamp(0.0, 1.0).toDouble(),
-          );
-          final downT = Curves.easeInOutCubic.transform(
-            ((rawT - 0.72) / 0.28).clamp(0.0, 1.0).toDouble(),
-          );
-          final compactWidth = (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
+          final compactWidth =
+              (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
           final panelWidth = compactWidth +
-              (mq.size.width - 32 - compactWidth) * downT;
+              (mq.size.width - 32 - compactWidth) * t;
           final panelLeft = (mq.size.width - panelWidth) / 2;
           final floatingBottom = mq.padding.bottom + 24;
-          final panelBottom = floatingBottom + dockBridgeHeight * (1 - downT);
+          final panelBottom = floatingBottom + dockBridgeHeight * (1 - t);
           return Stack(
             alignment: Alignment.bottomCenter,
             children: [
@@ -268,9 +256,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                     child: ClipRect(
                       child: Align(
                         alignment: Alignment.bottomCenter,
-                        heightFactor: upT,
+                        heightFactor: t,
                         child: SizedBox(
-                          height: panelHeight + dockBridgeHeight * downT,
+                          height: expandedSurfaceHeight,
                           child: IgnorePointer(
                             ignoring: !_open,
                             child: _buildPanel(items, accent, t),
