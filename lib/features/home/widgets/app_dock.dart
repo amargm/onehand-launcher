@@ -44,6 +44,26 @@ class AppDock extends ConsumerStatefulWidget {
 class _AppDockState extends ConsumerState<AppDock> {
   String? _activeFolderId;
   bool _messageBoxOpen = false;
+  final GlobalKey _dockSurfaceKey = GlobalKey();
+  bool _dockMeasureScheduled = false;
+
+  void _scheduleDockSurfaceMeasurement() {
+    if (_dockMeasureScheduled) return;
+    _dockMeasureScheduled = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _dockMeasureScheduled = false;
+      if (!mounted) return;
+      final object = _dockSurfaceKey.currentContext?.findRenderObject();
+      if (object is! RenderBox || !object.hasSize) return;
+      final measuredSize = object.size;
+      final previousSize = ref.read(dockSurfaceGeometryProvider);
+      if (previousSize == null ||
+          (previousSize.width - measuredSize.width).abs() > 0.5 ||
+          (previousSize.height - measuredSize.height).abs() > 0.5) {
+        ref.read(dockSurfaceGeometryProvider.notifier).state = measuredSize;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +97,10 @@ class _AppDockState extends ConsumerState<AppDock> {
 
     // Outer shell visible when either context source is active.
     final shellVisible = headphones || dayActive;
+
+    // Measure the actual dock/context-shell footprint after layout instead of
+    // making the planner guess its starting bounds from context flags.
+    _scheduleDockSurfaceMeasurement();
 
     // If the active folder was removed, clear selection.
     final activeFolder =
@@ -209,9 +233,17 @@ class _AppDockState extends ConsumerState<AppDock> {
           ),
 
           // ── Outer shell + inner dock — wrapped in Stack for amber dot ──
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
+          NotificationListener<SizeChangedLayoutNotification>(
+            onNotification: (_) {
+              // AnimatedSize changes the shell bounds over several frames.
+              // Re-measure those intermediate/final sizes, not just the first.
+              _scheduleDockSurfaceMeasurement();
+              return false;
+            },
+            child: SizeChangedLayoutNotifier(
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
               // Outer shell + inner dock (unchanged layout)
               AnimatedOpacity(
                 opacity: plannerCoveringDock ? 0.0 : 1.0,
@@ -220,7 +252,9 @@ class _AppDockState extends ConsumerState<AppDock> {
                 child: IgnorePointer(
                   ignoring: plannerCoveringDock,
                   child: Center(
-                    child: AnimatedContainer(
+                    child: SizeChangedLayoutNotifier(
+                      child: AnimatedContainer(
+                        key: _dockSurfaceKey,
                   duration: const Duration(milliseconds: 700),
                   curve: Curves.easeInOutQuart,
                   padding:
@@ -317,6 +351,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                     ],
                   ),
                     ),
+                    ),
                   ),
                 ),
               ),
@@ -339,7 +374,9 @@ class _AppDockState extends ConsumerState<AppDock> {
                         }),
                   ),
                 ),
-            ],
+                ],
+              ),
+            ),
           ),
         ],
       ),

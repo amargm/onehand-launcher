@@ -12,6 +12,10 @@ import '../../../core/providers/schedule_rules_provider.dart';
 /// The dock listens to this one threshold rather than rebuilding every frame.
 final plannerDrawerCoveringDockProvider = StateProvider<bool>((ref) => false);
 
+/// Actual laid-out height of the dock/context-shell surface, measured by
+/// AppDock and used as the planner morph's collapsed geometry.
+final dockSurfaceGeometryProvider = StateProvider<Size?>((ref) => null);
+
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
 
@@ -46,7 +50,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _syncDockCovering() {
-    final shouldCover = _controller.value >= 0.72;
+    // Start fading the dock early enough that its exit overlaps the planner's
+    // growth instead of becoming a second, late animation phase.
+    final shouldCover = _controller.value >= 0.20;
     if (shouldCover == _dockCovering) return;
     _dockCovering = shouldCover;
     ref.read(plannerDrawerCoveringDockProvider.notifier).state = shouldCover;
@@ -86,20 +92,24 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         (mq.size.height - mq.padding.top - mq.padding.bottom)
             .clamp(1.0, double.infinity)
             .toDouble();
+    // A shorter swipe should travel farther through the morph, so opening
+    // feels like one decisive gesture rather than stopping at the grabber.
     _controller.value = (_controller.value -
-            details.primaryDelta! / (usableHeight * 0.75))
+            details.primaryDelta! / (usableHeight * 0.46))
         .clamp(0.0, 1.0)
         .toDouble();
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    if (velocity < -180) {
+    if (velocity < -80) {
       _settle(true);
-    } else if (velocity > 180) {
+    } else if (velocity > 80) {
       _settle(false);
     } else {
-      _settle(_controller.value >= 0.5);
+      // Once a deliberate upward drag has opened the surface past its
+      // initial handle-only sliver, finish opening instead of snapping back.
+      _settle(_controller.value >= 0.22);
     }
   }
 
@@ -200,7 +210,11 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       ..sort((a, b) => a.date.compareTo(b.date));
     final shellVisible = ref.watch(headphoneProvider) ||
         ref.watch(isScheduleContextActiveProvider);
-    final dockBridgeHeight = shellVisible ? 184.0 : 92.0;
+    // Prefer the real laid-out dock/shell height; the fallback is only used
+    // for the first frame before AppDock has reported its geometry.
+    final dockGeometry = ref.watch(dockSurfaceGeometryProvider);
+    final dockBridgeHeight =
+        dockGeometry?.height ?? (shellVisible ? 184.0 : 92.0);
 
     // Size the complete expanded surface (planner + morph bridge) to 75% of
     // the usable display, not 75% of the raw screen plus system insets.
@@ -208,34 +222,22 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         .clamp(1.0, double.infinity)
         .toDouble();
     final expandedSurfaceHeight = usableHeight * 0.75;
-    final panelHeight = (expandedSurfaceHeight - dockBridgeHeight)
-        .clamp(220.0, expandedSurfaceHeight)
-        .toDouble();
 
     return Positioned.fill(
       child: AnimatedBuilder(
         animation: _curve,
         builder: (context, _) {
+          // One progress value drives every part of the dock-to-planner
+          // morph. Width, height, lower edge, radius and content all move
+          // together; there is no delayed second expansion phase.
           final t = _curve.value;
-          // The planner grows from the dock's floating footprint instead of
-          // stretching to the physical screen edge. Keep its resting baseline
-          // aligned with AppDock's bottom spacing (system inset + 24 px).
-          // Phase 1 (0–70%): grow upward from the top of the dock/shell.
-          // Phase 2 (70–100%): extend the lower edge down to the dock's
-          // floating baseline, while the dock itself gently fades away.
-          final rawT = _controller.value;
-          final upT = Curves.easeOutQuart.transform(
-            (rawT / 0.72).clamp(0.0, 1.0).toDouble(),
-          );
-          final downT = Curves.easeInOutCubic.transform(
-            ((rawT - 0.72) / 0.28).clamp(0.0, 1.0).toDouble(),
-          );
-          final compactWidth = (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
+          final compactWidth = dockGeometry?.width ??
+              (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
           final panelWidth = compactWidth +
-              (mq.size.width - 32 - compactWidth) * downT;
+              (mq.size.width - 32 - compactWidth) * t;
           final panelLeft = (mq.size.width - panelWidth) / 2;
           final floatingBottom = mq.padding.bottom + 24;
-          final panelBottom = floatingBottom + dockBridgeHeight * (1 - downT);
+          final panelBottom = floatingBottom + dockBridgeHeight * (1 - t);
           return Stack(
             alignment: Alignment.bottomCenter,
             children: [
@@ -268,9 +270,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                     child: ClipRect(
                       child: Align(
                         alignment: Alignment.bottomCenter,
-                        heightFactor: upT,
+                        heightFactor: t,
                         child: SizedBox(
-                          height: panelHeight + dockBridgeHeight * downT,
+                          height: expandedSurfaceHeight,
                           child: IgnorePointer(
                             ignoring: !_open,
                             child: _buildPanel(items, accent, t),
@@ -284,8 +286,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 Positioned(
                   left: 0,
                   right: 0,
-                  bottom: mq.padding.bottom + 64,
-                  height: 96,
+                  bottom: mq.padding.bottom + 40,
+                  height: 160,
                   child: GestureDetector(
                     behavior: HitTestBehavior.translucent,
                     onVerticalDragStart: _onVerticalDragStart,

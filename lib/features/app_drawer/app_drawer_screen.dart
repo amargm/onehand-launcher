@@ -430,20 +430,21 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                             padding: const EdgeInsets.symmetric(vertical: 3),
                                             child: Row(
                                               children: [
-                                                AnimatedContainer(
-                                                  duration: const Duration(milliseconds: 240),
-                                                  curve: Curves.easeInOutCubic,
-                                                  width: 3,
-                                                  height: 18,
-                                                  decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4)),
-                                                ),
-                                                const SizedBox(width: 9),
                                                 Expanded(
-                                                  child: Text(
-                                                    group.toUpperCase(),
-                                                    maxLines: 1,
-                                                    overflow: TextOverflow.ellipsis,
-                                                    style: GoogleFonts.sora(color: Colors.white70, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+                                                  child: AnimatedDefaultTextStyle(
+                                                    duration: const Duration(milliseconds: 360),
+                                                    curve: Curves.easeOutCubic,
+                                                    style: GoogleFonts.sora(
+                                                      color: Colors.white70,
+                                                      fontSize: _collapsedGroups.contains(group) ? 15.5 : 11,
+                                                      letterSpacing: _collapsedGroups.contains(group) ? 0.4 : 1.0,
+                                                      fontWeight: FontWeight.w700,
+                                                    ),
+                                                    child: Text(
+                                                      group.toUpperCase(),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
                                                   ),
                                                 ),
                                                 Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
@@ -461,8 +462,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                       ),
                                     ),
                                     AnimatedSize(
-                                      duration: const Duration(milliseconds: 300),
-                                      curve: Curves.easeInOutCubic,
+                                      duration: const Duration(milliseconds: 360),
+                                      curve: Curves.easeOutCubic,
                                       alignment: Alignment.topCenter,
                                       child: _collapsedGroups.contains(group)
                                           ? const SizedBox(width: double.infinity)
@@ -539,9 +540,20 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        if (_searchOpen)
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Don't mount the editable field until the animated
+                        // pill is wide enough to give it real layout space.
+                        // This prevents a transient RenderFlex/pixel overflow
+                        // on the first frames after the search button is tapped.
+                        final showInput =
+                            _searchOpen && constraints.maxWidth >= 140;
+                        return Row(
+                          mainAxisAlignment: showInput
+                              ? MainAxisAlignment.start
+                              : MainAxisAlignment.center,
+                          children: [
+                        if (showInput)
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(left: 18, right: 4),
@@ -563,13 +575,14 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                     hintText: 'Search apps',
                                     hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
                                     border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 17),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 8),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        const SizedBox(width: 4),
+                        if (showInput) const SizedBox(width: 4),
                         Material(
                           color: accent,
                           shape: const CircleBorder(),
@@ -604,8 +617,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                             ),
                           ),
                         ),
-                        if (_searchOpen) const SizedBox(width: 6),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
