@@ -182,10 +182,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           // floating baseline, while the dock itself gently fades away.
           final rawT = _controller.value;
           final upT = Curves.easeOutQuart.transform(
-            (rawT / 0.72).clamp(0.0, 1.0),
+            (rawT / 0.72).clamp(0.0, 1.0).toDouble(),
           );
           final downT = Curves.easeInOutCubic.transform(
-            ((rawT - 0.72) / 0.28).clamp(0.0, 1.0),
+            ((rawT - 0.72) / 0.28).clamp(0.0, 1.0).toDouble(),
           );
           final compactWidth = (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
           final panelWidth = compactWidth +
