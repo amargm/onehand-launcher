@@ -581,9 +581,20 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                       curve: Curves.easeInOutQuart,
                                       alignment: Alignment.topCenter,
                                       child: _query.isNotEmpty || !collapsedGroups.contains(group)
-                                          ? Padding(
-                                              padding: const EdgeInsets.only(top: 12),
-                                              child: GridView.builder(
+                                          ? TweenAnimationBuilder<double>(
+                                              tween: Tween<double>(begin: 0, end: 1),
+                                              duration: const Duration(milliseconds: 520),
+                                              curve: Curves.easeOutCubic,
+                                              builder: (context, progress, child) => Opacity(
+                                                opacity: progress,
+                                                child: Transform.translate(
+                                                  offset: Offset(0, 10 * (1 - progress)),
+                                                  child: child,
+                                                ),
+                                              ),
+                                              child: Padding(
+                                                padding: const EdgeInsets.only(top: 12),
+                                                child: GridView.builder(
                                                 shrinkWrap: true,
                                                 physics: const NeverScrollableScrollPhysics(),
                                                 itemCount: grouped[group]!.length,
@@ -608,6 +619,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                     onLongPress: () => showAppContextMenu(context, ref, app, onOrganize: () => _customizeGroup(app, group)),
                                                   );
                                                 },
+                                              ),
                                               ),
                                             )
                                           : const SizedBox(width: double.infinity)
