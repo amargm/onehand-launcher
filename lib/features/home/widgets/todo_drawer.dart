@@ -230,7 +230,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1B1B1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(28 - 0 * expansion)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(40 - 12 * expansion)),
         border: Border(top: BorderSide(color: Color(0x22FFFFFF))),
         boxShadow: [
           BoxShadow(
