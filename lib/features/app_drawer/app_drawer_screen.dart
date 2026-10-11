@@ -111,6 +111,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   bool _searchShrunk = false;
+  bool _searchOpen = false;
+  final Set<String> _collapsedGroups = <String>{};
 
   @override
   void dispose() {
@@ -408,16 +410,63 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      children: [
-                                        Container(width: 3, height: 16, decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4))),
-                                        const SizedBox(width: 9),
-                                        Expanded(child: Text(group.toUpperCase(), style: GoogleFonts.sora(color: Colors.white70, fontSize: 10, letterSpacing: 1.5, fontWeight: FontWeight.w700))),
-                                        Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
-                                      ],
+                                    Semantics(
+                                      button: true,
+                                      expanded: !_collapsedGroups.contains(group),
+                                      label: '$group group, ${grouped[group]!.length} apps',
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        borderRadius: BorderRadius.circular(14),
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(14),
+                                          onTap: () => setState(() {
+                                            if (!_collapsedGroups.add(group)) {
+                                              _collapsedGroups.remove(group);
+                                            }
+                                          }),
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 3),
+                                            child: Row(
+                                              children: [
+                                                AnimatedContainer(
+                                                  duration: const Duration(milliseconds: 240),
+                                                  curve: Curves.easeInOutCubic,
+                                                  width: 3,
+                                                  height: 18,
+                                                  decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(4)),
+                                                ),
+                                                const SizedBox(width: 9),
+                                                Expanded(
+                                                  child: Text(
+                                                    group.toUpperCase(),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                    style: GoogleFonts.sora(color: Colors.white70, fontSize: 11, letterSpacing: 1.2, fontWeight: FontWeight.w700),
+                                                  ),
+                                                ),
+                                                Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
+                                                const SizedBox(width: 8),
+                                                AnimatedRotation(
+                                                  turns: _collapsedGroups.contains(group) ? -0.25 : 0,
+                                                  duration: const Duration(milliseconds: 240),
+                                                  curve: Curves.easeInOutCubic,
+                                                  child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54, size: 20),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
-                                    const SizedBox(height: 12),
-                                    GridView.builder(
+                                    AnimatedSize(
+                                      duration: const Duration(milliseconds: 300),
+                                      curve: Curves.easeInOutCubic,
+                                      alignment: Alignment.topCenter,
+                                      child: _collapsedGroups.contains(group)
+                                          ? const SizedBox(width: double.infinity)
+                                          : Padding(
+                                              padding: const EdgeInsets.only(top: 12),
+                                              child: GridView.builder(
                                       shrinkWrap: true,
                                       physics: const NeverScrollableScrollPhysics(),
                                       itemCount: grouped[group]!.length,
@@ -443,6 +492,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                         );
                                       },
                                     ),
+                                          ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -458,58 +509,96 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
           ],
             ),
             Positioned(
-              left: _searchShrunk ? 42 : 18,
-              right: _searchShrunk ? 42 : 18,
+              left: 18,
+              right: 18,
               bottom: 14,
-              child: AnimatedScale(
-                scale: _searchShrunk ? 0.8 : 1.0,
-                alignment: Alignment.bottomCenter,
-                duration: const Duration(milliseconds: 220),
-                curve: Curves.easeOutCubic,
-                child: Container(
-                  height: _searchShrunk ? 54 : 62,
+              child: Align(
+                alignment: Alignment.bottomRight,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 360),
+                  curve: Curves.easeInOutCubic,
+                  width: _searchOpen ? double.infinity : 56,
+                  height: _searchOpen ? 62 : 56,
                   decoration: BoxDecoration(
                     color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(22),
-                    border: Border.all(color: accent.withValues(alpha: 0.22)),
-                    boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.35), blurRadius: 18, offset: const Offset(0, 6))],
+                    borderRadius: BorderRadius.circular(_searchOpen ? 22 : 28),
+                    border: Border.all(color: accent.withValues(alpha: _searchOpen ? 0.22 : 0.30)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.35),
+                        blurRadius: _searchOpen ? 18 : 12,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
                   ),
-                  child: Stack(
-                    alignment: Alignment.centerRight,
+                  child: Row(
                     children: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 18, right: 62),
-                        child: TextField(
-                          controller: _searchController,
-                          onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-                          style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
-                          cursorColor: accent,
-                          textInputAction: TextInputAction.search,
-                          decoration: InputDecoration(
-                            hintText: 'Search apps',
-                            hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 17),
-                            suffixIcon: _query.isEmpty ? null : IconButton(
-                              tooltip: 'Clear search',
-                              onPressed: () { _searchController.clear(); setState(() => _query = ''); },
-                              icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                      if (_searchOpen)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 18, right: 4),
+                            child: AnimatedOpacity(
+                              opacity: _searchOpen ? 1 : 0,
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              child: TextField(
+                                controller: _searchController,
+                                autofocus: true,
+                                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
+                                style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
+                                cursorColor: accent,
+                                textInputAction: TextInputAction.search,
+                                decoration: InputDecoration(
+                                  hintText: 'Search apps',
+                                  hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
+                                  border: InputBorder.none,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 17),
+                                  suffixIcon: _query.isEmpty ? null : IconButton(
+                                    tooltip: 'Clear search',
+                                    onPressed: () {
+                                      _searchController.clear();
+                                      setState(() => _query = '');
+                                    },
+                                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      Material(
+                        color: accent,
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          customBorder: const CircleBorder(),
+                          onTap: () {
+                            if (_searchOpen) {
+                              FocusScope.of(context).unfocus();
+                              if (_query.isEmpty) {
+                                setState(() => _searchOpen = false);
+                              } else {
+                                _searchController.clear();
+                                setState(() {
+                                  _query = '';
+                                  _searchOpen = false;
+                                });
+                              }
+                            } else {
+                              setState(() => _searchOpen = true);
+                            }
+                          },
+                          child: SizedBox(
+                            width: 48,
+                            height: 48,
+                            child: Icon(
+                              _searchOpen ? Icons.close_rounded : Icons.search_rounded,
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              size: 22,
                             ),
                           ),
                         ),
                       ),
-                      Positioned(
-                        right: 5,
-                        child: Material(
-                          color: accent,
-                          shape: const CircleBorder(),
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: () => FocusScope.of(context).unfocus(),
-                            child: SizedBox(width: 48, height: 48, child: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 22)),
-                          ),
-                        ),
-                      ),
+                      if (_searchOpen) const SizedBox(width: 6),
                     ],
                   ),
                 ),
