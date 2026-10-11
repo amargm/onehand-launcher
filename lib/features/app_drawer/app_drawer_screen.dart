@@ -548,9 +548,20 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                         ),
                       ],
                     ),
-                    child: Row(
-                      children: [
-                        if (_searchOpen)
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        // Don't mount the editable field until the animated
+                        // pill is wide enough to give it real layout space.
+                        // This prevents a transient RenderFlex/pixel overflow
+                        // on the first frames after the search button is tapped.
+                        final showInput =
+                            _searchOpen && constraints.maxWidth >= 140;
+                        return Row(
+                          mainAxisAlignment: showInput
+                              ? MainAxisAlignment.start
+                              : MainAxisAlignment.center,
+                          children: [
+                        if (showInput)
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(left: 18, right: 4),
@@ -579,7 +590,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                               ),
                             ),
                           ),
-                        const SizedBox(width: 4),
+                        if (showInput) const SizedBox(width: 4),
                         Material(
                           color: accent,
                           shape: const CircleBorder(),
@@ -614,7 +625,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                             ),
                           ),
                         ),
-                      ],
+                          ],
+                        );
+                      },
                     ),
                   ),
                 ),
