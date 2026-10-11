@@ -109,6 +109,7 @@ class AppDrawerScreen extends ConsumerStatefulWidget {
 
 class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   final _searchController = TextEditingController();
+  final _searchFocusNode = FocusNode(debugLabel: 'App drawer search');
   String _query = '';
   bool _searchShrunk = false;
   bool _searchOpen = false;
@@ -117,6 +118,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -513,98 +515,98 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
               right: 18,
               bottom: 14,
               child: Align(
-                alignment: Alignment.bottomRight,
+                alignment: Alignment.bottomCenter,
                 child: AnimatedScale(
                   scale: _searchOpen || !_searchShrunk ? 1.0 : 0.88,
                   duration: const Duration(milliseconds: 320),
                   curve: Curves.easeInOutCubic,
                   child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 360),
-                  curve: Curves.easeInOutCubic,
-                  width: _searchOpen ? double.infinity : 56,
-                  height: _searchOpen ? 62 : 56,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1E1E1E),
-                    borderRadius: BorderRadius.circular(_searchOpen ? 22 : 28),
-                    border: Border.all(color: accent.withValues(alpha: _searchOpen ? 0.22 : 0.30)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.35),
-                        blurRadius: _searchOpen ? 18 : 12,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      if (_searchOpen)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 18, right: 4),
-                            child: AnimatedOpacity(
-                              opacity: _searchOpen ? 1 : 0,
-                              duration: const Duration(milliseconds: 180),
-                              curve: Curves.easeOut,
-                              child: TextField(
-                                controller: _searchController,
-                                autofocus: true,
-                                onChanged: (value) => setState(() => _query = value.trim().toLowerCase()),
-                                style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
-                                cursorColor: accent,
-                                textInputAction: TextInputAction.search,
-                                decoration: InputDecoration(
-                                  hintText: 'Search apps',
-                                  hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
-                                  border: InputBorder.none,
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 17),
-                                  suffixIcon: _query.isEmpty ? null : IconButton(
-                                    tooltip: 'Clear search',
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _query = '');
-                                    },
-                                    icon: const Icon(Icons.close_rounded, color: Colors.white54, size: 18),
+                    duration: const Duration(milliseconds: 380),
+                    curve: Curves.easeInOutCubic,
+                    width: _searchOpen ? MediaQuery.sizeOf(context).width - 36 : 56,
+                    height: _searchOpen ? 62 : 56,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E1E),
+                      borderRadius: BorderRadius.circular(_searchOpen ? 22 : 28),
+                      border: _searchOpen
+                          ? Border.all(color: accent.withValues(alpha: 0.22))
+                          : null,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.35),
+                          blurRadius: _searchOpen ? 18 : 12,
+                          offset: const Offset(0, 5),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        if (_searchOpen)
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 18, right: 4),
+                              child: AnimatedOpacity(
+                                opacity: 1,
+                                duration: const Duration(milliseconds: 180),
+                                curve: Curves.easeOut,
+                                child: TextField(
+                                  controller: _searchController,
+                                  focusNode: _searchFocusNode,
+                                  autofocus: false,
+                                  onChanged: (value) => setState(
+                                    () => _query = value.trim().toLowerCase(),
+                                  ),
+                                  style: GoogleFonts.sora(color: Colors.white, fontSize: 13),
+                                  cursorColor: accent,
+                                  textInputAction: TextInputAction.search,
+                                  decoration: InputDecoration(
+                                    hintText: 'Search apps',
+                                    hintStyle: GoogleFonts.sora(color: Colors.white38, fontSize: 12),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(vertical: 17),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      Material(
-                        color: accent,
-                        shape: const CircleBorder(),
-                        child: InkWell(
-                          customBorder: const CircleBorder(),
-                          onTap: () {
-                            if (_searchOpen) {
-                              FocusScope.of(context).unfocus();
-                              if (_query.isEmpty) {
-                                setState(() => _searchOpen = false);
-                              } else {
+                        const SizedBox(width: 4),
+                        Material(
+                          color: accent,
+                          shape: const CircleBorder(),
+                          clipBehavior: Clip.antiAlias,
+                          child: InkWell(
+                            customBorder: const CircleBorder(),
+                            onTap: () {
+                              if (_searchOpen) {
+                                _searchFocusNode.unfocus();
                                 _searchController.clear();
                                 setState(() {
                                   _query = '';
                                   _searchOpen = false;
                                 });
+                              } else {
+                                setState(() => _searchOpen = true);
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  if (mounted && _searchOpen) {
+                                    _searchFocusNode.requestFocus();
+                                  }
+                                });
                               }
-                            } else {
-                              setState(() => _searchOpen = true);
-                            }
-                          },
-                          child: SizedBox(
-                            width: 48,
-                            height: 48,
-                            child: Icon(
-                              _searchOpen ? Icons.close_rounded : Icons.search_rounded,
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              size: 22,
+                            },
+                            child: SizedBox(
+                              width: 48,
+                              height: 48,
+                              child: Icon(
+                                _searchOpen ? Icons.close_rounded : Icons.search_rounded,
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                size: 22,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      if (_searchOpen) const SizedBox(width: 6),
-                    ],
-                  ),
+                        if (_searchOpen) const SizedBox(width: 6),
+                      ],
+                    ),
                   ),
                 ),
               ),

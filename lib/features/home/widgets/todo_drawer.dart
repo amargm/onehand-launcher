@@ -5,6 +5,12 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/models/planner_item.dart';
 import '../../../core/providers/planner_items_provider.dart';
 import '../../../core/providers/settings_provider.dart';
+import '../../../core/providers/headphone_provider.dart';
+import '../../../core/providers/schedule_rules_provider.dart';
+
+/// True while the planner's lower edge is merging with the dock/context shell.
+/// The dock listens to this one threshold rather than rebuilding every frame.
+final plannerDrawerCoveringDockProvider = StateProvider<bool>((ref) => false);
 
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
@@ -21,6 +27,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   late final AnimationController _controller;
   late final Animation<double> _curve;
   bool _open = false;
+  bool _dockCovering = false;
 
   @override
   void initState() {
@@ -35,10 +42,20 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       curve: Curves.easeOutQuart,
       reverseCurve: Curves.easeInCubic,
     );
+    _controller.addListener(_syncDockCovering);
+  }
+
+  void _syncDockCovering() {
+    final shouldCover = _curve.value >= 0.70;
+    if (shouldCover == _dockCovering) return;
+    _dockCovering = shouldCover;
+    ref.read(plannerDrawerCoveringDockProvider.notifier).state = shouldCover;
   }
 
   @override
   void dispose() {
+    _controller.removeListener(_syncDockCovering);
+    ref.read(plannerDrawerCoveringDockProvider.notifier).state = false;
     _controller.dispose();
     super.dispose();
   }
@@ -148,6 +165,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     final items = [...ref.watch(plannerItemsProvider)]
       ..sort((a, b) => a.date.compareTo(b.date));
     final panelHeight = mq.size.height * 0.65;
+    final shellVisible = ref.watch(headphoneProvider) ||
+        ref.watch(isScheduleContextActiveProvider);
+    final dockBridgeHeight = shellVisible ? 184.0 : 92.0;
 
     return Positioned.fill(
       child: AnimatedBuilder(
@@ -157,9 +177,17 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           // The planner grows from the dock's floating footprint instead of
           // stretching to the physical screen edge. Keep its resting baseline
           // aligned with AppDock's bottom spacing (system inset + 24 px).
-          final panelWidth = 200 + (mq.size.width - 232) * t;
+          // Phase 1 (0–70%): grow upward from the top of the dock/shell.
+          // Phase 2 (70–100%): extend the lower edge down to the dock's
+          // floating baseline, while the dock itself gently fades away.
+          final upT = (t / 0.70).clamp(0.0, 1.0);
+          final downT = ((t - 0.70) / 0.30).clamp(0.0, 1.0);
+          final compactWidth = (mq.size.width - 48).clamp(200.0, 280.0).toDouble();
+          final panelWidth = compactWidth +
+              (mq.size.width - 32 - compactWidth) * downT;
           final panelLeft = (mq.size.width - panelWidth) / 2;
           final floatingBottom = mq.padding.bottom + 24;
+          final panelBottom = floatingBottom + dockBridgeHeight * (1 - downT);
           return Stack(
             alignment: Alignment.bottomCenter,
             children: [
@@ -179,7 +207,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                 Positioned(
                   left: panelLeft,
                   right: panelLeft,
-                  bottom: floatingBottom,
+                  bottom: panelBottom,
                   child: ClipRRect(
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(40 - 12 * t),
@@ -192,9 +220,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                     child: ClipRect(
                       child: Align(
                         alignment: Alignment.bottomCenter,
-                        heightFactor: t,
+                        heightFactor: upT,
                         child: SizedBox(
-                          height: panelHeight,
+                          height: panelHeight + dockBridgeHeight * downT,
                           child: IgnorePointer(
                             ignoring: !_open,
                             child: _buildPanel(items, accent, t),

@@ -19,6 +19,7 @@ import '../../../core/services/apps_service.dart';
 import '../../search/search_overlay.dart';
 import '../../app_drawer/app_drawer_screen.dart';
 import 'circular_app_icon.dart';
+import 'todo_drawer.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AppDock
@@ -57,6 +58,7 @@ class _AppDockState extends ConsumerState<AppDock> {
     final hasSpecialDate = ref.watch(hasActiveSpecialDateProvider);
     final activeSpecialEvents = ref.watch(activeSpecialDateEventsProvider);
     final globalSnoozeMins = ref.watch(snoozeDurationProvider);
+    final plannerCoveringDock = ref.watch(plannerDrawerCoveringDockProvider);
 
     // Auto-close the message panel if all events were dismissed/snoozed.
     if (activeSpecialEvents.isEmpty && _messageBoxOpen) {
@@ -211,8 +213,14 @@ class _AppDockState extends ConsumerState<AppDock> {
             clipBehavior: Clip.none,
             children: [
               // Outer shell + inner dock (unchanged layout)
-              Center(
-                child: AnimatedContainer(
+              AnimatedOpacity(
+                opacity: plannerCoveringDock ? 0.0 : 1.0,
+                duration: const Duration(milliseconds: 180),
+                curve: Curves.easeOutCubic,
+                child: IgnorePointer(
+                  ignoring: plannerCoveringDock,
+                  child: Center(
+                    child: AnimatedContainer(
                   duration: const Duration(milliseconds: 700),
                   curve: Curves.easeInOutQuart,
                   padding:
@@ -307,6 +315,8 @@ class _AppDockState extends ConsumerState<AppDock> {
                         ),
                       ),
                     ],
+                  ),
+                    ),
                   ),
                 ),
               ),
