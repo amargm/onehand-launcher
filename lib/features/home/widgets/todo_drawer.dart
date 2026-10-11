@@ -88,7 +88,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
             .toDouble();
     _controller.value = (_controller.value -
             details.primaryDelta! / (usableHeight * 0.75))
-        .clamp(0.0, 1.0);
+        .clamp(0.0, 1.0)
+        .toDouble();
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
