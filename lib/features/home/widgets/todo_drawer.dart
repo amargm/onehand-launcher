@@ -20,6 +20,10 @@ final dockSurfaceGeometryProvider = StateProvider<Size?>((ref) => null);
 /// animation after a round-trip to the calendar page.
 final homePageActiveProvider = StateProvider<bool>((ref) => true);
 
+/// Locks the home PageView while the planner is expanded so horizontal
+/// gestures cannot detach the dock/shell from the planner surface.
+final plannerDrawerOpenProvider = StateProvider<bool>((ref) => false);
+
 Color _contrastForeground(Color background) =>
     background.computeLuminance() > 0.50 ? Colors.black : Colors.white;
 
@@ -44,12 +48,12 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
-      reverseDuration: const Duration(milliseconds: 280),
+      reverseDuration: const Duration(milliseconds: 340),
     );
     _curve = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutQuart,
-      reverseCurve: Curves.easeInCubic,
+      reverseCurve: Curves.easeInOutCubic,
     );
     _controller.addListener(_syncDockCovering);
   }
@@ -67,6 +71,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   void dispose() {
     _controller.removeListener(_syncDockCovering);
     ref.read(plannerDrawerCoveringDockProvider.notifier).state = false;
+    ref.read(plannerDrawerOpenProvider.notifier).state = false;
     _controller.dispose();
     super.dispose();
   }
@@ -76,6 +81,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _settle(bool open) {
+    ref.read(plannerDrawerOpenProvider.notifier).state = open;
     setState(() => _open = open);
     if (open) {
       _controller.forward();
