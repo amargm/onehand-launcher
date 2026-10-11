@@ -67,6 +67,43 @@ final appDrawerGroupOverridesProvider = StateNotifierProvider<
   (ref) => AppDrawerGroupOverridesNotifier(ref.watch(sharedPreferencesProvider)),
 );
 
+const _kAppDrawerCollapsedGroupsKey = 'app_drawer_collapsed_groups';
+
+final appDrawerCollapsedGroupsProvider =
+    StateNotifierProvider<AppDrawerCollapsedGroupsNotifier, Set<String>>(
+  (ref) => AppDrawerCollapsedGroupsNotifier(ref.watch(sharedPreferencesProvider)),
+);
+
+class AppDrawerCollapsedGroupsNotifier extends StateNotifier<Set<String>> {
+  AppDrawerCollapsedGroupsNotifier(this._prefs)
+      : super((_prefs.getStringList(_kAppDrawerCollapsedGroupsKey) ??
+                const <String>[])
+            .toSet());
+
+  final SharedPreferences _prefs;
+
+  void toggle(String group) {
+    final next = {...state};
+    if (!next.add(group)) next.remove(group);
+    state = next;
+    _persist();
+  }
+
+  void collapseAll(Iterable<String> groups) {
+    state = {...state, ...groups};
+    _persist();
+  }
+
+  void expandAll() {
+    state = <String>{};
+    _persist();
+  }
+
+  void _persist() {
+    _prefs.setStringList(_kAppDrawerCollapsedGroupsKey, state.toList());
+  }
+}
+
 class AppDrawerGroupOverridesNotifier
     extends StateNotifier<Map<String, String>> {
   AppDrawerGroupOverridesNotifier(this._prefs) : super(_load(_prefs));
@@ -164,7 +201,6 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   String _query = '';
   bool _searchShrunk = false;
   bool _searchOpen = false;
-  final Set<String> _collapsedGroups = <String>{};
 
   @override
   void dispose() {
@@ -279,6 +315,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     final overrides = ref.watch(appDrawerGroupOverridesProvider);
     final customGroups = ref.watch(appDrawerCustomGroupsProvider);
     final groups = [..._drawerGroups, ...customGroups];
+    final collapsedGroups = ref.watch(appDrawerCollapsedGroupsProvider);
+    final allGroupsCollapsed = groups.isNotEmpty &&
+        groups.every(collapsedGroups.contains);
     final favorites = ref.watch(favoriteAppsProvider);
     final iconSize = ref.watch(drawerIconSizeProvider);
     final gridColumns = ref.watch(drawerGridColumnsProvider);
@@ -312,10 +351,22 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(color: accent.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(12)),
-                    child: const Icon(Icons.grid_view_rounded, size: 17),
+                  IconButton(
+                    tooltip: allGroupsCollapsed ? 'Expand all groups' : 'Collapse all groups',
+                    onPressed: () {
+                      final notifier = ref.read(appDrawerCollapsedGroupsProvider.notifier);
+                      if (allGroupsCollapsed) {
+                        notifier.expandAll();
+                      } else {
+                        notifier.collapseAll(groups);
+                      }
+                    },
+                    icon: Icon(
+                      allGroupsCollapsed
+                          ? Icons.unfold_more_rounded
+                          : Icons.unfold_less_rounded,
+                      color: accent,
+                    ),
                   ),
                 ],
               ),
@@ -457,18 +508,19 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                   children: [
                                     Semantics(
                                       button: true,
-                                      expanded: !_collapsedGroups.contains(group),
+                                      expanded: _query.isNotEmpty || !collapsedGroups.contains(group),
                                       label: '$group group, ${grouped[group]!.length} apps',
                                       child: Material(
                                         color: Colors.transparent,
                                         borderRadius: BorderRadius.circular(14),
                                         child: InkWell(
                                           borderRadius: BorderRadius.circular(14),
-                                          onTap: () => setState(() {
-                                            if (!_collapsedGroups.add(group)) {
-                                              _collapsedGroups.remove(group);
-                                            }
-                                          }),
+                                          onTap: () {
+                                            // Search results temporarily show matching apps
+                                            // in expanded groups without changing saved state.
+                                            if (_query.isNotEmpty) return;
+                                            ref.read(appDrawerCollapsedGroupsProvider.notifier).toggle(group);
+                                          },
                                           child: Padding(
                                             padding: const EdgeInsets.symmetric(vertical: 3),
                                             child: Row(
@@ -479,8 +531,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                     curve: Curves.easeInOutCubic,
                                                     style: GoogleFonts.sora(
                                                       color: Colors.white70,
-                                                      fontSize: _collapsedGroups.contains(group) ? 15.5 : 11,
-                                                      letterSpacing: _collapsedGroups.contains(group) ? 0.4 : 1.0,
+                                                      fontSize: (_query.isEmpty && collapsedGroups.contains(group)) ? 15.5 : 11,
+                                                      letterSpacing: (_query.isEmpty && collapsedGroups.contains(group)) ? 0.4 : 1.0,
                                                       fontWeight: FontWeight.w700,
                                                     ),
                                                     child: Text(
@@ -493,7 +545,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                 Text('${grouped[group]!.length}', style: GoogleFonts.sora(color: accent, fontSize: 10, fontWeight: FontWeight.w600)),
                                                 const SizedBox(width: 8),
                                                 AnimatedRotation(
-                                                  turns: _collapsedGroups.contains(group) ? -0.25 : 0,
+                                                  turns: (_query.isEmpty && collapsedGroups.contains(group)) ? -0.25 : 0,
                                                   duration: const Duration(milliseconds: 240),
                                                   curve: Curves.easeInOutCubic,
                                                   child: const Icon(Icons.keyboard_arrow_down_rounded, color: Colors.white54, size: 20),
@@ -508,37 +560,38 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                       duration: const Duration(milliseconds: 620),
                                       curve: Curves.easeInOutCubic,
                                       alignment: Alignment.topCenter,
-                                      child: _collapsedGroups.contains(group)
-                                          ? const SizedBox(width: double.infinity)
-                                          : Padding(
+                                      child: _query.isNotEmpty || !collapsedGroups.contains(group)
+                                          ? Padding(
                                               padding: const EdgeInsets.only(top: 12),
                                               child: GridView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      itemCount: grouped[group]!.length,
-                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: gridColumns,
-                                        mainAxisExtent: iconSize + (showLabels ? 36 : 12),
-                                        crossAxisSpacing: 7,
-                                        mainAxisSpacing: 8,
-                                      ),
-                                      itemBuilder: (context, index) {
-                                        final app = grouped[group]![index];
-                                        return _DrawerAppTile(
-                                          key: ValueKey('group-$group-${app.packageName}'),
-                                          app: app,
-                                          accent: accent,
-                                          iconSize: iconSize,
-                                          showLabel: showLabels,
-                                          onTap: () async {
-                                            await AppsService.openApp(app.packageName);
-                                            if (context.mounted) ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
-                                          },
-                                          onLongPress: () => showAppContextMenu(context, ref, app, onOrganize: () => _customizeGroup(app, group)),
-                                        );
-                                      },
-                                    ),
-                                          ),
+                                                shrinkWrap: true,
+                                                physics: const NeverScrollableScrollPhysics(),
+                                                itemCount: grouped[group]!.length,
+                                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                                  crossAxisCount: gridColumns,
+                                                  mainAxisExtent: iconSize + (showLabels ? 36 : 12),
+                                                  crossAxisSpacing: 7,
+                                                  mainAxisSpacing: 8,
+                                                ),
+                                                itemBuilder: (context, index) {
+                                                  final app = grouped[group]![index];
+                                                  return _DrawerAppTile(
+                                                    key: ValueKey('group-$group-${app.packageName}'),
+                                                    app: app,
+                                                    accent: accent,
+                                                    iconSize: iconSize,
+                                                    showLabel: showLabels,
+                                                    onTap: () async {
+                                                      await AppsService.openApp(app.packageName);
+                                                      if (context.mounted) ref.read(recentAppsProvider.notifier).recordLaunch(app.packageName);
+                                                    },
+                                                    onLongPress: () => showAppContextMenu(context, ref, app, onOrganize: () => _customizeGroup(app, group)),
+                                                  );
+                                                },
+                                              ),
+                                            )
+                                          : const SizedBox(width: double.infinity)
+
                                     ),
                                   ],
                                 ),
