@@ -432,8 +432,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                               children: [
                                                 Expanded(
                                                   child: AnimatedDefaultTextStyle(
-                                                    duration: const Duration(milliseconds: 360),
-                                                    curve: Curves.easeOutCubic,
+                                                    duration: const Duration(milliseconds: 760),
+                                                    curve: Curves.easeInOutCubic,
                                                     style: GoogleFonts.sora(
                                                       color: Colors.white70,
                                                       fontSize: _collapsedGroups.contains(group) ? 15.5 : 11,
@@ -462,8 +462,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                       ),
                                     ),
                                     AnimatedSize(
-                                      duration: const Duration(milliseconds: 360),
-                                      curve: Curves.easeOutCubic,
+                                      duration: const Duration(milliseconds: 620),
+                                      curve: Curves.easeInOutCubic,
                                       alignment: Alignment.topCenter,
                                       child: _collapsedGroups.contains(group)
                                           ? const SizedBox(width: double.infinity)

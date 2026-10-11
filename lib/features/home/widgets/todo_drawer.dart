@@ -32,6 +32,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   late final Animation<double> _curve;
   bool _open = false;
   bool _dockCovering = false;
+  bool _draggedUp = false;
 
   @override
   void initState() {
@@ -80,36 +81,24 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _onVerticalDragStart(DragStartDetails details) {
-    // Stop at the current frame so a new gesture can reverse the morph
-    // immediately, even while an earlier animation is still in flight.
+    // Keep the current animation interruptible, but do not render a partially
+    // dragged handle/sliver. The gesture chooses a destination; one animation
+    // then carries the entire surface there.
     _controller.stop();
-    _open = _controller.value >= 0.5;
+    _draggedUp = false;
   }
 
   void _onVerticalDragUpdate(DragUpdateDetails details) {
-    final mq = MediaQuery.of(context);
-    final usableHeight =
-        (mq.size.height - mq.padding.top - mq.padding.bottom)
-            .clamp(1.0, double.infinity)
-            .toDouble();
-    // A shorter swipe should travel farther through the morph, so opening
-    // feels like one decisive gesture rather than stopping at the grabber.
-    _controller.value = (_controller.value -
-            details.primaryDelta! / (usableHeight * 0.46))
-        .clamp(0.0, 1.0)
-        .toDouble();
+    if (details.primaryDelta! < 0) _draggedUp = true;
   }
 
   void _onVerticalDragEnd(DragEndDetails details) {
     final velocity = details.primaryVelocity ?? 0;
-    if (velocity < -80) {
+    if (_draggedUp || velocity < -20) {
+      // Any upward swipe, however short, completes the full opening.
       _settle(true);
     } else if (velocity > 80) {
       _settle(false);
-    } else {
-      // Once a deliberate upward drag has opened the surface past its
-      // initial handle-only sliver, finish opening instead of snapping back.
-      _settle(_controller.value >= 0.22);
     }
   }
 
@@ -238,6 +227,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
           final panelLeft = (mq.size.width - panelWidth) / 2;
           final floatingBottom = mq.padding.bottom + 24;
           final panelBottom = floatingBottom + dockBridgeHeight * (1 - t);
+          final panelHeight = dockBridgeHeight +
+              (expandedSurfaceHeight - dockBridgeHeight) * t;
           return Stack(
             alignment: Alignment.bottomCenter,
             children: [
@@ -268,15 +259,11 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                       bottomRight: Radius.circular(40 - 12 * t),
                     ),
                     child: ClipRect(
-                      child: Align(
-                        alignment: Alignment.bottomCenter,
-                        heightFactor: t,
-                        child: SizedBox(
-                          height: expandedSurfaceHeight,
-                          child: IgnorePointer(
-                            ignoring: !_open,
-                            child: _buildPanel(items, accent, t),
-                          ),
+                      child: SizedBox(
+                        height: panelHeight,
+                        child: IgnorePointer(
+                          ignoring: !_open,
+                          child: _buildPanel(items, accent, t),
                         ),
                       ),
                     ),
