@@ -514,7 +514,11 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
               bottom: 14,
               child: Align(
                 alignment: Alignment.bottomRight,
-                child: AnimatedContainer(
+                child: AnimatedScale(
+                  scale: _searchOpen || !_searchShrunk ? 1.0 : 0.88,
+                  duration: const Duration(milliseconds: 320),
+                  curve: Curves.easeInOutCubic,
+                  child: AnimatedContainer(
                   duration: const Duration(milliseconds: 360),
                   curve: Curves.easeInOutCubic,
                   width: _searchOpen ? double.infinity : 56,
@@ -600,6 +604,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                       ),
                       if (_searchOpen) const SizedBox(width: 6),
                     ],
+                  ),
                   ),
                 ),
               ),
