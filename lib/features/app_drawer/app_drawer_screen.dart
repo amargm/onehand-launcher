@@ -201,6 +201,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   String _query = '';
   bool _searchShrunk = false;
   bool _searchOpen = false;
+  List<AppInfo>? _indexedApps;
+  Map<String, String> _appSearchIndex = <String, String>{};
 
   @override
   void dispose() {
@@ -398,10 +400,22 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                   ),
                 ),
                 data: (allApps) {
-                  final filtered = allApps.where((app) {
-                    if (_query.isEmpty) return true;
-                    return app.appName.toLowerCase().contains(_query) || app.packageName.toLowerCase().contains(_query);
-                  }).toList();
+                  // Build searchable text once per installed-app snapshot so
+                  // scroll/animation rebuilds don't lowercase every app again.
+                  if (!identical(_indexedApps, allApps)) {
+                    _indexedApps = allApps;
+                    _appSearchIndex = {
+                      for (final app in allApps)
+                        app.packageName:
+                            '${app.appName.toLowerCase()} ${app.packageName.toLowerCase()}',
+                    };
+                  }
+                  final filtered = _query.isEmpty
+                      ? allApps
+                      : allApps
+                          .where((app) =>
+                              _appSearchIndex[app.packageName]!.contains(_query))
+                          .toList();
                   if (filtered.isEmpty) {
                     return Center(
                       child: Text(_query.isEmpty ? 'No launchable apps found' : 'No apps match “$_query”', style: GoogleFonts.sora(color: Colors.white38, fontSize: 12)),
@@ -422,8 +436,14 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                     grouped[group]!.sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
                   }
 
+                  // Package lookup avoids scanning all filtered apps for every
+                  // favorite (O(A × F) -> O(A + F)).
+                  final appByPackage = {
+                    for (final app in filtered) app.packageName: app,
+                  };
+                  final filteredPackages = appByPackage.keys.toSet();
                   final visibleFavorites = favorites
-                      .where((packageName) => filtered.any((app) => app.packageName == packageName))
+                      .where(filteredPackages.contains)
                       .toList();
 
                   return CustomScrollView(
@@ -461,7 +481,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                             delegate: SliverChildBuilderDelegate(
                               (context, index) {
                                 final packageName = visibleFavorites[index];
-                                final app = filtered.firstWhere((a) => a.packageName == packageName);
+                                final app = appByPackage[packageName]!;
                                 return _DrawerAppTile(
                                   key: ValueKey('favorite-$packageName'),
                                   app: app,
@@ -527,7 +547,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                               children: [
                                                 Expanded(
                                                   child: AnimatedDefaultTextStyle(
-                                                    duration: const Duration(milliseconds: 760),
+                                                    duration: const Duration(milliseconds: 320),
                                                     curve: Curves.easeInOutCubic,
                                                     style: GoogleFonts.sora(
                                                       color: Colors.white70,
@@ -557,7 +577,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                       ),
                                     ),
                                     AnimatedSize(
-                                      duration: const Duration(milliseconds: 620),
+                                      duration: const Duration(milliseconds: 320),
                                       curve: Curves.easeInOutCubic,
                                       alignment: Alignment.topCenter,
                                       child: _query.isNotEmpty || !collapsedGroups.contains(group)
