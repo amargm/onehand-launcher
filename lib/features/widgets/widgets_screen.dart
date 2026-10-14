@@ -395,7 +395,7 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                       ),
 
                       // Counter taps rebuild this section only, not the year grid.
-                      const _CounterWidgetsSection(
+                      _CounterWidgetsSection(
                         accent: accent,
                         isLight: isLight,
                       ),
