@@ -167,6 +167,7 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
     with WidgetsBindingObserver {
   bool _isDefault = true; // optimistic until first check
   StreamSubscription<String?>? _packageSub;
+  DateTime? _lastAppsRefreshAt;
 
   @override
   void initState() {
@@ -174,6 +175,7 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(appsProvider); // warm up app list
+      _lastAppsRefreshAt = DateTime.now();
       _checkDefaultLauncher();
     });
     // Invalidate app list immediately when any package is installed/removed,
@@ -186,6 +188,7 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
       final colon = event.indexOf(':');
       final action = colon > 0 ? event.substring(0, colon) : 'CHANGED';
       final pkg = colon > 0 ? event.substring(colon + 1) : event;
+      _lastAppsRefreshAt = DateTime.now();
 
       if (action == 'REMOVED') {
         final prevApps = ref.read(appsProvider).valueOrNull ?? <AppInfo>[];
@@ -237,9 +240,16 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
       // app was backgrounded — prevents the clock staying invisible on return.
       ref.read(searchOverlayActiveProvider.notifier).state = false;
       _checkDefaultLauncher();
-      // Package changes invalidate appsProvider through packageChangeEvents.
-      // Re-querying PackageManager on every resume reloads every app icon;
-      // avoid that expensive work when the user simply returns to the launcher.
+      // Package events refresh immediately. Keep a slow safety refresh for
+      // changes missed while Android had the launcher fully stopped, but avoid
+      // re-querying PackageManager and re-encoding every icon on rapid returns.
+      final now = DateTime.now();
+      final lastRefresh = _lastAppsRefreshAt;
+      if (lastRefresh == null ||
+          now.difference(lastRefresh) >= const Duration(minutes: 2)) {
+        ref.invalidate(appsProvider);
+        _lastAppsRefreshAt = now;
+      }
     }
   }
 
