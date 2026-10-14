@@ -50,6 +50,13 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   late final AnimationController _animCtrl;
   late final Animation<double> _fade;
 
+  // Build expensive app indexes once for each installed-app snapshot.
+  List<AppInfo>? _indexedApps;
+  Map<String, String> _appNameIndex = <String, String>{};
+  Map<String, AppInfo> _appsByPackage = <String, AppInfo>{};
+  String? _lastSortedQuery;
+  List<AppInfo>? _lastSortedResults;
+
   // Multi-pick selection set
   final Set<String> _selected = {};
   bool _keyboardWasVisible = false;
@@ -79,10 +86,8 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
       duration: const Duration(milliseconds: 220),
     );
     _fade = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
-    // Rebuild every animation tick so blurSigma updates frame-by-frame
-    _animCtrl.addListener(() {
-      if (mounted) setState(() {});
-    });
+    // FadeTransition drives opacity directly; avoid setState for every
+    // animation tick so search results are not re-filtered/rebuilt with it.
     _animCtrl.forward();
     // Ensure keyboard appears as soon as the overlay animates in
     WidgetsBinding.instance.addPostFrameCallback(
@@ -116,21 +121,46 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
   }
 
   // ── Relevance ranking ──────────────────────────────────────────────────────
-  List<AppInfo> _sortedResults(List<AppInfo> all) {
-    if (_query.isEmpty) return all;
-    final q = _query;
-    final matched =
-        all.where((a) => a.appName.toLowerCase().contains(q)).toList();
-    matched.sort((a, b) => _score(a, q).compareTo(_score(b, q)));
-    return matched;
+  void _ensureAppIndex(List<AppInfo> all) {
+    if (identical(_indexedApps, all)) return;
+    _indexedApps = all;
+    _appNameIndex = {
+      for (final app in all) app.packageName: app.appName.toLowerCase(),
+    };
+    _appsByPackage = {
+      for (final app in all) app.packageName: app,
+    };
+    _lastSortedQuery = null;
+    _lastSortedResults = null;
   }
 
-  int _score(AppInfo app, String q) {
-    final name = app.appName.toLowerCase();
-    if (name == q) return 0;
-    if (name.startsWith(q)) return 1;
-    if (name.split(' ').any((w) => w.startsWith(q))) return 2;
-    return 3;
+  List<AppInfo> _sortedResults(List<AppInfo> all) {
+    if (_query.isEmpty) return all;
+    _ensureAppIndex(all);
+    if (_lastSortedQuery == _query && _lastSortedResults != null) {
+      return _lastSortedResults!;
+    }
+
+    // Score each app once, then sort integers. The previous comparator
+    // repeatedly lowercased and split app names during an O(n log n) sort.
+    final ranked = <({AppInfo app, int score})>[];
+    for (final app in all) {
+      final name = _appNameIndex[app.packageName] ?? app.appName.toLowerCase();
+      if (!name.contains(_query)) continue;
+      final score = name == _query
+          ? 0
+          : name.startsWith(_query)
+              ? 1
+              : name.split(' ').any((word) => word.startsWith(_query))
+                  ? 2
+                  : 3;
+      ranked.add((app: app, score: score));
+    }
+    ranked.sort((a, b) => a.score.compareTo(b.score));
+    final results = ranked.map((entry) => entry.app).toList(growable: false);
+    _lastSortedQuery = _query;
+    _lastSortedResults = results;
+    return results;
   }
 
   @override
@@ -140,15 +170,10 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
     final mq = MediaQuery.of(context);
     final accent = Theme.of(context).colorScheme.primary;
 
-    // Blur sigma tracks the keyboard rise/fall in real-time.
-    // When keyboard is absent (overlay opening/closing), fall back to the
-    // animation controller value so the blur still animates with the overlay.
-    const kKeyboardApproxHeight = 260.0;
-    final kbFraction =
-        mq.viewInsets.bottom > 8
-            ? (mq.viewInsets.bottom / kKeyboardApproxHeight).clamp(0.0, 1.0)
-            : _fade.value;
-    final blurSigma = kbFraction * 20.0;
+    // A steady, moderate blur avoids repeatedly changing an expensive
+    // full-screen backdrop shader during IME animation. FadeTransition
+    // handles the overlay entrance/exit independently.
+    final blurSigma = mq.viewInsets.bottom > 8 ? 16.0 : 12.0;
     if (mq.viewInsets.bottom > 8) _keyboardWasVisible = true;
 
     // Material(transparency) is required so that IconButton / InkWell widgets
@@ -205,10 +230,9 @@ class _SearchOverlayState extends ConsumerState<SearchOverlay>
                             skipLoadingOnReload: true,
                             error: (_, __) => const SizedBox(height: 160),
                             data: (all) {
+                              _ensureAppIndex(all);
                               final recentPkgs = ref.watch(recentAppsProvider);
-                              final pkgMap = {
-                                for (final a in all) a.packageName: a,
-                              };
+                              final pkgMap = _appsByPackage;
                               final recentApps =
                                   recentPkgs
                                       .map((pkg) => pkgMap[pkg])

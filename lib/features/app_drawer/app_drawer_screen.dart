@@ -203,6 +203,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   bool _searchOpen = false;
   List<AppInfo>? _indexedApps;
   Map<String, String> _appSearchIndex = <String, String>{};
+  Map<String, String> _automaticGroupIndex = <String, String>{};
 
   @override
   void dispose() {
@@ -210,6 +211,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     _searchFocusNode.dispose();
     super.dispose();
   }
+
+  String _automaticGroupIndexKey(AppInfo app) =>
+      '${app.packageName}::${app.appName.toLowerCase()}';
 
   String _automaticGroup(AppInfo app) {
     final value = '${app.appName} ${app.packageName}'.toLowerCase();
@@ -409,6 +413,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                         app.packageName:
                             '${app.appName.toLowerCase()} ${app.packageName.toLowerCase()}',
                     };
+                    _automaticGroupIndex = {
+                      for (final app in allApps)
+                        _automaticGroupIndexKey(app): _automaticGroup(app),
+                    };
                   }
                   final filtered = _query.isEmpty
                       ? allApps
@@ -429,12 +437,13 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                     final override = overrides[app.packageName];
                     final group = override != null && groups.contains(override)
                         ? override
-                        : _automaticGroup(app);
+                        : (_automaticGroupIndex[_automaticGroupIndexKey(app)] ??
+                            _automaticGroup(app));
                     grouped.putIfAbsent(group, () => <AppInfo>[]).add(app);
                   }
-                  for (final group in grouped.keys) {
-                    grouped[group]!.sort((a, b) => a.appName.toLowerCase().compareTo(b.appName.toLowerCase()));
-                  }
+                  // allApps is alphabetically ordered by the native app-list
+                  // query; filtering preserves that order, so grouped lists do
+                  // not need to be sorted again on every search keystroke.
 
                   // Package lookup avoids scanning all filtered apps for every
                   // favorite (O(A × F) -> O(A + F)).
