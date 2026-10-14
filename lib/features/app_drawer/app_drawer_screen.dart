@@ -212,6 +212,9 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
     super.dispose();
   }
 
+  String _automaticGroupIndexKey(AppInfo app) =>
+      '${app.packageName}::${app.appName.toLowerCase()}';
+
   String _automaticGroup(AppInfo app) {
     final value = '${app.appName} ${app.packageName}'.toLowerCase();
     bool has(List<String> words) => words.any(value.contains);
@@ -412,7 +415,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                     };
                     _automaticGroupIndex = {
                       for (final app in allApps)
-                        app.packageName: _automaticGroup(app),
+                        _automaticGroupIndexKey(app): _automaticGroup(app),
                     };
                   }
                   final filtered = _query.isEmpty
@@ -434,7 +437,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                     final override = overrides[app.packageName];
                     final group = override != null && groups.contains(override)
                         ? override
-                        : (_automaticGroupIndex[app.packageName] ??
+                        : (_automaticGroupIndex[_automaticGroupIndexKey(app)] ??
                             _automaticGroup(app));
                     grouped.putIfAbsent(group, () => <AppInfo>[]).add(app);
                   }
