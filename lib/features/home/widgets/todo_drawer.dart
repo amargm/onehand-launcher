@@ -150,7 +150,6 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   Future<void> _pickInlineDate() async {
-    final now = DateTime.now();
     final accent = ref.read(accentColorProvider);
     final picked = await showDatePicker(
       context: context,
@@ -678,10 +677,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                         children: [
                           Icon(Icons.event_note_rounded, size: 34, color: accent.withValues(alpha: 0.8)),
                           const SizedBox(height: 12),
-                          Text('A little space for what matters',
+                          Text('Start with one small thing',
                               style: GoogleFonts.sora(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 6),
-                          Text('Add a to-do or event and it will appear here by date.',
+                          Text('Type above, choose a type if needed, then tap the arrow to add it.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.sora(color: Colors.white54, fontSize: 10, height: 1.45)),
                         ],
