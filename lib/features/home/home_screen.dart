@@ -237,9 +237,9 @@ class _HomeBodyState extends ConsumerState<_HomeBody>
       // app was backgrounded — prevents the clock staying invisible on return.
       ref.read(searchOverlayActiveProvider.notifier).state = false;
       _checkDefaultLauncher();
-      // Refresh installed apps list so newly installed/uninstalled
-      // apps appear immediately when the user returns to the launcher.
-      ref.invalidate(appsProvider);
+      // Package changes invalidate appsProvider through packageChangeEvents.
+      // Re-querying PackageManager on every resume reloads every app icon;
+      // avoid that expensive work when the user simply returns to the launcher.
     }
   }
 
@@ -377,15 +377,29 @@ class _ClockWidgetState extends ConsumerState<_ClockWidget> {
   void initState() {
     super.initState();
     _now = DateTime.now();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _now = DateTime.now());
-    });
+    _scheduleNextMinuteTick();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  // The clock displays HH:MM rather than seconds, so rebuilding once per
+  // second is wasted work. Align updates to minute boundaries to keep the
+  // displayed time accurate without continuous unnecessary rebuilds.
+  void _scheduleNextMinuteTick() {
+    final now = DateTime.now();
+    final remainingMilliseconds =
+        const Duration(minutes: 1).inMilliseconds -
+        now.second * 1000 -
+        now.millisecond;
+    _timer = Timer(Duration(milliseconds: remainingMilliseconds), () {
+      if (!mounted) return;
+      setState(() => _now = DateTime.now());
+      _scheduleNextMinuteTick();
+    });
   }
 
   String _buildTimeString(bool use24h) {
