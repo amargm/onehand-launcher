@@ -235,10 +235,14 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         .toDouble();
     final expandedSurfaceHeight = usableHeight * 0.75;
 
+    final panelContent =
+        _open || _controller.value > 0 ? _buildPanelContent(items, accent) : null;
+
     return Positioned.fill(
       child: AnimatedBuilder(
         animation: _curve,
-        builder: (context, _) {
+        child: panelContent,
+        builder: (context, panelContent) {
           // One progress value drives every part of the dock-to-planner
           // morph. Width, height, lower edge, radius and content all move
           // together; there is no delayed second expansion phase.
@@ -289,7 +293,11 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                         height: panelHeight,
                         child: IgnorePointer(
                           ignoring: !_open,
-                          child: _buildPanel(items, accent, t),
+                          child: _buildPanel(
+                          accent,
+                          t,
+                          panelContent ?? const SizedBox.shrink(),
+                        ),
                         ),
                       ),
                     ),
@@ -316,21 +324,14 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     );
   }
 
-  Widget _buildPanel(List<PlannerItem> items, Color accent, double expansion) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final grouped = <DateTime, List<PlannerItem>>{};
-    for (final item in items) {
-      final date = DateTime(item.date.year, item.date.month, item.date.day);
-      grouped.putIfAbsent(date, () => []).add(item);
-    }
-    final dates = grouped.keys.toList()..sort();
-
+  Widget _buildPanel(Color accent, double expansion, Widget content) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1B1B1E),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(40 - 12 * expansion)),
-        border: Border(top: BorderSide(color: Color(0x22FFFFFF))),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(40 - 12 * expansion),
+        ),
+        border: const Border(top: BorderSide(color: Color(0x22FFFFFF))),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.20 * expansion),
@@ -343,8 +344,27 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         opacity: ((expansion - 0.08) / 0.84).clamp(0.0, 1.0),
         child: Transform.translate(
           offset: Offset(0, 10 * (1 - expansion)),
-          child: Column(
-        children: [
+          child: content,
+        ),
+      ),
+    );
+  }
+
+  /// Content is built when app/provider state changes, not on each animation
+  /// frame. AnimatedBuilder reuses this child while only the panel shell's
+  /// geometry, shadow, fade and translation follow the animation.
+  Widget _buildPanelContent(List<PlannerItem> items, Color accent) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final grouped = <DateTime, List<PlannerItem>>{};
+    for (final item in items) {
+      final date = DateTime(item.date.year, item.date.month, item.date.day);
+      grouped.putIfAbsent(date, () => []).add(item);
+    }
+    final dates = grouped.keys.toList()..sort();
+
+    return Column(
+      children: [
           const SizedBox(height: 8),
           GestureDetector(
             behavior: HitTestBehavior.opaque,
@@ -495,10 +515,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
               ),
             ),
           ),
-        ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 
