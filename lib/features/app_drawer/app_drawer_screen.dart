@@ -713,10 +713,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(left: 18, right: 4),
-                              child: AnimatedOpacity(
+                              child: Opacity(
+                                // The pill's own width animation is the timing
+                                // source; derive the fade directly from it.
                                 opacity: inputOpacity,
-                                duration: const Duration(milliseconds: 140),
-                                curve: Curves.easeOut,
                                 child: TextField(
                                   controller: _searchController,
                                   focusNode: _searchFocusNode,
