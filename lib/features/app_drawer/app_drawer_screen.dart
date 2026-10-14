@@ -631,7 +631,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                 itemBuilder: (context, index) {
                                                   final app = grouped[group]![index];
                                                   return _DrawerAppTile(
-                                                    key: ValueKey('group-$group-${app.packageName}'),
+                                                    key: ValueKey('group-$group-${_automaticGroupIndexKey(app)}'),
                                                     app: app,
                                                     accent: accent,
                                                     iconSize: iconSize,
@@ -700,6 +700,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                         // on the first frames after the search button is tapped.
                         final showInput =
                             _searchOpen && constraints.maxWidth >= 140;
+                        final inputOpacity =
+                            ((constraints.maxWidth - 140) / 72)
+                                .clamp(0.0, 1.0)
+                                .toDouble();
                         return Row(
                           mainAxisAlignment: showInput
                               ? MainAxisAlignment.start
@@ -710,8 +714,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                             child: Padding(
                               padding: const EdgeInsets.only(left: 18, right: 4),
                               child: AnimatedOpacity(
-                                opacity: 1,
-                                duration: const Duration(milliseconds: 180),
+                                opacity: inputOpacity,
+                                duration: const Duration(milliseconds: 140),
                                 curve: Curves.easeOut,
                                 child: TextField(
                                   controller: _searchController,
