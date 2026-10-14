@@ -204,6 +204,8 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
   List<AppInfo>? _indexedApps;
   Map<String, String> _appSearchIndex = <String, String>{};
   Map<String, String> _automaticGroupIndex = <String, String>{};
+  String? _filteredQuery;
+  List<AppInfo>? _cachedFilteredApps;
 
   @override
   void dispose() {
@@ -409,21 +411,34 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                   if (!identical(_indexedApps, allApps)) {
                     _indexedApps = allApps;
                     _appSearchIndex = {
+                      // A package can expose more than one launcher activity.
+                      // Index each activity separately so the last entry for a
+                      // package cannot overwrite another activity's searchable name.
                       for (final app in allApps)
-                        app.packageName:
+                        _automaticGroupIndexKey(app):
                             '${app.appName.toLowerCase()} ${app.packageName.toLowerCase()}',
                     };
+                    _filteredQuery = null;
+                    _cachedFilteredApps = null;
                     _automaticGroupIndex = {
                       for (final app in allApps)
                         _automaticGroupIndexKey(app): _automaticGroup(app),
                     };
                   }
-                  final filtered = _query.isEmpty
-                      ? allApps
-                      : allApps
-                          .where((app) =>
-                              _appSearchIndex[app.packageName]!.contains(_query))
-                          .toList();
+                  // Search text is stable for a given query + installed-app
+                  // snapshot. Reuse the filtered list during theme, group and
+                  // scroll-state rebuilds instead of walking every app again.
+                  if (_filteredQuery != _query || _cachedFilteredApps == null) {
+                    _filteredQuery = _query;
+                    _cachedFilteredApps = _query.isEmpty
+                        ? allApps
+                        : allApps
+                            .where((app) => _appSearchIndex[
+                                    _automaticGroupIndexKey(app)]!
+                                .contains(_query))
+                            .toList(growable: false);
+                  }
+                  final filtered = _cachedFilteredApps!;
                   if (filtered.isEmpty) {
                     return Center(
                       child: Text(_query.isEmpty ? 'No launchable apps found' : 'No apps match “$_query”', style: GoogleFonts.sora(color: Colors.white38, fontSize: 12)),
