@@ -808,6 +808,11 @@ class _DrawerAppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Decode launcher icons near their rendered size. Native launcher icons can
+    // be much larger than the drawer tile, so full-resolution decodes waste
+    // memory during long, grouped app lists.
+    final decodeDimension =
+        (iconSize * MediaQuery.devicePixelRatioOf(context)).round();
     return Semantics(
       button: true,
       label: '${app.appName}. Tap to open, long-press to organize',
@@ -831,6 +836,8 @@ class _DrawerAppTile extends StatelessWidget {
                   ? Icon(Icons.android_rounded, color: accent, size: 25)
                   : Image.memory(
                       app.icon!,
+                      cacheWidth: decodeDimension,
+                      cacheHeight: decodeDimension,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Icon(Icons.android_rounded, color: accent, size: 25),
                     ),
