@@ -41,6 +41,11 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   bool _open = false;
   bool _dockCovering = false;
   bool _draggedUp = false;
+  final TextEditingController _entryController = TextEditingController();
+  final FocusNode _entryFocusNode = FocusNode(debugLabel: 'Quick add to-do or event');
+  PlannerItemType _entryType = PlannerItemType.todo;
+  DateTime _entryDate = DateTime.now();
+  bool _isAddingItem = false;
 
   @override
   void initState() {
@@ -77,6 +82,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     ref.read(plannerDrawerCoveringDockProvider.notifier).state = false;
     ref.read(plannerDrawerOpenProvider.notifier).state = false;
     _controller.dispose();
+    _entryController.dispose();
+    _entryFocusNode.dispose();
     super.dispose();
   }
 
@@ -86,6 +93,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
 
   void _settle(bool open) {
     ref.read(plannerDrawerOpenProvider.notifier).state = open;
+    if (!open) _entryFocusNode.unfocus();
     setState(() => _open = open);
     if (open) {
       _controller.forward();
@@ -116,20 +124,257 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     }
   }
 
-  Future<void> _addItem() async {
-    final item = await showModalBottomSheet<PlannerItem>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: const Color(0xFF1D1D20),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      builder: (_) => const _PlannerItemForm(),
+  Future<void> _submitInlineItem() async {
+    final title = _entryController.text.trim();
+    if (title.isEmpty || _isAddingItem) return;
+
+    final item = PlannerItem(
+      title: title,
+      date: DateTime(_entryDate.year, _entryDate.month, _entryDate.day),
+      type: _entryType,
     );
-    if (item != null && mounted) {
-      final saved = await ref.read(plannerItemsProvider.notifier).add(item);
-      if (!saved && mounted) _showPersistenceWarning();
+
+    setState(() => _isAddingItem = true);
+    final saved = await ref.read(plannerItemsProvider.notifier).add(item);
+    if (!mounted) return;
+
+    setState(() {
+      _entryController.clear();
+      // A custom date applies to the item just added. The next quick entry
+      // starts at today's date unless the user chooses another date.
+      _entryDate = DateTime.now();
+      _isAddingItem = false;
+    });
+    _entryFocusNode.requestFocus();
+    if (!saved) _showPersistenceWarning();
+  }
+
+  Future<void> _pickInlineDate() async {
+    final accent = ref.read(accentColorProvider);
+    final restoreFocus = _entryFocusNode.hasFocus;
+    // Hide the IME while the date dialog is open, then restore the composing
+    // session so choosing a date doesn't interrupt a half-written entry.
+    _entryFocusNode.unfocus();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _entryDate,
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: Theme.of(context).colorScheme.copyWith(
+            primary: accent,
+            surface: const Color(0xFF252529),
+          ),
+          datePickerTheme: const DatePickerThemeData(
+            backgroundColor: Color(0xFF252529),
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (!mounted) return;
+    if (picked != null) {
+      setState(() => _entryDate = DateTime(picked.year, picked.month, picked.day));
     }
+    if (restoreFocus) _entryFocusNode.requestFocus();
+  }
+
+  Widget _buildQuickEntry(Color accent) {
+    final isTodo = _entryType == PlannerItemType.todo;
+    final typeColor = isTodo ? accent : const Color(0xFFFFB547);
+    final now = DateTime.now();
+    final isToday = _entryDate.year == now.year &&
+        _entryDate.month == now.month &&
+        _entryDate.day == now.day;
+    final dateCaption = isToday ? 'Today' : _dateLabel(_entryDate);
+
+    ButtonStyle typeButtonStyle(Color color, bool selected) =>
+        IconButton.styleFrom(
+          minimumSize: const Size(44, 44),
+          fixedSize: const Size(44, 44),
+          padding: EdgeInsets.zero,
+          backgroundColor: selected
+              ? color
+              : Colors.white.withValues(alpha: 0.045),
+          foregroundColor: selected ? _contrastForeground(color) : Colors.white70,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(13),
+            side: BorderSide(
+              color: selected ? color : Colors.white.withValues(alpha: 0.06),
+            ),
+          ),
+        );
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF242428),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 3, 10, 2),
+            child: TextField(
+              controller: _entryController,
+              focusNode: _entryFocusNode,
+              maxLength: 70,
+              maxLines: 2,
+              minLines: 1,
+              textCapitalization: TextCapitalization.sentences,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submitInlineItem(),
+              style: GoogleFonts.sora(
+                color: Colors.white,
+                fontSize: 13,
+                height: 1.35,
+              ),
+              cursorColor: accent,
+              decoration: InputDecoration(
+                hintText: 'Write a task or event…',
+                hintStyle: GoogleFonts.sora(
+                  color: Colors.white38,
+                  fontSize: 12,
+                ),
+                border: InputBorder.none,
+                counterText: '',
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+          Divider(height: 1, color: Colors.white.withValues(alpha: 0.07)),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 5, 7, 6),
+            child: Row(
+              children: [
+                Semantics(
+                  button: true,
+                  selected: isTodo,
+                  label: 'Set entry type to to-do',
+                  child: IconButton(
+                    tooltip: 'To-do',
+                    onPressed: () => setState(
+                      () => _entryType = PlannerItemType.todo,
+                    ),
+                    style: typeButtonStyle(accent, isTodo),
+                    icon: const Icon(Icons.check_circle_outline_rounded, size: 21),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Semantics(
+                  button: true,
+                  selected: !isTodo,
+                  label: 'Set entry type to event',
+                  child: IconButton(
+                    tooltip: 'Event',
+                    onPressed: () => setState(
+                      () => _entryType = PlannerItemType.event,
+                    ),
+                    style: typeButtonStyle(
+                      const Color(0xFFFFB547),
+                      !isTodo,
+                    ),
+                    icon: const Icon(Icons.event_available_rounded, size: 21),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Tooltip(
+                    message: 'Choose date (defaults to today)',
+                    child: Material(
+                      color: Colors.white.withValues(alpha: 0.045),
+                      borderRadius: BorderRadius.circular(13),
+                      child: InkWell(
+                        onTap: _pickInlineDate,
+                        borderRadius: BorderRadius.circular(13),
+                        child: Container(
+                          constraints: const BoxConstraints(minHeight: 44),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(13),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.06),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                color: isToday ? Colors.white70 : accent,
+                                size: 18,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  dateCaption,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.sora(
+                                    color: isToday ? Colors.white70 : accent,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _entryController,
+                  builder: (context, value, _) {
+                    final canSubmit =
+                        value.text.trim().isNotEmpty && !_isAddingItem;
+                    return Semantics(
+                      button: true,
+                      label: 'Add ${isTodo ? 'to-do' : 'event'}',
+                      child: IconButton(
+                        tooltip: _isAddingItem
+                            ? 'Adding…'
+                            : 'Add ${isTodo ? 'to-do' : 'event'}',
+                        onPressed: canSubmit ? _submitInlineItem : null,
+                        style: IconButton.styleFrom(
+                          minimumSize: const Size(44, 44),
+                          fixedSize: const Size(44, 44),
+                          padding: EdgeInsets.zero,
+                          backgroundColor: canSubmit
+                              ? typeColor
+                              : Colors.white.withValues(alpha: 0.035),
+                          foregroundColor: canSubmit
+                              ? _contrastForeground(typeColor)
+                              : Colors.white24,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(13),
+                          ),
+                        ),
+                        icon: _isAddingItem
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.arrow_upward_rounded, size: 22),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _togglePlannerItem(PlannerItem item) async {
@@ -230,7 +475,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
 
     // Size the complete expanded surface (planner + morph bridge) to 75% of
     // the usable display, not 75% of the raw screen plus system insets.
-    final usableHeight = (mq.size.height - mq.padding.top - mq.padding.bottom)
+    final usableHeight = (mq.size.height -
+            mq.padding.top -
+            mq.padding.bottom -
+            mq.viewInsets.bottom)
         .clamp(1.0, double.infinity)
         .toDouble();
     final expandedSurfaceHeight = usableHeight * 0.75;
@@ -403,7 +651,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                             fontWeight: FontWeight.w700,
                           )),
                       const SizedBox(height: 3),
-                      Text('Your upcoming plans',
+                      Text('Capture it now',
                           style: GoogleFonts.sora(
                             color: Colors.white,
                             fontSize: 15,
@@ -417,25 +665,11 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Semantics(
-                  button: true,
-                  label: 'Add a to-do or event',
-                  child: IconButton(
-                    tooltip: 'Add a to-do or event',
-                    onPressed: _addItem,
-                    style: IconButton.styleFrom(
-                      backgroundColor: accent,
-                      foregroundColor: _contrastForeground(accent),
-                      minimumSize: const Size(48, 48),
-                      fixedSize: const Size(48, 48),
-                    ),
-                    icon: const Icon(Icons.add_rounded, size: 23),
-                  ),
-                ),
+
               ],
             ),
           ),
+          _buildQuickEntry(accent),
           Expanded(
             child: dates.isEmpty
                 ? Center(
@@ -446,10 +680,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                         children: [
                           Icon(Icons.event_note_rounded, size: 34, color: accent.withValues(alpha: 0.8)),
                           const SizedBox(height: 12),
-                          Text('A little space for what matters',
+                          Text('Start with one small thing',
                               style: GoogleFonts.sora(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 6),
-                          Text('Add a to-do or event and it will appear here by date.',
+                          Text('Type above, choose a type if needed, then tap the arrow to add it.',
                               textAlign: TextAlign.center,
                               style: GoogleFonts.sora(color: Colors.white54, fontSize: 10, height: 1.45)),
                         ],
@@ -720,117 +954,6 @@ class _PlannerTypePill extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlannerItemForm extends StatefulWidget {
-  const _PlannerItemForm();
-
-  @override
-  State<_PlannerItemForm> createState() => _PlannerItemFormState();
-}
-
-class _PlannerItemFormState extends State<_PlannerItemForm> {
-  final _formKey = GlobalKey<FormState>();
-  final _title = TextEditingController();
-  final _description = TextEditingController();
-  DateTime _date = DateTime.now();
-  PlannerItemType _type = PlannerItemType.todo;
-
-  @override
-  void dispose() {
-    _title.dispose();
-    _description.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-      builder: (context, child) => Theme(
-        data: Theme.of(context).copyWith(
-          colorScheme: const ColorScheme.dark(
-            primary: Color(0xFF7448FF),
-            surface: Color(0xFF252529),
-          ),
-        ),
-        child: child!,
-      ),
-    );
-    if (picked != null) setState(() => _date = DateTime(picked.year, picked.month, picked.day));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(20, 18, 20, 20 + bottom),
-      child: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(8)))),
-              const SizedBox(height: 18),
-              Text('Add something to your day',
-                  style: GoogleFonts.sora(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 16),
-              SegmentedButton<PlannerItemType>(
-                segments: const [
-                  ButtonSegment(value: PlannerItemType.todo, label: Text('To-do'), icon: Icon(Icons.check_circle_outline_rounded)),
-                  ButtonSegment(value: PlannerItemType.event, label: Text('Event'), icon: Icon(Icons.event_rounded)),
-                ],
-                selected: {_type},
-                onSelectionChanged: (v) => setState(() => _type = v.first),
-                showSelectedIcon: false,
-              ),
-              const SizedBox(height: 14),
-              OutlinedButton.icon(
-                onPressed: _pickDate,
-                icon: const Icon(Icons.calendar_today_rounded, size: 16),
-                label: Text('${_date.day.toString().padLeft(2, '0')} / ${_date.month.toString().padLeft(2, '0')} / ${_date.year}'),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _title,
-                autofocus: true,
-                maxLength: 70,
-                decoration: const InputDecoration(labelText: 'Headline', hintText: 'What do you need to do?'),
-                validator: (v) => v == null || v.trim().isEmpty ? 'Please add a headline' : null,
-              ),
-              const SizedBox(height: 6),
-              TextFormField(
-                controller: _description,
-                maxLines: 3,
-                maxLength: 180,
-                decoration: const InputDecoration(labelText: 'Short description (optional)', hintText: 'Add a little detail…'),
-              ),
-              const SizedBox(height: 18),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: () {
-                    if (!_formKey.currentState!.validate()) return;
-                    Navigator.pop(context, PlannerItem(
-                      date: _date,
-                      title: _title.text.trim(),
-                      description: _description.text.trim(),
-                      type: _type,
-                    ));
-                  },
-                  child: const Text('Save'),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
