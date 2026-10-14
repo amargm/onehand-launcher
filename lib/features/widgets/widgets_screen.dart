@@ -81,6 +81,16 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
   int? _loadedYear;
   String? _loadedCountry;
 
+  // Calendar geometry is deterministic for a year + event snapshot. Cache the
+  // derived maps so opening the event panel or changing a counter does not
+  // repeatedly walk every event before rebuilding the twelve-month grid.
+  int? _calendarMapYear;
+  List<CalendarEvent>? _calendarMapHolidays;
+  List<CalendarEvent>? _calendarMapUserEvents;
+  Map<int, Set<int>> _cachedHolidayDays = const <int, Set<int>>{};
+  Map<int, List<_MonthEventSpan>> _cachedUserEventSpans =
+      const <int, List<_MonthEventSpan>>{};
+
   @override
   bool get wantKeepAlive => true;
 
@@ -114,6 +124,29 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
       _loadHolidaysIfNeeded();
     }
     if (_panelOpen) setState(() => _panelOpen = false);
+  }
+
+  void _refreshCalendarMaps(List<CalendarEvent> userEvents) {
+    if (_calendarMapYear == _displayYear &&
+        identical(_calendarMapHolidays, _holidays) &&
+        identical(_calendarMapUserEvents, userEvents)) {
+      return;
+    }
+
+    _calendarMapYear = _displayYear;
+    _calendarMapHolidays = _holidays;
+    _calendarMapUserEvents = userEvents;
+    _cachedHolidayDays = _buildDayMap(
+      _holidays.where((event) => event.date.year == _displayYear),
+    );
+    _cachedUserEventSpans = _buildEventSpanMap(
+      userEvents.where(
+        (event) =>
+            event.date.year <= _displayYear &&
+            event.endDate.year >= _displayYear,
+      ),
+      _displayYear,
+    );
   }
 
   // ── Holiday loading ───────────────────────────────────────────────────────
@@ -317,18 +350,9 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
 
     final bgColor = isLight ? const Color(0xFFF2F2F2) : Colors.black;
     final placedWidgets = ref.watch(placedAndroidWidgetsProvider);
-    final counterWidgets = ref.watch(counterWidgetsProvider);
-    final counterUse24h = ref.watch(use24HourClockProvider);
-
-    final holidayDays = _buildDayMap(
-      _holidays.where((e) => e.date.year == _displayYear),
-    );
-    final userEventSpans = _buildEventSpanMap(
-      userEvents.where(
-        (e) => e.date.year <= _displayYear && e.endDate.year >= _displayYear,
-      ),
-      _displayYear,
-    );
+    _refreshCalendarMaps(userEvents);
+    final holidayDays = _cachedHolidayDays;
+    final userEventSpans = _cachedUserEventSpans;
 
     // Panel bottom offset: above navBar row + add-widget button + bottom padding
     final panelBottom = mq.padding.bottom + 124.0;
@@ -370,51 +394,11 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
                         ),
                       ),
 
-                      // ── Counter widgets ────────────────────────────────
-                      if (counterWidgets.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 14),
-                          child: Column(
-                            children:
-                                counterWidgets.map((cw) {
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 10),
-                                    child: _CounterCard(
-                                      model: cw,
-                                      accent: accent,
-                                      isLight: isLight,
-                                      use24h: counterUse24h,
-                                      onIncrement:
-                                          () => ref
-                                              .read(
-                                                counterWidgetsProvider.notifier,
-                                              )
-                                              .increment(cw.id),
-                                      onDecrement:
-                                          () => ref
-                                              .read(
-                                                counterWidgetsProvider.notifier,
-                                              )
-                                              .decrement(cw.id),
-                                      onReset:
-                                          () => ref
-                                              .read(
-                                                counterWidgetsProvider.notifier,
-                                              )
-                                              .reset(cw.id),
-                                      onDelete:
-                                          () => ref
-                                              .read(
-                                                counterWidgetsProvider.notifier,
-                                              )
-                                              .remove(cw.id),
-                                    ),
-                                  );
-                                }).toList(),
-                          ),
-                        ),
-                      ],
+                      // Counter taps rebuild this section only, not the year grid.
+                      _CounterWidgetsSection(
+                        accent: accent,
+                        isLight: isLight,
+                      ),
 
                       // ── Placed Android widgets ─────────────────────────
                       if (placedWidgets.isNotEmpty) ...[
@@ -995,6 +979,59 @@ class WidgetsScreenState extends ConsumerState<WidgetsScreen>
       }
     }
     return map;
+  }
+}
+
+
+class _CounterWidgetsSection extends ConsumerWidget {
+  const _CounterWidgetsSection({
+    required this.accent,
+    required this.isLight,
+  });
+
+  final Color accent;
+  final bool isLight;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final counterWidgets = ref.watch(counterWidgetsProvider);
+    final use24h = ref.watch(use24HourClockProvider);
+    if (counterWidgets.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: [
+        const SizedBox(height: 12),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Column(
+            children: [
+              for (final counter in counterWidgets)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _CounterCard(
+                    model: counter,
+                    accent: accent,
+                    isLight: isLight,
+                    use24h: use24h,
+                    onIncrement: () => ref
+                        .read(counterWidgetsProvider.notifier)
+                        .increment(counter.id),
+                    onDecrement: () => ref
+                        .read(counterWidgetsProvider.notifier)
+                        .decrement(counter.id),
+                    onReset: () => ref
+                        .read(counterWidgetsProvider.notifier)
+                        .reset(counter.id),
+                    onDelete: () => ref
+                        .read(counterWidgetsProvider.notifier)
+                        .remove(counter.id),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 }
 
