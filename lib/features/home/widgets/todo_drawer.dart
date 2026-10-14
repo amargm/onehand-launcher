@@ -294,7 +294,6 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                         child: IgnorePointer(
                           ignoring: !_open,
                           child: _buildPanel(
-                          accent,
                           t,
                           panelContent ?? const SizedBox.shrink(),
                         ),
@@ -324,7 +323,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     );
   }
 
-  Widget _buildPanel(Color accent, double expansion, Widget content) {
+  Widget _buildPanel(double expansion, Widget content) {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1B1B1E),
