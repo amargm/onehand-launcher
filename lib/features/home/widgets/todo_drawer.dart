@@ -145,7 +145,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       _entryDate = DateTime.now();
       _isAddingItem = false;
     });
-    _entryFocusNode.requestFocus();
+    // A save can complete after the drawer has started collapsing. Do not
+    // steal focus back from the home screen or reopen the keyboard in that case.
+    if (_open) _entryFocusNode.requestFocus();
     if (!saved) _showPersistenceWarning();
   }
 
@@ -177,7 +179,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     if (picked != null) {
       setState(() => _entryDate = DateTime(picked.year, picked.month, picked.day));
     }
-    if (restoreFocus) _entryFocusNode.requestFocus();
+    if (restoreFocus && _open) _entryFocusNode.requestFocus();
   }
 
   Widget _buildQuickEntry(Color accent) {
