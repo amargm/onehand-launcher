@@ -279,6 +279,10 @@ class _AppCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Avoid decoding large source icons at full resolution when they are only
+    // displayed as small launcher/search circles.
+    final decodeDimension =
+        (size * MediaQuery.devicePixelRatioOf(context)).round();
     return Container(
       width: size,
       height: size,
@@ -291,6 +295,8 @@ class _AppCircle extends StatelessWidget {
             icon != null
                 ? Image.memory(
                   icon!,
+                  cacheWidth: decodeDimension,
+                  cacheHeight: decodeDimension,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => _fallback(context),
                 )

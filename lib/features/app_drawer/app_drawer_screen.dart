@@ -631,7 +631,7 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                                                 itemBuilder: (context, index) {
                                                   final app = grouped[group]![index];
                                                   return _DrawerAppTile(
-                                                    key: ValueKey('group-$group-${app.packageName}'),
+                                                    key: ValueKey('group-$group-${_automaticGroupIndexKey(app)}'),
                                                     app: app,
                                                     accent: accent,
                                                     iconSize: iconSize,
@@ -700,6 +700,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                         // on the first frames after the search button is tapped.
                         final showInput =
                             _searchOpen && constraints.maxWidth >= 140;
+                        final inputOpacity =
+                            ((constraints.maxWidth - 140) / 72)
+                                .clamp(0.0, 1.0)
+                                .toDouble();
                         return Row(
                           mainAxisAlignment: showInput
                               ? MainAxisAlignment.start
@@ -709,10 +713,10 @@ class _AppDrawerScreenState extends ConsumerState<AppDrawerScreen> {
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.only(left: 18, right: 4),
-                              child: AnimatedOpacity(
-                                opacity: 1,
-                                duration: const Duration(milliseconds: 180),
-                                curve: Curves.easeOut,
+                              child: Opacity(
+                                // The pill's own width animation is the timing
+                                // source; derive the fade directly from it.
+                                opacity: inputOpacity,
                                 child: TextField(
                                   controller: _searchController,
                                   focusNode: _searchFocusNode,
@@ -804,6 +808,11 @@ class _DrawerAppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Decode launcher icons near their rendered size. Native launcher icons can
+    // be much larger than the drawer tile, so full-resolution decodes waste
+    // memory during long, grouped app lists.
+    final decodeDimension =
+        (iconSize * MediaQuery.devicePixelRatioOf(context)).round();
     return Semantics(
       button: true,
       label: '${app.appName}. Tap to open, long-press to organize',
@@ -827,6 +836,8 @@ class _DrawerAppTile extends StatelessWidget {
                   ? Icon(Icons.android_rounded, color: accent, size: 25)
                   : Image.memory(
                       app.icon!,
+                      cacheWidth: decodeDimension,
+                      cacheHeight: decodeDimension,
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => Icon(Icons.android_rounded, color: accent, size: 25),
                     ),
