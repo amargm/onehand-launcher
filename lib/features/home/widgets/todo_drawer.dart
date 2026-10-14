@@ -151,6 +151,10 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
 
   Future<void> _pickInlineDate() async {
     final accent = ref.read(accentColorProvider);
+    final restoreFocus = _entryFocusNode.hasFocus;
+    // Hide the IME while the date dialog is open, then restore the composing
+    // session so choosing a date doesn't interrupt a half-written entry.
+    _entryFocusNode.unfocus();
     final picked = await showDatePicker(
       context: context,
       initialDate: _entryDate,
@@ -169,12 +173,11 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         child: child!,
       ),
     );
-    if (picked == null || !mounted) return;
-    setState(() => _entryDate = DateTime(picked.year, picked.month, picked.day));
-    // Keep the keyboard and cursor ready for the next part of the entry.
-    if (_entryController.text.isNotEmpty) {
-      _entryFocusNode.requestFocus();
+    if (!mounted) return;
+    if (picked != null) {
+      setState(() => _entryDate = DateTime(picked.year, picked.month, picked.day));
     }
+    if (restoreFocus) _entryFocusNode.requestFocus();
   }
 
   Widget _buildQuickEntry(Color accent) {
