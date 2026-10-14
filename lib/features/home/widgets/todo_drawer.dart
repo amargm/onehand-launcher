@@ -193,8 +193,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
 
     ButtonStyle typeButtonStyle(Color color, bool selected) =>
         IconButton.styleFrom(
-          minimumSize: const Size(44, 44),
-          fixedSize: const Size(44, 44),
+          minimumSize: const Size(38, 38),
+          fixedSize: const Size(38, 38),
           padding: EdgeInsets.zero,
           backgroundColor: selected
               ? color
@@ -263,7 +263,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                       () => _entryType = PlannerItemType.todo,
                     ),
                     style: typeButtonStyle(accent, isTodo),
-                    icon: const Icon(Icons.check_circle_outline_rounded, size: 21),
+                    icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -280,7 +280,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                       const Color(0xFFFFB547),
                       !isTodo,
                     ),
-                    icon: const Icon(Icons.event_available_rounded, size: 21),
+                    icon: const Icon(Icons.event_available_rounded, size: 18),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -294,7 +294,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                         onTap: _pickInlineDate,
                         borderRadius: BorderRadius.circular(13),
                         child: Container(
-                          constraints: const BoxConstraints(minHeight: 44),
+                          constraints: const BoxConstraints(minHeight: 38),
                           padding: const EdgeInsets.symmetric(horizontal: 10),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(13),
@@ -345,8 +345,8 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                             : 'Add ${isTodo ? 'to-do' : 'event'}',
                         onPressed: canSubmit ? _submitInlineItem : null,
                         style: IconButton.styleFrom(
-                          minimumSize: const Size(44, 44),
-                          fixedSize: const Size(44, 44),
+                          minimumSize: const Size(38, 38),
+                          fixedSize: const Size(38, 38),
                           padding: EdgeInsets.zero,
                           backgroundColor: canSubmit
                               ? typeColor
@@ -366,7 +366,7 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Icon(Icons.arrow_upward_rounded, size: 22),
+                            : const Icon(Icons.arrow_upward_rounded, size: 19),
                       ),
                     );
                   },
@@ -430,19 +430,33 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       _showPersistenceWarning();
       return;
     }
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
+    final messenger = ScaffoldMessenger.of(context);
+    messenger
+      ..clearSnackBars()
       ..showSnackBar(
         SnackBar(
           content: Text(
             '“${item.title}” deleted',
-            maxLines: 2,
+            maxLines: 1,
             overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.sora(
+              color: Colors.white,
+              fontSize: 12,
+            ),
           ),
+          backgroundColor: const Color(0xFF29292D),
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
+          elevation: 10,
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 96),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          duration: const Duration(seconds: 3),
           action: SnackBarAction(
             label: 'UNDO',
+            textColor: const Color(0xFFFFB547),
             onPressed: () async {
               final restored = await notifier.add(item);
               if (!restored && mounted) _showPersistenceWarning();
