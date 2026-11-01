@@ -21,13 +21,14 @@ app upload remain outstanding.
   be checked against the final release before submission. Paid distribution
   was selected, but a merchant account is still required before a paid price
   can be configured.
-- The upload key is stored locally at
-  `C:\Users\mugal\OneHandLauncherSigning\onehand-upload.jks`; its password
-  files are DPAPI-encrypted for the Windows user. The public certificate is
-  `C:\Users\mugal\OneHandLauncherSigning\onehand-upload-certificate.pem`.
-  Register this certificate in Play Console's Play App Signing setup before
-  uploading an AAB. The private key and password files must never be committed
-  or sent in chat.
+- The upload keystore is being moved to the developer's Bitwarden Password
+  Manager vault as an encrypted file attachment. Bitwarden is the human-managed
+  source of truth and recovery copy; do not keep a working keystore on the
+  Windows development machine after verifying the vault attachment and its
+  recovery procedure. The public upload certificate is not secret and can be
+  be kept separately. Register that certificate in Play Console's Play App
+  Signing setup before uploading an AAB. Never commit the keystore or disclose
+  either signing password.
 - The `play-internal` GitHub environment already contains the four
   `ANDROID_UPLOAD_*` signing secrets. `PLAY_SERVICE_ACCOUNT_JSON` is not yet
   configured, so the tagged workflow cannot upload to Play until a suitable
@@ -171,6 +172,39 @@ Requires Android 8.0 or later.
 
 ## Signing and credential setup
 
+### Bitwarden Password Manager is the key backup
+
+Use a Bitwarden vault item named **One Hand Launcher — Android Play upload signing**:
+
+1. Attach the existing `onehand-upload.jks` file to that vault item. Keep the
+   keystore and its passwords in the vault; use separate secure fields for
+   passwords rather than putting them in an ordinary note.
+2. Store the key alias, keystore password, key password, and a short recovery
+   note in the protected vault item. Protect the vault with a strong master
+   password and two-step login.
+3. Verify that the attachment has finished syncing. From a second trusted
+   device/session, confirm that the attachment can be retrieved before
+   deleting any local copy.
+4. After verifying the Bitwarden backup, remove local JKS copies and any
+   unencrypted temporary copies from Windows, Recycle Bin, Downloads, build
+   folders, and clipboard history. Do not upload the keystore as a GitHub
+   artifact.
+5. Keep the public PEM certificate separately; it contains no private key and
+   is what Play Console needs to register the upload certificate.
+
+**Important CI design:** Bitwarden Password Manager is the human-managed
+recovery vault. GitHub Actions cannot safely unlock a personal vault without
+introducing another long-lived Bitwarden credential and potentially broad
+vault access. Do not automate Bitwarden CLI login from CI for this pipeline.
+The `play-internal` GitHub environment needs its own encrypted operational
+copy of the upload keystore and passwords so the trusted release runner can
+sign each AAB. GitHub encrypts Actions secrets before storage and injects them
+only into authorized workflow jobs. Restrict access to the `play-internal`
+environment, and never expose its secrets to pull-request jobs or untrusted
+branches. Bitwarden remains the recovery source if GitHub secrets need to be
+recreated.
+
+
 Google Play App Signing should hold the **app signing key**. The key used in
 this repository/CI is the separate **upload key**. Never commit the upload
 keystore, its passwords, or the Play service-account JSON.
@@ -179,11 +213,12 @@ keystore, its passwords, or the Play service-account JSON.
    `com.onehand.onehand_launcher`. Enroll it in Play App Signing and register
    the existing upload certificate
    `C:\Users\mugal\OneHandLauncherSigning\onehand-upload-certificate.pem`.
-2. The upload key has already been generated locally. Keep at least two
-   encrypted offline backups of the keystore, and store passwords separately.
-   If replacing or resetting the upload key, generate a new key using Java's
-   `keytool` from a secure directory outside the repository; `keytool` prompts
-   for passwords:
+2. The upload key has already been generated. Its primary recovery
+   attachment should be in Bitwarden as described above. If replacing or
+   resetting the upload key, generate a new key in a trusted temporary
+   environment, upload the resulting keystore to Bitwarden, and register its
+   new public certificate in Play Console. Do not generate a replacement just
+   to move the existing key into Bitwarden; `keytool` prompts for passwords:
 
    ```powershell
    keytool -genkeypair -v `
@@ -222,16 +257,13 @@ keystore, its passwords, or the Play service-account JSON.
    | `ANDROID_UPLOAD_KEY_PASSWORD` | Configured |
    | `PLAY_SERVICE_ACCOUNT_JSON` | Pending: full service-account JSON, as plain text |
 
-   To copy the keystore's base64 value to the Windows clipboard without
-   printing it:
+   The existing GitHub signing secrets are the CI operational copy. Do not
+   replace them merely because the Bitwarden backup is being established.
+   If the upload key is rotated, update the Bitwarden attachment and the
+   GitHub environment secrets together, then verify a signed internal AAB
+   before removing the previous backup. Avoid placing base64 keystore data on
+   the clipboard or in shell history.
 
-   ```powershell
-   [Convert]::ToBase64String([IO.File]::ReadAllBytes("C:\secure\onehand-upload.jks")) | Set-Clipboard
-   ```
-
-   This is only needed when initially configuring or rotating the existing
-   signing secret. Paste the value directly into the GitHub environment secret,
-   then clear the clipboard. Keep the source keystore and offline backups.
 6. In a suitable Google Cloud project, enable the Google Play Android
    Developer API and create a service account. Invite its email in Play Console
    with only the app-level permissions needed to manage testing releases. Add
