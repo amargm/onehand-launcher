@@ -26,7 +26,7 @@ app upload remain outstanding.
   source of truth and recovery copy; do not keep a working keystore on the
   Windows development machine after verifying the vault attachment and its
   recovery procedure. The public upload certificate is not secret and can be
-  be kept separately. Register that certificate in Play Console's Play App
+  can be kept separately. Register that certificate in Play Console's Play App
   Signing setup before uploading an AAB. Never commit the keystore or disclose
   either signing password.
 - The `play-internal` GitHub environment already contains the four
