@@ -13,6 +13,42 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  test('rapid planner mutations persist the latest state in order', () async {
+    final prefs = await SharedPreferences.getInstance();
+    final notifier = PlannerItemsNotifier(prefs);
+    final first = PlannerItem(
+      id: 'planner-first',
+      date: DateTime(2026, 11, 1),
+      title: 'First item',
+    );
+    final second = PlannerItem(
+      id: 'planner-second',
+      date: DateTime(2026, 11, 2),
+      title: 'Second item',
+    );
+
+    final writes = [
+      notifier.add(first),
+      notifier.add(second),
+      notifier.remove(first.id),
+      notifier.toggleCompleted(second.id),
+    ];
+
+    expect(await Future.wait(writes), everyElement(isTrue));
+    expect(notifier.state, hasLength(1));
+    expect(notifier.state.single.id, second.id);
+    expect(notifier.state.single.isCompleted, isTrue);
+
+    final stored = jsonDecode(
+      prefs.getString('home_planner_items_v1')!,
+    ) as List<dynamic>;
+    expect(stored, hasLength(1));
+    expect(stored.single['id'], second.id);
+    expect(stored.single['isCompleted'], isTrue);
+
+    notifier.dispose();
+  });
+
   test('planner mutations are persisted and can be restored', () async {
     final prefs = await SharedPreferences.getInstance();
     final notifier = PlannerItemsNotifier(prefs);

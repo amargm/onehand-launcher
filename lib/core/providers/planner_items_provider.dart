@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +18,10 @@ class PlannerItemsNotifier extends StateNotifier<List<PlannerItem>> {
 
   final SharedPreferences _prefs;
   static const _key = 'home_planner_items_v1';
+
+  // Serialize asynchronous writes so an older snapshot cannot finish last
+  // and overwrite a more recent planner mutation.
+  Future<void> _saveQueue = Future<void>.value();
 
   static List<PlannerItem> _load(SharedPreferences prefs) {
     try {
@@ -53,14 +58,18 @@ class PlannerItemsNotifier extends StateNotifier<List<PlannerItem>> {
   /// Retry persisting the current state after a previous failed write.
   Future<bool> persist() => _save();
 
-  Future<bool> _save() async {
-    try {
-      return await _prefs.setString(
-        _key,
-        jsonEncode(state.map((e) => e.toJson()).toList()),
-      );
-    } catch (_) {
-      return false;
-    }
+  Future<bool> _save() {
+    final snapshot = jsonEncode(state.map((e) => e.toJson()).toList());
+    final result = Completer<bool>();
+
+    _saveQueue = _saveQueue.then((_) async {
+      try {
+        result.complete(await _prefs.setString(_key, snapshot));
+      } catch (_) {
+        result.complete(false);
+      }
+    });
+
+    return result.future;
   }
 }
