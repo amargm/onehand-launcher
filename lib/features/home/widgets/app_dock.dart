@@ -326,8 +326,7 @@ class _AppDockState extends ConsumerState<AppDock> {
                       ),
 
                       // ── Inner dock ──────────────────────────────────────
-                      IntrinsicWidth(
-                        child: Container(
+                      Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
@@ -347,7 +346,6 @@ class _AppDockState extends ConsumerState<AppDock> {
                                   ..removeLast(),
                           ),
                         ),
-                      ),
                     ],
                   ),
                     ),
