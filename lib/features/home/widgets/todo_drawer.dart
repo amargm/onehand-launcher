@@ -92,9 +92,16 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
   }
 
   void _settle(bool open) {
+    final status = _controller.status;
+    final alreadySettling = open
+        ? status == AnimationStatus.forward || status == AnimationStatus.completed
+        : status == AnimationStatus.reverse || status == AnimationStatus.dismissed;
+    if (_open == open && alreadySettling) return;
+
     ref.read(plannerDrawerOpenProvider.notifier).state = open;
     if (!open) _entryFocusNode.unfocus();
-    setState(() => _open = open);
+    if (_open != open) setState(() => _open = open);
+
     if (open) {
       _controller.forward();
     } else {
@@ -121,6 +128,9 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
       _settle(true);
     } else if (velocity > 80) {
       _settle(false);
+    } else {
+      // A slow/ambiguous gesture must never leave the drawer frozen halfway.
+      _settle(_controller.value >= 0.5);
     }
   }
 
@@ -486,9 +496,6 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
     // Prefer the real laid-out dock/shell height; the fallback is only used
     // for the first frame before AppDock has reported its geometry.
     final dockGeometry = ref.watch(dockSurfaceGeometryProvider);
-    final dockBridgeHeight =
-        dockGeometry?.height ?? (shellVisible ? 184.0 : 92.0);
-
     // Size the complete expanded surface (planner + morph bridge) to 75% of
     // the usable display, not 75% of the raw screen plus system insets.
     final usableHeight = (mq.size.height -
@@ -498,6 +505,12 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
         .clamp(1.0, double.infinity)
         .toDouble();
     final expandedSurfaceHeight = usableHeight * 0.75;
+    // On short displays the measured dock can be taller than the planner
+    // viewport. Clamp it so the interpolation never starts above its endpoint.
+    final dockBridgeHeight = (dockGeometry?.height ??
+            (shellVisible ? 184.0 : 92.0))
+        .clamp(0.0, expandedSurfaceHeight)
+        .toDouble();
 
     final panelContent =
         _open || _controller.value > 0 ? _buildPanelContent(items, accent) : null;
@@ -553,14 +566,26 @@ class _TodoDrawerState extends ConsumerState<TodoDrawer>
                       bottomRight: Radius.circular(40 - 12 * t),
                     ),
                     child: ClipRect(
+                      // Keep the planner's flex layout at its full expanded
+                      // height while the animated viewport clips it. Giving
+                      // the Column a shrinking height caused its Expanded
+                      // list to overflow during the closing animation.
                       child: SizedBox(
                         height: panelHeight,
                         child: IgnorePointer(
                           ignoring: !_open,
-                          child: _buildPanel(
-                          t,
-                          panelContent ?? const SizedBox.shrink(),
-                        ),
+                          child: OverflowBox(
+                            alignment: Alignment.bottomCenter,
+                            minHeight: expandedSurfaceHeight,
+                            maxHeight: expandedSurfaceHeight,
+                            child: SizedBox(
+                              height: expandedSurfaceHeight,
+                              child: _buildPanel(
+                                t,
+                                panelContent ?? const SizedBox.shrink(),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
