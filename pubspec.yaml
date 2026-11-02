@@ -2,7 +2,7 @@ name: onehand_launcher
 description: "One-Handed Minimalist Launcher — Ergonomic Android launcher with Obsidian Pulse aesthetic."
 publish_to: 'none'
 
-version: 1.0.1+1000001
+version: 1.0.2+1000002
 
 environment:
   sdk: ">=3.7.2 <4.0.0"
