@@ -5,18 +5,14 @@
     <!-- Network-backed fonts, holidays, and wallpaper selection -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- List & query every installed app (Android 11+ package visibility) -->
-    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
-
     <!-- Allow setting the wallpaper from settings -->
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
 
     <!-- Coarse location for one-time country detection (holiday calendar) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- ── Explicit package queries (Android 11+ visibility) ─────────────
-         Without this block, PackageManager won't return launcher-intent apps
-         even with QUERY_ALL_PACKAGES declared on some OEM builds. -->
+    <!-- ── Targeted package visibility (Android 11+) ──────────────────────
+         Declare only the app categories queried by launcher and media features. -->
     <queries>
         <!-- All apps with a launcher icon (home screen grid) -->
         <intent>
@@ -27,6 +23,16 @@
         <intent>
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.HOME" />
+        </intent>
+        <!-- Music players shown in media-app shortcuts -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.APP_MUSIC" />
+        </intent>
+        <!-- Apps that can open audio files (media-app shortcuts) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="audio/*" />
         </intent>
         <!-- Text-processing actions (Flutter engine requirement) -->
         <intent>
